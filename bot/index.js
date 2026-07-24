@@ -153,15 +153,21 @@ app.listen(PORT, async () => {
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
   console.log(`Админка: ${WEBAPP_URL}/admin.html`);
 
-  await bot.api.setChatMenuButton({
-    menu_button: { type: 'web_app', text: 'Spirit', web_app: { url: WEBAPP_URL } },
-  });
+  // Настройка Telegram обёрнута в try/catch: даже если токен временно
+  // неверный или Telegram недоступен — веб-сервис остаётся живым.
+  try {
+    await bot.api.setChatMenuButton({
+      menu_button: { type: 'web_app', text: 'Spirit', web_app: { url: WEBAPP_URL } },
+    });
 
-  if (USE_WEBHOOK) {
-    await bot.api.setWebhook(`${WEBHOOK_BASE}${secretPath}`);
-    console.log('Режим: вебхук →', `${WEBHOOK_BASE}${secretPath}`);
-  } else {
-    await bot.api.deleteWebhook();
-    bot.start({ onStart: (info) => console.log(`Режим: long polling. Бот @${info.username} запущен`) });
+    if (USE_WEBHOOK) {
+      await bot.api.setWebhook(`${WEBHOOK_BASE}${secretPath}`);
+      console.log('Режим: вебхук →', `${WEBHOOK_BASE}${secretPath}`);
+    } else {
+      await bot.api.deleteWebhook();
+      bot.start({ onStart: (info) => console.log(`Режим: long polling. Бот @${info.username} запущен`) });
+    }
+  } catch (e) {
+    console.error('⚠️ Ошибка настройки Telegram (проверь BOT_TOKEN):', e.description || e.message);
   }
 });
