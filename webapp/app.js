@@ -235,6 +235,11 @@ document.querySelectorAll('.tab').forEach((t) => {
 
 // ---------- Заполнение даты ----------
 const MONTHS = ['қаңтар','ақпан','наурыз','сәуір','мамыр','маусым','шілде','тамыз','қыркүйек','қазан','қараша','желтоқсан'];
+['firstName','lastName','email','phone'].forEach((id)=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',()=>{ el.style.borderColor=''; });
+});
+
 function fillDates() {
   const d = document.getElementById('birthDay');
   const m = document.getElementById('birthMonth');
@@ -287,12 +292,21 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     birthDate: `${get('birthDay')}.${get('birthMonth')}.${get('birthYear')}`,
   };
 
-  if (!form.firstName || !form.lastName || !form.patronymic || !get('email') || !get('phone')) {
-    hint.textContent = 'Барлық өрісті толтыр';
+  // Обязательные поля: Аты, Жөні, Почта, Нөмірі (Әкесінің аты — необязательно)
+  const requiredIds = ['firstName', 'lastName', 'email', 'phone'];
+  let missing = false;
+  requiredIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) { el.style.borderColor = '#d9534f'; missing = true; }
+    else { el.style.borderColor = ''; }
+  });
+  if (missing) {
+    hint.textContent = 'Міндетті өрістерді толтырыңыз (белгіленген *)';
     tg.HapticFeedback?.notificationOccurred('error');
     return;
   }
   if (!/^\S+@\S+\.\S+$/.test(form.email)) {
+    document.getElementById('email').style.borderColor = '#d9534f';
     hint.textContent = 'Почта дұрыс емес';
     return;
   }
