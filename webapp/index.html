@@ -12,14 +12,37 @@
   <!-- ЭКРАН: Регистрация -->
   <section id="screen-register" class="screen">
     <div class="reg-head">
-      <div class="reg-badge">✦</div>
+      <div class="reg-badge"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Spirit">
+        <defs><clipPath id="spiritClip"><circle cx="50" cy="50" r="48"/></clipPath></defs>
+        <circle cx="50" cy="50" r="48" fill="#123f31"/>
+        <g clip-path="url(#spiritClip)">
+          <circle cx="55" cy="38" r="8.5" fill="#E8C572"/>
+          <g stroke="#E8C572" stroke-width="1.4" stroke-linecap="round">
+            <line x1="55" y1="25" x2="55" y2="20"/><line x1="63" y1="28" x2="66" y2="24"/>
+            <line x1="47" y1="28" x2="44" y2="24"/><line x1="67" y1="35" x2="72" y2="33"/>
+            <line x1="43" y1="35" x2="38" y2="33"/>
+          </g>
+          <path d="M-5 70 L20 46 L38 62 L55 41 L72 60 L90 47 L110 70 Z" fill="#265645" fill-opacity="0.45"/>
+          <path d="M0 72 L26 43 L40 60 L58 35 L80 72 Z" fill="#EAF2EA"/>
+          <path d="M58 35 L66 52 L58 48 L52 56 Z" fill="#c9d8cf"/>
+          <path d="M26 43 L33 55 L26 51 L21 58 Z" fill="#c9d8cf"/>
+          <path d="M-5 66 Q50 58 105 66 L105 101 L-5 101 Z" fill="#1c5a45"/>
+          <path d="M46 101 Q52 80 50 70 Q49 66 54 63" fill="none" stroke="#d8c9a0" stroke-width="4" stroke-linecap="round"/>
+          <g fill="#0f4433">
+            <polygon points="19,69 23,60 27,69"/><polygon points="19,64 23,57 27,64"/>
+            <polygon points="28,71 32,63 36,71"/>
+          </g>
+        </g>
+        <circle cx="50" cy="50" r="48" fill="none" stroke="#EAF2EA" stroke-width="2.5"/>
+        <circle cx="50" cy="50" r="43" fill="none" stroke="#5a8f79" stroke-width="0.8"/>
+      </svg></div>
       <h1>Spirit-ке тіркелу</h1>
       <div class="muted">Қауымдастыққа қосыл</div>
     </div>
 
     <div class="field">
       <label>Аты</label>
-      <input class="input" id="firstName" placeholder="Мысалы: Алихан" />
+      <input class="input" id="firstName" placeholder="Аты" />
     </div>
     <div class="field">
       <label>Жөні</label>
