@@ -69,7 +69,7 @@ app.post('/api/register', async (req, res) => {
   if (!tgUser) return;
 
   const f = req.body?.form || {};
-  const required = ['firstName', 'lastName', 'patronymic', 'email', 'phone', 'birthDate'];
+  const required = ['firstName', 'lastName', 'email', 'phone', 'birthDate'];
   for (const key of required) {
     if (!f[key] || String(f[key]).trim() === '') {
       return res.status(400).json({ ok: false, error: `Бос өріс: ${key}` });
