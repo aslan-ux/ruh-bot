@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spirit — Админка</title>
+  <style>
+    :root { --green:#1D9E75; --dark:#0F5C43; --soft:#4b8a72; --bg:#F1F8F4; --line:#CDE7DA; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--dark); }
+    .wrap { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+    h1 { font-size:22px; } h2 { font-size:17px; margin-top:28px; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; }
+    label { display:block; font-size:13px; color:var(--soft); margin:10px 0 4px; }
+    input { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:15px; color:var(--dark); outline:none; }
+    input:focus { border-color:var(--green); }
+    button { background:var(--green); color:#fff; border:none; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:500; cursor:pointer; }
+    button.ghost { background:#fff; color:var(--green); border:1px solid var(--green); }
+    .hint { font-size:13px; color:var(--soft); margin-top:8px; min-height:18px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+    th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); }
+    th { color:var(--soft); font-weight:500; }
+    .row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+    .preview { width:70px; height:70px; border-radius:50%; object-fit:cover; border:1px solid var(--line); background:#E3F1EA; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Spirit — Админка</h1>
+
+  <!-- Вход -->
+  <div id="login" class="card" style="margin-top:16px;">
+    <label>Админ кілті (ADMIN_KEY)</label>
+    <div class="row">
+      <input id="key" type="password" placeholder="кілт" style="flex:1;" />
+      <button id="loginBtn">Кіру</button>
+    </div>
+    <div class="hint" id="loginHint"></div>
+  </div>
+
+  <!-- Панель -->
+  <div id="panel" class="hidden">
+    <h2>Осы айдың кітабы</h2>
+    <div class="card">
+      <div class="row" style="align-items:center;">
+        <img id="coverPreview" class="preview" src="" alt="" />
+        <div style="flex:1; min-width:200px;">
+          <label>Мұқаба (фото URL)</label>
+          <input id="cover" placeholder="https://…/book.jpg" />
+        </div>
+      </div>
+      <label>Атауы</label>
+      <input id="title" placeholder="Кітап атауы" />
+      <label>Авторы</label>
+      <input id="author" placeholder="Автор" />
+      <label>Прогресс (%)</label>
+      <input id="progress" type="number" min="0" max="100" placeholder="0" />
+      <div style="margin-top:14px;"><button id="saveBook">Сақтау</button></div>
+      <div class="hint" id="bookHint"></div>
+    </div>
+
+    <h2>Қатысушылар (<span id="count">0</span>)</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr><th>Аты-жөні</th><th>Почта</th><th>Нөмірі</th><th>Туған күні</th><th>Кітап</th></tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let ADMIN_KEY = '';
+
+async function adminGet() {
+  const res = await fetch('/api/admin/data', { headers: { 'X-Admin-Key': ADMIN_KEY } });
+  return res.json();
+}
+async function adminPost(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  ADMIN_KEY = document.getElementById('key').value.trim();
+  const r = await adminGet();
+  if (r.ok) {
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('panel').classList.remove('hidden');
+    render(r);
+  } else {
+    document.getElementById('loginHint').textContent = r.error || 'Қате';
+  }
+});
+
+function render(data) {
+  const b = data.book;
+  document.getElementById('title').value = b.title || '';
+  document.getElementById('author').value = b.author || '';
+  document.getElementById('cover').value = b.cover || '';
+  document.getElementById('progress').value = b.progress || 0;
+  document.getElementById('coverPreview').src = b.cover || '';
+
+  const body = document.getElementById('usersBody');
+  document.getElementById('count').textContent = data.users.length;
+  body.innerHTML = '';
+  data.users.forEach((u) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${u.lastName} ${u.firstName} ${u.patronymic}</td>` +
+      `<td>${u.email}</td><td>${u.phone}</td><td>${u.birthDate}</td>` +
+      `<td>${u.assignedBookId ? '✅' : '—'}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+document.getElementById('cover').addEventListener('input', (e) => {
+  document.getElementById('coverPreview').src = e.target.value;
+});
+
+document.getElementById('saveBook').addEventListener('click', async () => {
+  const hint = document.getElementById('bookHint');
+  hint.textContent = 'Сақталуда…';
+  const r = await adminPost('/api/admin/book', {
+    title: document.getElementById('title').value.trim(),
+    author: document.getElementById('author').value.trim(),
+    cover: document.getElementById('cover').value.trim(),
+    progress: Number(document.getElementById('progress').value) || 0,
+  });
+  hint.textContent = r.ok ? '✅ Сақталды' : ('Қате: ' + r.error);
+});
+</script>
+</body>
+</html>
