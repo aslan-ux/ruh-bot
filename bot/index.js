@@ -138,6 +138,13 @@ app.post('/api/steps/me', async (req, res) => {
   const user = await getUser(tgUser.id);
   if (!user) return res.json({ ok: true, registered: false });
 
+  // Токен для iOS «Команд»: если участник зарегистрировался до этой функции — выдаём сейчас
+  let syncToken = user.syncToken;
+  if (!syncToken) {
+    syncToken = crypto.randomBytes(16).toString('hex');
+    await upsertUser({ ...user, syncToken });
+  }
+
   const mySteps = await getUserSteps(tgUser.id); // [{date, steps}]
   const today = kzDate(0);
   const weekStart = kzDate(6);
@@ -162,7 +169,7 @@ app.post('/api/steps/me', async (req, res) => {
   res.json({
     ok: true,
     registered: true,
-    syncToken: user.syncToken || '',
+    syncToken,
     steps: mySteps,
     today,
     leaderboard: {
