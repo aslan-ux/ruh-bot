@@ -170,7 +170,7 @@ function fullName(u) { return `${u.lastName || ''} ${u.firstName || ''} ${u.patr
 function userMatches(u, q) {
   q = (q || '').trim().toLowerCase();
   if (!q) return true;
-  const text = `${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''} ${u.email || ''} ${u.phone || ''}`.toLowerCase();
+  const text = `${u.name || ''} ${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''} ${u.email || ''} ${u.phone || ''}`.toLowerCase();
   if (text.includes(q)) return true;
   const qDigits = q.replace(/\D/g, '');
   if (qDigits) {
