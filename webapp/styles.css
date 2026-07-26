@@ -225,3 +225,19 @@ select.input { background-image: none; padding-right: 12px; }
 .qd-token code { font-family: ui-monospace, Menlo, monospace; color: var(--green-dark); }
 .qd-list { margin: 12px 0 0; padding-left: 18px; }
 .qd-list li { font-size: 13px; color: var(--green-dark); margin-bottom: 7px; line-height: 1.45; }
+
+/* ---------- Копирование/вставка + видимый курсор во всех полях ---------- */
+input, textarea, select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+  caret-color: var(--green);
+}
+.qd-token { display: flex; align-items: center; gap: 8px; }
+.qd-token code { flex: 1; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+.qd-copy {
+  flex: 0 0 auto; background: var(--green); color: #fff; border: none;
+  border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+}
+.qd-copy.done { background: var(--green-dark); }

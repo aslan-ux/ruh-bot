@@ -54,9 +54,9 @@
         <button class="qd-connect-btn" id="qdSetupBtn">Қосу нұсқаулығы</button>
         <div id="qdSetupBox" class="hidden">
           <div class="qd-note">Құпия токенің (ешкімге көрсетпе):</div>
-          <div class="qd-token"><code id="qdToken">demo-1a2b3c4d5e6f7g8h</code></div>
+          <div class="qd-token"><code id="qdToken">demo-1a2b3c4d5e6f7g8h</code><button type="button" class="qd-copy" data-copy="qdToken">Көшіру</button></div>
           <div class="qd-note">Мекенжай (URL):</div>
-          <div class="qd-token"><code id="qdUrl">https://…/api/steps/push</code></div>
+          <div class="qd-token"><code id="qdUrl">https://spirit-bot.onrender.com/api/steps/push</code><button type="button" class="qd-copy" data-copy="qdUrl">Көшіру</button></div>
           <ol class="qd-list">
             <li>«Пәрмендер» (Shortcuts) қолданбасын аш.</li>
             <li>Жаңа пәрмен: «Денсаулық» → «Қадам санын алу» (Бүгін).</li>
@@ -161,6 +161,17 @@
     });
     document.getElementById('qdSetupBtn').addEventListener('click',()=>{
       document.getElementById('qdSetupBox').classList.toggle('hidden');
+    });
+    document.querySelectorAll('.qd-copy').forEach((b)=>{
+      b.addEventListener('click', async ()=>{
+        const el=document.getElementById(b.dataset.copy);
+        const text=el?el.textContent.trim():'';
+        if(!text) return;
+        try { await navigator.clipboard.writeText(text); }
+        catch { const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch{} document.body.removeChild(ta); }
+        const old=b.textContent; b.textContent='✓ Көшірілді'; b.classList.add('done');
+        setTimeout(()=>{ b.textContent=old; b.classList.remove('done'); },1500);
+      });
     });
 
     qdRenderWeek(); qdRenderMonths(); qdRenderMonth(6);

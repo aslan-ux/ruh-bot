@@ -509,6 +509,32 @@ document.getElementById('qdSetupBtn')?.addEventListener('click', () => {
   document.getElementById('qdSetupBox').classList.toggle('hidden');
 });
 
+// Кнопки «Көшіру» (копировать токен / адрес)
+async function copyText(text) {
+  if (!text) return false;
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta); return ok;
+  }
+}
+document.querySelectorAll('.qd-copy').forEach((b) => {
+  b.addEventListener('click', async () => {
+    const el = document.getElementById(b.dataset.copy);
+    const text = el ? el.textContent.trim() : '';
+    if (!text || text === '—') return;
+    const ok = await copyText(text);
+    const old = b.textContent;
+    b.textContent = ok ? '✓ Көшірілді' : 'Қате';
+    b.classList.add('done');
+    tg.HapticFeedback?.notificationOccurred(ok ? 'success' : 'error');
+    setTimeout(() => { b.textContent = old; b.classList.remove('done'); }, 1500);
+  });
+});
+
 // ---------- Старт ----------
 async function init() {
   fillDates();
