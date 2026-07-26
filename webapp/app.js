@@ -392,10 +392,10 @@ async function loadQadam() {
   QD.leaderboard = r.leaderboard || { day: [], week: [], month: [] };
   document.getElementById('qdToken').textContent = r.syncToken || '—';
   document.getElementById('qdUrl').textContent = location.origin + '/api/steps/push';
-  QD.selMonth = Number(QD.today.slice(5, 7)) - 1;
+  QD.selMonth = null;
   qdRenderWeek();
   qdRenderMonths();
-  qdRenderMonth(QD.selMonth);
+  qdHideMonth();
   qdSetRing(qdStepsOn(QD.today));
   document.getElementById('qdSelDay').textContent = 'Бүгін · ' + qdFmt(qdStepsOn(QD.today)) + ' қадам';
   qdRenderLb();
@@ -413,7 +413,7 @@ function qdRenderWeek() {
     el.className = 'qd-day' + (i === 0 ? ' active' : '');
     el.innerHTML = '<div class="wd">' + KK_WD[d.getUTCDay()] + '</div>' +
       '<div class="dot">' + d.getUTCDate() + '</div>' +
-      '<div class="st">' + qdShort(steps) + '</div>';
+      '<div class="st">' + (steps ? qdFmt(steps) : '—') + '</div>';
     el.onclick = () => {
       document.querySelectorAll('.qd-day').forEach((x) => x.classList.remove('active'));
       document.querySelectorAll('.qd-cell').forEach((x) => x.classList.remove('sel'));
@@ -433,13 +433,28 @@ function qdRenderMonths() {
     const el = document.createElement('div');
     el.className = 'qd-mon';
     el.textContent = nm;
-    el.onclick = () => qdRenderMonth(mi);
+    el.onclick = () => qdToggleMonthView(mi);
     m.appendChild(el);
   });
 }
 
+// Тап по месяцу: показать его календарь; повторный тап по активному — скрыть
+function qdToggleMonthView(mi) {
+  const wrap = document.getElementById('qdCalWrap');
+  const shown = QD.selMonth === mi && !wrap.classList.contains('hidden');
+  if (shown) { qdHideMonth(); return; }
+  qdRenderMonth(mi);
+}
+
+function qdHideMonth() {
+  QD.selMonth = null;
+  document.getElementById('qdCalWrap').classList.add('hidden');
+  document.querySelectorAll('#qdMonths .qd-mon').forEach((x) => x.classList.remove('active'));
+}
+
 function qdRenderMonth(mi) {
   QD.selMonth = mi;
+  document.getElementById('qdCalWrap').classList.remove('hidden');
   const year = Number(QD.today.slice(0, 4));
   document.querySelectorAll('#qdMonths .qd-mon').forEach((x, i) => x.classList.toggle('active', i === mi));
   const active = document.querySelector('#qdMonths .qd-mon.active');
@@ -465,7 +480,7 @@ function qdRenderMonth(mi) {
     const steps = qdStepsOn(ds);
     const c = document.createElement('div');
     c.className = 'qd-cell' + (ds === QD.today ? ' today' : '');
-    c.innerHTML = '<div class="d">' + d + '</div><div class="s">' + (steps ? qdShort(steps) : '') + '</div>';
+    c.innerHTML = '<div class="d">' + d + '</div><div class="s">' + (steps ? qdFmt(steps) : '') + '</div>';
     c.onclick = () => {
       document.querySelectorAll('.qd-cell').forEach((x) => x.classList.remove('sel'));
       document.querySelectorAll('.qd-day').forEach((x) => x.classList.remove('active'));

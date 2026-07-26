@@ -37,9 +37,11 @@
 
       <div class="qd-sect">Айлар</div>
       <div class="qd-months" id="qdMonths"></div>
-      <div class="qd-montotal" id="qdMonTotal"></div>
-      <div class="qd-calhead"><div>Дс</div><div>Сс</div><div>Ср</div><div>Бс</div><div>Жм</div><div>Сб</div><div>Жс</div></div>
-      <div class="qd-cal" id="qdCal"></div>
+      <div id="qdCalWrap" class="hidden">
+        <div class="qd-montotal" id="qdMonTotal"></div>
+        <div class="qd-calhead"><div>Дс</div><div>Сс</div><div>Ср</div><div>Бс</div><div>Жм</div><div>Сб</div><div>Жс</div></div>
+        <div class="qd-cal" id="qdCal"></div>
+      </div>
 
       <div class="qd-sect">Рейтинг</div>
       <div class="qd-seg" id="qdSeg">
@@ -103,7 +105,7 @@
         const d=new Date(base.getTime()-i*86400000);
         const ds=d.toISOString().slice(0,10), steps=qdStepsOn(ds);
         const el=document.createElement('div'); el.className='qd-day'+(i===0?' active':'');
-        el.innerHTML='<div class="wd">'+KK_WD[d.getUTCDay()]+'</div><div class="dot">'+d.getUTCDate()+'</div><div class="st">'+qdShort(steps)+'</div>';
+        el.innerHTML='<div class="wd">'+KK_WD[d.getUTCDay()]+'</div><div class="dot">'+d.getUTCDate()+'</div><div class="st">'+(steps?qdFmt(steps):'—')+'</div>';
         el.onclick=()=>{
           document.querySelectorAll('.qd-day').forEach(x=>x.classList.remove('active'));
           document.querySelectorAll('.qd-cell').forEach(x=>x.classList.remove('sel'));
@@ -117,11 +119,23 @@
       const m=document.getElementById('qdMonths'); m.innerHTML='';
       KK_MON_SHORT.forEach((nm,mi)=>{
         const el=document.createElement('div'); el.className='qd-mon'; el.textContent=nm;
-        el.onclick=()=>qdRenderMonth(mi); m.appendChild(el);
+        el.onclick=()=>qdToggleMonthView(mi); m.appendChild(el);
       });
     }
+    function qdToggleMonthView(mi){
+      const wrap=document.getElementById('qdCalWrap');
+      const shown=QD.selMonth===mi && !wrap.classList.contains('hidden');
+      if(shown){ qdHideMonth(); return; }
+      qdRenderMonth(mi);
+    }
+    function qdHideMonth(){
+      QD.selMonth=null;
+      document.getElementById('qdCalWrap').classList.add('hidden');
+      document.querySelectorAll('#qdMonths .qd-mon').forEach(x=>x.classList.remove('active'));
+    }
     function qdRenderMonth(mi){
-      QD.selMonth=mi; const year=Number(QD.today.slice(0,4));
+      QD.selMonth=mi; document.getElementById('qdCalWrap').classList.remove('hidden');
+      const year=Number(QD.today.slice(0,4));
       document.querySelectorAll('#qdMonths .qd-mon').forEach((x,i)=>x.classList.toggle('active',i===mi));
       const active=document.querySelector('#qdMonths .qd-mon.active'); if(active) active.scrollIntoView({inline:'center',block:'nearest'});
       const n=new Date(Date.UTC(year,mi+1,0)).getUTCDate();
@@ -133,7 +147,7 @@
       for(let d=1;d<=n;d++){
         const ds=year+'-'+qdPad(mi+1)+'-'+qdPad(d), steps=qdStepsOn(ds);
         const c=document.createElement('div'); c.className='qd-cell'+(ds===QD.today?' today':'');
-        c.innerHTML='<div class="d">'+d+'</div><div class="s">'+(steps?qdShort(steps):'')+'</div>';
+        c.innerHTML='<div class="d">'+d+'</div><div class="s">'+(steps?qdFmt(steps):'')+'</div>';
         c.onclick=()=>{
           document.querySelectorAll('.qd-cell').forEach(x=>x.classList.remove('sel'));
           document.querySelectorAll('.qd-day').forEach(x=>x.classList.remove('active'));
@@ -177,7 +191,7 @@
       });
     });
 
-    qdRenderWeek(); qdRenderMonths(); qdRenderMonth(6);
+    qdRenderWeek(); qdRenderMonths(); qdHideMonth();
     qdSetRing(qdStepsOn(QD.today));
     document.getElementById('qdSelDay').textContent='Бүгін · '+qdFmt(qdStepsOn(QD.today))+' қадам';
     qdRenderLb();
