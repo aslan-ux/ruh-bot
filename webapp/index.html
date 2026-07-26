@@ -9,6 +9,26 @@
 </head>
 <body>
 
+  <!-- SVG-спрайт иконок (минималистичные line-иконки) -->
+  <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.5"/><path d="M9.5 20v-5.5h5V20"/></g></symbol>
+    <symbol id="i-steps" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><path d="M9.3 3.1c1.5.3 2.3 2.3 1.8 4.5-.5 2.1-1.9 3.5-3.4 3.2-1.5-.3-2.3-2.3-1.8-4.5.5-2.1 1.9-3.5 3.4-3.2Z"/><path d="M8 12.5c1.3.2 2.1 1.5 1.8 2.9-.3 1.4-1.6 2.3-2.9 2-1.3-.3-2.1-1.6-1.8-3 .3-1.4 1.6-2.2 2.9-1.9Z"/><path d="M15.4 8c1.5.3 2.3 2.3 1.8 4.5-.5 2.1-1.9 3.5-3.4 3.2-1.5-.3-2.3-2.3-1.8-4.5.5-2.1 1.9-3.5 3.4-3.2Z"/><path d="M14.1 17.4c1.3.2 2.1 1.5 1.8 2.9-.3 1.4-1.6 2.3-2.9 2-1.3-.3-2.1-1.6-1.8-3 .3-1.4 1.6-2.2 2.9-1.9Z"/></g></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.6"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h15"/><path d="M8 19v-4"/><path d="M12.5 19v-8"/><path d="M17 19v-5.5"/></g></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></g></symbol>
+    <symbol id="i-sprout" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8"/><path d="M12 13.5C12 10.5 9.5 8 6.5 8c0 3 2.5 5.5 5.5 5.5Z"/><path d="M12 11.5C12 9 14 7 16.5 7c0 2.5-2 4.5-4.5 4.5Z"/></g></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-2.5Z"/><path d="M9 12l2.2 2.2L15.5 10"/></g></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.2" r="2.9"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.2 6a2.9 2.9 0 0 1 0 5.6"/><path d="M17.5 14.3c1.9.5 3.5 2 3.5 4.2"/></g></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.4C10 5.1 7.5 4.7 4.5 4.7V17c3 0 5.4.4 7.5 1.8 2.1-1.4 4.5-1.8 7.5-1.8V4.7c-3 0-5.5.4-7.5 1.7Z"/><path d="M12 6.4v12.4"/></g></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.6"/><path d="M11 18h2"/></g></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.3l2.8 1.7"/></g></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.1-5.2"/><path d="M20 4.5V9h-4.5"/></g></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A7.5 7.5 0 1 1 10.5 4 6 6 0 0 0 20 13.5Z"/></g></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15l6-5.5"/></g></symbol>
+  </svg>
+
   <!-- ЭКРАН: Регистрация -->
   <section id="screen-register" class="screen">
     <div class="reg-head">
@@ -63,7 +83,7 @@
         <button type="button" class="country-btn" id="countryBtn">
           <span id="countryFlag">🇰🇿</span>
           <span class="code" id="countryCode">+7</span>
-          <span>▾</span>
+          <span class="chev"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-chevron"/></svg></span>
         </button>
         <input class="input" id="phone" inputmode="tel" placeholder="000 000 00 00" style="flex:1;" />
       </div>
@@ -85,7 +105,7 @@
   <!-- ЭКРАН: Ожидание подтверждения -->
   <section id="screen-pending" class="screen">
     <div class="placeholder-screen">
-      <div class="ic">⏳</div>
+      <div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
       <div class="t">Өтінішің қабылданды!</div>
       <div class="d">Мәліметтерің сақталды. Әкімші растағаннан кейін қосымша ашылады.</div>
       <button class="btn-primary" id="checkStatusBtn" style="max-width:240px; margin:18px auto 0;">Тексеру</button>
@@ -96,10 +116,10 @@
   <!-- ЭКРАН: Главная -->
   <section id="screen-home" class="screen">
     <div class="values">
-      <div class="value"><div class="ic">🌱</div><div class="lbl">Өсу</div></div>
-      <div class="value"><div class="ic">⚖️</div><div class="lbl">Тәртіп</div></div>
-      <div class="value"><div class="ic">🤝</div><div class="lbl">Қауым.</div></div>
-      <div class="value"><div class="ic">🎯</div><div class="lbl">Мақсат</div></div>
+      <div class="value"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-sprout"/></svg></div><div class="lbl">Өсу</div></div>
+      <div class="value"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="lbl">Тәртіп</div></div>
+      <div class="value"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-people"/></svg></div><div class="lbl">Қауым.</div></div>
+      <div class="value"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-target"/></svg></div><div class="lbl">Мақсат</div></div>
     </div>
 
     <div class="slogan">
@@ -108,7 +128,7 @@
     </div>
 
     <div class="book-card">
-      <div class="book-cover" id="bookCover">📖</div>
+      <div class="book-cover" id="bookCover"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-book"/></svg></div>
       <div class="book-meta">
         <div class="cap">Осы айдың кітабы</div>
         <div class="title" id="bookTitle">Жүктелуде…</div>
@@ -118,13 +138,13 @@
     </div>
   </section>
 
-  <!-- ЭКРАН: Заглушки -->
+  <!-- ЭКРАН: Қадам -->
   <section id="screen-qadam" class="screen">
-    <h1 style="text-align:center; margin-bottom:12px;">👣 Қадам <button type="button" id="qdRefreshBtn" class="qd-refresh" title="Жаңарту" aria-label="Жаңарту">↻</button></h1>
+    <h1 class="screen-title" style="margin-bottom:12px;"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-steps"/></svg> Қадам <button type="button" id="qdRefreshBtn" class="qd-refresh" title="Жаңарту" aria-label="Жаңарту"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-refresh"/></svg></button></h1>
     <div class="qd-ringwrap">
       <svg viewBox="0 0 200 200" width="184" height="184">
-        <circle cx="100" cy="100" r="86" fill="none" stroke="#D6ECE0" stroke-width="16"/>
-        <circle id="qdArc" cx="100" cy="100" r="86" fill="none" stroke="#1D9E75" stroke-width="16" stroke-linecap="round" transform="rotate(-90 100 100)" stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
+        <circle class="qd-ring-track" cx="100" cy="100" r="86" fill="none" stroke-width="16"/>
+        <circle id="qdArc" cx="100" cy="100" r="86" fill="none" stroke-width="16" stroke-linecap="round" transform="rotate(-90 100 100)" stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
       </svg>
       <div class="qd-ringcenter">
         <div class="qd-steps" id="qdSteps">0</div>
@@ -152,7 +172,7 @@
     <div id="qdLb"></div>
 
     <div class="qd-connect">
-      <div class="qd-connect-t">📲 Қадамды автоматты санау (iPhone)</div>
+      <div class="qd-connect-t"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-phone"/></svg> Қадамды автоматты санау (iPhone)</div>
       <button class="qd-connect-btn" id="qdSetupBtn">Қосу нұсқаулығы</button>
       <div id="qdSetupBox" class="hidden">
         <div class="qd-note">Құпия токенің (ешкімге көрсетпе):</div>
@@ -168,28 +188,41 @@
       </div>
     </div>
   </section>
+
   <section id="screen-qarjy" class="screen">
-    <div class="placeholder-screen"><div class="ic">💰</div><div class="t">Қаржы</div><div class="d">Бөлім жасалу үстінде</div></div>
+    <div class="placeholder-screen"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-wallet"/></svg></div><div class="t">Қаржы</div><div class="d">Бөлім жасалу үстінде</div></div>
   </section>
   <section id="screen-progress" class="screen">
-    <div class="placeholder-screen"><div class="ic">📈</div><div class="t">Прогресс</div><div class="d">Бөлім жасалу үстінде</div></div>
+    <div class="placeholder-screen"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-chart"/></svg></div><div class="t">Прогресс</div><div class="d">Бөлім жасалу үстінде</div></div>
   </section>
+
+  <!-- ЭКРАН: Профиль (тема) -->
   <section id="screen-profile" class="screen">
-    <div class="placeholder-screen"><div class="ic">👤</div><div class="t">Профиль</div><div class="d">Бөлім жасалу үстінде</div></div>
+    <div class="profile-head">
+      <div class="profile-avatar"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="name" id="profileName">Профиль</div>
+    </div>
+    <div class="qd-sect" style="margin-top:0;">Тема</div>
+    <div class="qd-seg" id="themeSeg">
+      <button type="button" data-theme-val="auto" class="active">Авто</button>
+      <button type="button" data-theme-val="light">Ашық</button>
+      <button type="button" data-theme-val="dark">Күңгірт</button>
+    </div>
+    <div class="profile-hint">«Авто» — телефон/Telegram параметріне сай ауысады.</div>
   </section>
 
   <!-- Нижняя панель -->
   <nav class="tabbar" id="tabbar">
-    <button class="tab" data-screen="qadam"><span class="ic">👣</span><span class="lbl">Қадам</span></button>
-    <button class="tab" data-screen="qarjy"><span class="ic">💰</span><span class="lbl">Қаржы</span></button>
-    <button class="tab center active" data-screen="home"><span class="ic">🏠</span><span class="lbl">Басты бет</span></button>
-    <button class="tab" data-screen="progress"><span class="ic">📈</span><span class="lbl">Прогресс</span></button>
-    <button class="tab" data-screen="profile"><span class="ic">👤</span><span class="lbl">Профиль</span></button>
+    <button class="tab" data-screen="qadam"><span class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-steps"/></svg></span><span class="lbl">Қадам</span></button>
+    <button class="tab" data-screen="qarjy"><span class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-wallet"/></svg></span><span class="lbl">Қаржы</span></button>
+    <button class="tab center active" data-screen="home"><span class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-home"/></svg></span><span class="lbl">Басты бет</span></button>
+    <button class="tab" data-screen="progress"><span class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-chart"/></svg></span><span class="lbl">Прогресс</span></button>
+    <button class="tab" data-screen="profile"><span class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-user"/></svg></span><span class="lbl">Профиль</span></button>
   </nav>
 
   <!-- Модалка выбора страны -->
-  <div id="countryModal" class="hidden" style="position:fixed; inset:0; background:rgba(15,92,67,.35); z-index:50; display:flex; align-items:flex-end;">
-    <div style="background:#fff; width:100%; max-height:70vh; border-radius:18px 18px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px)); overflow:auto;">
+  <div id="countryModal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:flex; align-items:flex-end;">
+    <div style="background:var(--card); color:var(--text); width:100%; max-height:70vh; border-radius:18px 18px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px)); overflow:auto;">
       <input class="input" id="countrySearch" placeholder="Елді іздеу…" style="margin-bottom:10px;" />
       <div id="countryList"></div>
     </div>

@@ -2,6 +2,39 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
+// ---------- Тема (авто по Telegram/системе + ручной выбор) ----------
+const THEME_KEY = 'spirit-theme';
+function themePref() { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch { return 'auto'; } }
+function systemDark() {
+  if (tg && tg.colorScheme) return tg.colorScheme === 'dark';
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+function applyTheme() {
+  const pref = themePref();
+  const dark = pref === 'dark' || (pref === 'auto' && systemDark());
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  try {
+    tg.setBackgroundColor && tg.setBackgroundColor(dark ? '#0F0F14' : '#FFFFFF');
+    tg.setHeaderColor && tg.setHeaderColor(dark ? '#0F0F14' : '#FFFFFF');
+  } catch {}
+  document.querySelectorAll('#themeSeg button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.themeVal === pref);
+  });
+}
+function initThemeControls() {
+  document.querySelectorAll('#themeSeg button').forEach((b) => {
+    b.addEventListener('click', () => {
+      try { localStorage.setItem(THEME_KEY, b.dataset.themeVal); } catch {}
+      applyTheme();
+    });
+  });
+  try { tg.onEvent && tg.onEvent('themeChanged', applyTheme); } catch {}
+  const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq && mq.addEventListener) mq.addEventListener('change', applyTheme);
+  applyTheme();
+}
+applyTheme(); // применить как можно раньше (до полной инициализации)
+
 // ---------- Страны (флаг, код, название) ----------
 const COUNTRIES = [
   { c: 'Казахстан', flag: '🇰🇿', code: '+7' },
@@ -340,7 +373,7 @@ async function loadBook() {
     document.getElementById('bookProgress').textContent = Math.round(b.progress || 0) + '%';
     const cover = document.getElementById('bookCover');
     if (b.cover) cover.innerHTML = `<img src="${b.cover}" alt="" />`;
-    else cover.textContent = '📖';
+    else cover.innerHTML = '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-book"/></svg>';
   } catch {}
 }
 
@@ -572,12 +605,25 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) qdRe
 window.addEventListener('focus', () => qdRefresh());
 document.getElementById('qdRefreshBtn')?.addEventListener('click', () => qdRefresh(true));
 
+// ---------- Профиль: имя ----------
+function setProfileName(user) {
+  const el = document.getElementById('profileName');
+  if (!el) return;
+  const name = user
+    ? `${user.lastName || user.last_name || ''} ${user.firstName || user.first_name || ''}`.trim()
+    : '';
+  el.textContent = name || 'Профиль';
+}
+
 // ---------- Старт ----------
 async function init() {
+  initThemeControls();
   fillDates();
+  setProfileName(tg.initDataUnsafe && tg.initDataUnsafe.user);
   try {
     const me = await api('/api/me', {});
     if (me.ok && me.registered) {
+      if (me.user) setProfileName(me.user);
       show(me.user && me.user.status === 'approved' ? 'home' : 'pending');
     } else {
       show('register');

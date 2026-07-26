@@ -1,13 +1,50 @@
 :root {
-  --green: #1D9E75;
-  --green-dark: #0F5C43;
-  --green-soft: #4b8a72;
-  --bg: #F1F8F4;
+  /* Акцент — индиго-ирис (уникальный, минималистичный, под белый фон) */
+  --accent: #5E5CE6;
+  --accent-strong: #4B49C8;
+  --accent-soft: rgba(94, 92, 230, 0.10);
+  --on-accent: #ffffff;
+
+  --bg: #ffffff;
   --card: #ffffff;
-  --line: #CDE7DA;
-  --tint: #E3F1EA;
-  --placeholder: #9bb3a8;
+  --surface: #F6F6FA;
+  --line: #ECECF2;
+  --text: #17171F;
+  --placeholder: #A6A6B4;
+  --ring-track: #ECECF2;
+  --shadow: 0 1px 3px rgba(20, 20, 40, 0.06);
+  --shadow-accent: 0 6px 18px rgba(94, 92, 230, 0.28);
+
+  /* Совместимость со старыми правилами (алиасы) */
+  --green: var(--accent);
+  --green-dark: var(--text);
+  --green-soft: #6E6E7C;
+  --tint: var(--surface);
 }
+
+:root[data-theme="dark"] {
+  --accent: #7D7AFF;
+  --accent-strong: #9B99FF;
+  --accent-soft: rgba(125, 122, 255, 0.16);
+  --on-accent: #ffffff;
+
+  --bg: #0F0F14;
+  --card: #191921;
+  --surface: #20202B;
+  --line: #2A2A36;
+  --text: #F3F3F8;
+  --placeholder: #6C6C7C;
+  --ring-track: #2A2A36;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-accent: 0 6px 18px rgba(125, 122, 255, 0.32);
+
+  --green: var(--accent);
+  --green-dark: var(--text);
+  --green-soft: #9A9AAB;
+  --tint: var(--surface);
+}
+
+html { color-scheme: light dark; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -15,8 +52,14 @@ body {
   margin: 0;
   font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
-  color: var(--green-dark);
+  color: var(--text);
   padding-bottom: 90px;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .25s ease, color .25s ease;
+}
+.card, .value, .book-card, .qd-day, .qd-cell, .qd-mon, .qd-lbitem, .tabbar,
+.input, .country-btn, .qd-connect, .qd-token, .qd-seg, .btn-primary {
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
 }
 
 .screen { display: none; padding: 18px 16px; }
@@ -53,11 +96,14 @@ h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 select.input { background-image: none; padding-right: 12px; }
 
 .btn-primary {
-  width: 100%; background: var(--green); color: #fff; border: none;
-  border-radius: 13px; padding: 14px; font-size: 16px; font-weight: 500;
-  margin-top: 8px; cursor: pointer;
+  width: 100%; background: var(--accent); color: var(--on-accent); border: none;
+  border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 600; letter-spacing: .2px;
+  margin-top: 8px; cursor: pointer; box-shadow: var(--shadow-accent);
+  transition: transform .12s ease, background-color .2s ease, box-shadow .2s ease;
 }
-.btn-primary:disabled { opacity: 0.6; }
+.btn-primary:hover { background: var(--accent-strong); }
+.btn-primary:active { transform: scale(.985); }
+.btn-primary:disabled { opacity: 0.5; box-shadow: none; }
 
 .hint { font-size: 13px; color: var(--green-soft); text-align: center; margin-top: 10px; min-height: 18px; }
 
@@ -118,18 +164,20 @@ select.input { background-image: none; padding-right: 12px; }
   padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px));
 }
 .tab {
-  flex: 1; text-align: center; color: #7fa694; cursor: pointer; background: none; border: none;
+  flex: 1; text-align: center; color: var(--placeholder); cursor: pointer; background: none; border: none;
+  transition: color .2s ease;
 }
-.tab .ic { font-size: 22px; display: block; }
-.tab .lbl { font-size: 10px; margin-top: 2px; }
-.tab.active { color: var(--green-dark); }
+.tab .ic { display: flex; justify-content: center; }
+.tab .lbl { font-size: 10px; margin-top: 3px; }
+.tab.active { color: var(--accent); }
 .tab.center { position: relative; }
 .tab.center .ic {
-  width: 56px; height: 56px; border-radius: 50%; background: var(--green); color: #fff;
-  display: flex; align-items: center; justify-content: center; font-size: 26px;
-  margin: -32px auto 0; border: 4px solid var(--bg);
+  width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: var(--on-accent);
+  display: flex; align-items: center; justify-content: center;
+  margin: -32px auto 0; border: 4px solid var(--bg); box-shadow: var(--shadow-accent);
 }
-.tab.center .lbl { color: var(--green-dark); font-weight: 500; margin-top: 4px; }
+.tab.center.active { color: var(--accent); }
+.tab.center .lbl { color: var(--text); font-weight: 500; margin-top: 4px; }
 
 .hidden { display: none !important; }
 
@@ -249,4 +297,59 @@ input, textarea, select {
   border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 500;
   cursor: pointer; white-space: nowrap;
 }
-.qd-copy.done { background: var(--green-dark); }
+.qd-copy.done { background: var(--accent-strong); }
+
+/* ================= Иконки (SVG-спрайт) + полировка ================= */
+.svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ic-svg { display: block; width: 24px; height: 24px; }
+
+.tab .ic-svg { width: 24px; height: 24px; }
+.tab.center .ic-svg { width: 26px; height: 26px; }
+
+.value .ic { display: flex; justify-content: center; color: var(--accent); margin-bottom: 3px; }
+.value .ic-svg { width: 24px; height: 24px; }
+
+.placeholder-screen .ic { display: flex; justify-content: center; color: var(--accent); }
+.placeholder-screen .ic-svg { width: 44px; height: 44px; }
+
+.book-cover .ic-svg { width: 34px; height: 34px; }
+
+/* Кольцо шагов — цвета из темы */
+.qd-ring-track { stroke: var(--ring-track); }
+#qdArc { stroke: var(--accent); }
+
+/* Заголовок экрана с иконкой */
+.screen-title { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.screen-title .ic-svg { width: 22px; height: 22px; color: var(--accent); }
+
+/* Кнопка обновления — иконка */
+.qd-refresh { display: inline-flex; align-items: center; justify-content: center; }
+.qd-refresh .ic-svg { width: 16px; height: 16px; }
+
+/* Заголовок «подключить» с иконкой */
+.qd-connect-t { display: flex; align-items: center; gap: 8px; }
+.qd-connect-t .ic-svg { width: 18px; height: 18px; color: var(--accent); }
+
+/* Chevron в кнопке страны */
+.country-btn .chev { display: inline-flex; }
+.country-btn .chev .ic-svg { width: 16px; height: 16px; color: var(--placeholder); }
+
+/* Сегмент-контролы (рейтинг, тема) — активный = мягкий акцент */
+.qd-seg button.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
+
+/* Press-feedback */
+.qd-connect-btn, .country-btn, .qd-copy, .qd-seg button, .qd-mon, .qd-day, .qd-cell, .tab {
+  transition: transform .12s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.qd-connect-btn:active, .country-btn:active, .qd-copy:active, .qd-seg button:active { transform: scale(.98); }
+
+/* Профиль */
+.profile-hint { text-align: center; color: var(--green-soft); font-size: 12px; margin-top: 8px; }
+.profile-head { text-align: center; margin-bottom: 18px; }
+.profile-head .name { font-size: 18px; font-weight: 600; margin-top: 10px; }
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 50%; margin: 0 auto;
+  background: var(--accent-soft); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.profile-avatar .ic-svg { width: 34px; height: 34px; }
