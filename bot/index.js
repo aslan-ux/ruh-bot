@@ -18,6 +18,9 @@ import {
   setSteps,
   getUserSteps,
   getStepsSince,
+  getAllSteps,
+  getGoal,
+  setGoal,
 } from './storage.js';
 
 // Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
@@ -170,6 +173,7 @@ app.post('/api/steps/me', async (req, res) => {
     ok: true,
     registered: true,
     syncToken,
+    goal: await getGoal(),
     steps: mySteps,
     today,
     leaderboard: {
@@ -193,7 +197,48 @@ app.post('/api/steps/push', async (req, res) => {
 // ---------- Админка ----------
 app.get('/api/admin/data', async (req, res) => {
   if (!requireAdmin(req, res)) return;
-  res.json({ ok: true, book: await getBook(), users: await getUsers() });
+  res.json({ ok: true, book: await getBook(), users: await getUsers(), goal: await getGoal() });
+});
+
+// Изменить общую цель шагов (мақсат) — применится ко всем участникам
+app.post('/api/admin/goal', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const goal = await setGoal(req.body?.goal);
+  res.json({ ok: true, goal });
+});
+
+// Шаги всех участников: сегодня / неделя / месяц / всего
+app.get('/api/admin/steps', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const users = await getUsers();
+  const all = await getAllSteps();
+  const today = kzDate(0);
+  const weekStart = kzDate(6);
+  const monthStart = today.slice(0, 8) + '01';
+
+  const byUser = {};
+  all.forEach((s) => {
+    const b = byUser[s.telegramId] || (byUser[s.telegramId] = { today: 0, week: 0, month: 0, total: 0, last: '' });
+    const st = Number(s.steps) || 0;
+    b.total += st;
+    if (s.date === today) b.today += st;
+    if (s.date >= weekStart) b.week += st;
+    if (s.date >= monthStart) b.month += st;
+    if (s.date > b.last) b.last = s.date;
+  });
+
+  const rows = users.map((u) => {
+    const b = byUser[u.telegramId] || { today: 0, week: 0, month: 0, total: 0, last: '' };
+    return {
+      telegramId: u.telegramId,
+      name: `${u.lastName || ''} ${u.firstName || ''}`.trim() || (u.firstName || 'Қатысушы'),
+      email: u.email || '',
+      phone: u.phone || '',
+      today: b.today, week: b.week, month: b.month, total: b.total, last: b.last,
+    };
+  }).sort((a, b) => b.today - a.today || b.total - a.total);
+
+  res.json({ ok: true, goal: await getGoal(), today, rows });
 });
 
 app.post('/api/admin/book', async (req, res) => {

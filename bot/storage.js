@@ -147,9 +147,39 @@ export async function getUserSteps(telegramId) {
   return (readJson(STEPS_FILE, [])).filter((x) => x.telegramId === telegramId);
 }
 
+export async function getAllSteps() {
+  if (useMongo) return col.steps.find({}, { projection: { _id: 0 } }).toArray();
+  return readJson(STEPS_FILE, []);
+}
+
 export async function getStepsSince(dateStr) {
   if (useMongo) return col.steps.find({ date: { $gte: dateStr } }, { projection: { _id: 0 } }).toArray();
   return (readJson(STEPS_FILE, [])).filter((x) => x.date >= dateStr);
+}
+
+// ---------- Настройки: күнделікті мақсат (общая цель шагов) ----------
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const DEFAULT_GOAL = 10000;
+
+export async function getGoal() {
+  if (useMongo) {
+    const m = await col.meta.findOne({ _id: 'goal' });
+    return (m && Number(m.value)) || DEFAULT_GOAL;
+  }
+  const s = readJson(SETTINGS_FILE, {});
+  return Number(s.goal) || DEFAULT_GOAL;
+}
+
+export async function setGoal(goal) {
+  const g = Math.max(1, Math.floor(Number(goal) || DEFAULT_GOAL));
+  if (useMongo) {
+    await col.meta.updateOne({ _id: 'goal' }, { $set: { value: g } }, { upsert: true });
+    return g;
+  }
+  const s = readJson(SETTINGS_FILE, {});
+  s.goal = g;
+  writeJson(SETTINGS_FILE, s);
+  return g;
 }
 
 // ---------- Книга ----------
