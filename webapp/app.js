@@ -370,7 +370,8 @@ document.getElementById('checkStatusBtn')?.addEventListener('click', async () =>
 const QD = { stepsMap: {}, today: '', leaderboard: { day: [], week: [], month: [] }, period: 'day', selMonth: null };
 const KK_WD = ['Жс', 'Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сб']; // index = getUTCDay()
 const KK_MON_SHORT = ['Қаң', 'Ақп', 'Нау', 'Сәу', 'Мам', 'Мау', 'Шіл', 'Там', 'Қыр', 'Қаз', 'Қар', 'Жел'];
-const QD_GOAL = 10000, QD_C = 540.35;
+let QD_GOAL = 10000;
+const QD_C = 540.35;
 
 function qdFmt(n) { return (Number(n) || 0).toLocaleString('ru-RU'); }
 function qdPad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -390,6 +391,9 @@ async function loadQadam() {
   (r.steps || []).forEach((x) => { QD.stepsMap[x.date] = x.steps; });
   QD.today = r.today || new Date().toISOString().slice(0, 10);
   QD.leaderboard = r.leaderboard || { day: [], week: [], month: [] };
+  QD_GOAL = Number(r.goal) || 10000;
+  const goalEl = document.getElementById('qdGoal');
+  if (goalEl) goalEl.textContent = 'мақсат: ' + qdFmt(QD_GOAL);
   document.getElementById('qdToken').textContent = r.syncToken || '—';
   document.getElementById('qdUrl').textContent = location.origin + '/api/steps/push';
   QD.selMonth = null;

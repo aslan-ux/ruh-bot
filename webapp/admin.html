@@ -100,8 +100,24 @@
         <!-- Қадам -->
         <section id="tab-qadam" class="tab-content">
           <h2>👣 Қадам</h2>
+          <div class="card" style="margin-bottom:14px;">
+            <label>Күнделікті мақсат (қадам) — барлық қатысушыға ортақ</label>
+            <div class="row">
+              <input id="goalInput" type="number" min="1" step="500" placeholder="10000" style="flex:1; min-width:160px;" />
+              <button id="saveGoal">Сақтау</button>
+            </div>
+            <div class="hint" id="goalHint">Өзгертсең, мини-аппта барлық қатысушыда жаңа мақсат көрінеді.</div>
+          </div>
           <input class="search" id="search-qadam" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
-          <div id="list-qadam"></div>
+          <div class="hint" id="qadamMeta" style="margin-bottom:8px;"></div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>Аты-жөні</th><th>Бүгін</th><th>Апта</th><th>Ай</th><th>Барлығы</th></tr>
+              </thead>
+              <tbody id="tbody-qadam"></tbody>
+            </table>
+          </div>
         </section>
 
         <!-- Қаржы -->
@@ -194,8 +210,51 @@ function applyData(data) {
   document.getElementById('cover').value = b.cover || '';
   document.getElementById('progress').value = b.progress || 0;
   document.getElementById('coverPreview').src = b.cover || '';
+  document.getElementById('goalInput').value = data.goal || 10000;
   renderUchastniki();
-  ['qadam', 'qarjy', 'progress'].forEach(renderStub);
+  ['qarjy', 'progress'].forEach(renderStub);
+  loadQadamAdmin();
+}
+
+// ---------- Қадам: цель + таблица шагов ----------
+let STEPS_ROWS = [];
+function fmt(n) { return (Number(n) || 0).toLocaleString('ru-RU'); }
+
+async function loadQadamAdmin() {
+  const meta = document.getElementById('qadamMeta');
+  meta.textContent = 'Жүктелуде…';
+  try {
+    const res = await fetch('/api/admin/steps', { headers: { 'X-Admin-Key': ADMIN_KEY } });
+    const r = await res.json();
+    if (!r.ok) { meta.textContent = 'Қате: ' + (r.error || ''); return; }
+    STEPS_ROWS = r.rows || [];
+    meta.textContent = `Бүгін: ${r.today} · мақсат: ${fmt(r.goal)} қадам`;
+    renderQadamTable();
+  } catch (e) {
+    meta.textContent = 'Қате: ' + e.message;
+  }
+}
+
+function renderQadamTable() {
+  const q = document.getElementById('search-qadam').value;
+  const rows = STEPS_ROWS.filter((u) => userMatches(u, q));
+  const body = document.getElementById('tbody-qadam');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="5" class="hint" style="text-align:center;">Ешкім табылмады</td></tr>';
+    return;
+  }
+  const goal = Number(document.getElementById('goalInput').value) || 10000;
+  body.innerHTML = rows.map((u) => {
+    const done = u.today >= goal;
+    const todayCell = `<b style="color:${done ? '#1D9E75' : 'inherit'}">${fmt(u.today)}</b>` + (done ? ' ✅' : '');
+    return `<tr>
+      <td>${u.name}</td>
+      <td>${todayCell}</td>
+      <td>${fmt(u.week)}</td>
+      <td>${fmt(u.month)}</td>
+      <td>${fmt(u.total)}</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderUchastniki() {
@@ -240,9 +299,10 @@ function renderStub(tabKey) {
 
 // Слушатели поиска
 document.getElementById('search-uchastniki').addEventListener('input', renderUchastniki);
-['qadam', 'qarjy', 'progress'].forEach((k) => {
+['qarjy', 'progress'].forEach((k) => {
   document.getElementById('search-' + k).addEventListener('input', () => renderStub(k));
 });
+document.getElementById('search-qadam').addEventListener('input', renderQadamTable);
 
 // Enter: вход по ключу и сохранение книги
 document.getElementById('key').addEventListener('keydown', (e) => {
@@ -275,6 +335,28 @@ async function approveUser(telegramId) {
   if (r.ok) { const d = await adminGet(); ALL_USERS = d.users || []; renderUchastniki(); }
   else alert('Қате: ' + (r.error || ''));
 }
+
+// Сохранить общую цель (мақсат)
+document.getElementById('saveGoal').addEventListener('click', async () => {
+  const hint = document.getElementById('goalHint');
+  const goal = Number(document.getElementById('goalInput').value) || 0;
+  if (goal < 1) { hint.textContent = 'Мақсат 1-ден кем болмауы керек'; return; }
+  hint.textContent = 'Сақталуда…';
+  const r = await adminPost('/api/admin/goal', { goal });
+  if (r.ok) {
+    document.getElementById('goalInput').value = r.goal;
+    hint.textContent = `✅ Сақталды: ${fmt(r.goal)} қадам (барлық қатысушыға)`;
+    renderQadamTable();
+  } else {
+    hint.textContent = 'Қате: ' + (r.error || '');
+  }
+});
+document.getElementById('goalInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('saveGoal').click();
+});
+
+// При открытии вкладки Қадам — обновить данные
+document.querySelector('#sideTabs button[data-tab="qadam"]').addEventListener('click', loadQadamAdmin);
 </script>
 </body>
 </html>
