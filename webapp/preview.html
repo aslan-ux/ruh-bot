@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spirit — Қадам (демо)</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    body { padding-bottom: 40px; }
+    .demo-wrap { max-width: 440px; margin: 0 auto; }
+    .demo-note {
+      max-width: 440px; margin: 14px auto 0; text-align: center;
+      font-size: 12px; color: var(--green-soft);
+      background: var(--tint); border-radius: 12px; padding: 10px 14px;
+    }
+    .screen { display: block !important; }
+  </style>
+</head>
+<body>
+  <div class="demo-note">👀 Демо-көрініс: «Қадам» бетінің үлгі деректермен көрінісі. Нақты сандар Telegram ішінде әр қатысушыда өз деректерімен көрсетіледі.</div>
+  <div class="demo-wrap">
+    <section id="screen-qadam" class="screen">
+      <h1 style="text-align:center; margin-bottom:12px;">👣 Қадам</h1>
+      <div class="qd-ringwrap">
+        <svg viewBox="0 0 200 200" width="184" height="184">
+          <circle cx="100" cy="100" r="86" fill="none" stroke="#D6ECE0" stroke-width="16"/>
+          <circle id="qdArc" cx="100" cy="100" r="86" fill="none" stroke="#1D9E75" stroke-width="16" stroke-linecap="round" transform="rotate(-90 100 100)" stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
+        </svg>
+        <div class="qd-ringcenter">
+          <div class="qd-steps" id="qdSteps">0</div>
+          <div class="qd-lbl">қадам</div>
+          <div class="qd-goal">мақсат: 10 000</div>
+        </div>
+      </div>
+      <div class="qd-selday" id="qdSelDay">Бүгін</div>
+      <div class="qd-week" id="qdWeek"></div>
+
+      <div class="qd-sect">Айлар</div>
+      <div class="qd-months" id="qdMonths"></div>
+      <div class="qd-montotal" id="qdMonTotal"></div>
+      <div class="qd-calhead"><div>Дс</div><div>Сс</div><div>Ср</div><div>Бс</div><div>Жм</div><div>Сб</div><div>Жс</div></div>
+      <div class="qd-cal" id="qdCal"></div>
+
+      <div class="qd-sect">Рейтинг</div>
+      <div class="qd-seg" id="qdSeg">
+        <button data-p="day" class="active">Күн</button>
+        <button data-p="week">Апта</button>
+        <button data-p="month">Ай</button>
+      </div>
+      <div id="qdLb"></div>
+
+      <div class="qd-connect">
+        <div class="qd-connect-t">📲 Қадамды автоматты санау (iPhone)</div>
+        <button class="qd-connect-btn" id="qdSetupBtn">Қосу нұсқаулығы</button>
+        <div id="qdSetupBox" class="hidden">
+          <div class="qd-note">Құпия токенің (ешкімге көрсетпе):</div>
+          <div class="qd-token"><code id="qdToken">demo-1a2b3c4d5e6f7g8h</code></div>
+          <div class="qd-note">Мекенжай (URL):</div>
+          <div class="qd-token"><code id="qdUrl">https://…/api/steps/push</code></div>
+          <ol class="qd-list">
+            <li>«Пәрмендер» (Shortcuts) қолданбасын аш.</li>
+            <li>Жаңа пәрмен: «Денсаулық» → «Қадам санын алу» (Бүгін).</li>
+            <li>«URL мазмұнын алу»: жоғарыдағы мекенжай, әдіс POST, тип JSON, өрістер: <b>token</b> = токенің, <b>steps</b> = қадам саны.</li>
+            <li>Автоматизация жаса: күн сайын автоматты орындалсын.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const MONTHS = ['қаңтар','ақпан','наурыз','сәуір','мамыр','маусым','шілде','тамыз','қыркүйек','қазан','қараша','желтоқсан'];
+    const KK_WD = ['Жс','Дс','Сс','Ср','Бс','Жм','Сб'];
+    const KK_MON_SHORT = ['Қаң','Ақп','Нау','Сәу','Мам','Мау','Шіл','Там','Қыр','Қаз','Қар','Жел'];
+    const QD_GOAL = 10000, QD_C = 540.35;
+
+    // ---- Демо-деректер (шілде 2026) ----
+    const QD = { stepsMap: {}, today: '2026-07-26', period: 'day', selMonth: 6, leaderboard: {} };
+    (function () {
+      const vals = [6200,8100,10450,7300,9200,12000,5400,8800,11020,9990,4300,7600,10800,9100,8300,12500,6700,9400,10200,8600];
+      for (let d = 1; d <= 26; d++) QD.stepsMap['2026-07-' + String(d).padStart(2,'0')] = vals[(d*7) % vals.length];
+      QD.stepsMap['2026-06-28'] = 9100; QD.stepsMap['2026-06-30'] = 7400;
+    })();
+    QD.leaderboard = {
+      day:   [{name:'Ким Дана',steps:15000},{name:'Саримбет Аслан',steps:8600,you:true},{name:'Нұр Әлі',steps:7200},{name:'Абай Ерлан',steps:5400}],
+      week:  [{name:'Саримбет Аслан',steps:64200,you:true},{name:'Ким Дана',steps:61000},{name:'Нұр Әлі',steps:52300},{name:'Абай Ерлан',steps:40100},{name:'Сая Мадина',steps:38700}],
+      month: [{name:'Ким Дана',steps:243000},{name:'Саримбет Аслан',steps:221600,you:true},{name:'Нұр Әлі',steps:198300},{name:'Абай Ерлан',steps:150100},{name:'Сая Мадина',steps:142700}],
+    };
+
+    function qdFmt(n){ return (Number(n)||0).toLocaleString('ru-RU'); }
+    function qdPad(n){ return n<10?'0'+n:''+n; }
+    function qdShort(s){ return s ? (s>=1000 ? (s/1000).toFixed(s>=10000?0:1)+'к' : String(s)) : '—'; }
+    function qdStepsOn(d){ return QD.stepsMap[d]||0; }
+    function qdSetRing(s){
+      const arc=document.getElementById('qdArc');
+      arc.setAttribute('stroke-dashoffset',(QD_C*(1-Math.min(1,(s||0)/QD_GOAL))).toFixed(1));
+      document.getElementById('qdSteps').textContent=qdFmt(s);
+    }
+    function qdRenderWeek(){
+      const wk=document.getElementById('qdWeek'); wk.innerHTML='';
+      const base=new Date(QD.today+'T12:00:00Z');
+      for(let i=6;i>=0;i--){
+        const d=new Date(base.getTime()-i*86400000);
+        const ds=d.toISOString().slice(0,10), steps=qdStepsOn(ds);
+        const el=document.createElement('div'); el.className='qd-day'+(i===0?' active':'');
+        el.innerHTML='<div class="wd">'+KK_WD[d.getUTCDay()]+'</div><div class="dot">'+d.getUTCDate()+'</div><div class="st">'+qdShort(steps)+'</div>';
+        el.onclick=()=>{
+          document.querySelectorAll('.qd-day').forEach(x=>x.classList.remove('active'));
+          document.querySelectorAll('.qd-cell').forEach(x=>x.classList.remove('sel'));
+          el.classList.add('active'); qdSetRing(steps);
+          document.getElementById('qdSelDay').textContent=(i===0?'Бүгін':d.getUTCDate()+' '+MONTHS[d.getUTCMonth()])+' · '+qdFmt(steps)+' қадам';
+        };
+        wk.appendChild(el);
+      }
+    }
+    function qdRenderMonths(){
+      const m=document.getElementById('qdMonths'); m.innerHTML='';
+      KK_MON_SHORT.forEach((nm,mi)=>{
+        const el=document.createElement('div'); el.className='qd-mon'; el.textContent=nm;
+        el.onclick=()=>qdRenderMonth(mi); m.appendChild(el);
+      });
+    }
+    function qdRenderMonth(mi){
+      QD.selMonth=mi; const year=Number(QD.today.slice(0,4));
+      document.querySelectorAll('#qdMonths .qd-mon').forEach((x,i)=>x.classList.toggle('active',i===mi));
+      const active=document.querySelector('#qdMonths .qd-mon.active'); if(active) active.scrollIntoView({inline:'center',block:'nearest'});
+      const n=new Date(Date.UTC(year,mi+1,0)).getUTCDate();
+      let total=0; for(let d=1;d<=n;d++) total+=qdStepsOn(year+'-'+qdPad(mi+1)+'-'+qdPad(d));
+      document.getElementById('qdMonTotal').innerHTML='<b>'+qdFmt(total)+'</b> <span>қадам · '+KK_MON_SHORT[mi]+'</span>';
+      const cal=document.getElementById('qdCal'); cal.innerHTML='';
+      const first=new Date(Date.UTC(year,mi,1)).getUTCDay(), off=(first+6)%7;
+      for(let o=0;o<off;o++){ const e=document.createElement('div'); e.className='qd-cell empty'; cal.appendChild(e); }
+      for(let d=1;d<=n;d++){
+        const ds=year+'-'+qdPad(mi+1)+'-'+qdPad(d), steps=qdStepsOn(ds);
+        const c=document.createElement('div'); c.className='qd-cell'+(ds===QD.today?' today':'');
+        c.innerHTML='<div class="d">'+d+'</div><div class="s">'+(steps?qdShort(steps):'')+'</div>';
+        c.onclick=()=>{
+          document.querySelectorAll('.qd-cell').forEach(x=>x.classList.remove('sel'));
+          document.querySelectorAll('.qd-day').forEach(x=>x.classList.remove('active'));
+          c.classList.add('sel'); qdSetRing(steps);
+          document.getElementById('qdSelDay').textContent=d+' '+MONTHS[mi]+' · '+qdFmt(steps)+' қадам';
+        };
+        cal.appendChild(c);
+      }
+    }
+    function qdRenderLb(){
+      const arr=QD.leaderboard[QD.period]||[]; const lb=document.getElementById('qdLb'); lb.innerHTML='';
+      if(!arr.length){ lb.innerHTML='<div class="qd-empty">Әзірше деректер жоқ.</div>'; return; }
+      arr.forEach((x,i)=>{
+        const el=document.createElement('div'); el.className='qd-lbitem'+(x.you?' you':'');
+        const ini=(x.name||'?').split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+        el.innerHTML='<div class="r">'+(i+1)+'</div><div class="av">'+ini+'</div><div class="nm">'+x.name+(x.you?' <span style="color:var(--green)">(сен)</span>':'')+'</div><div class="sp">'+qdFmt(x.steps)+'</div>';
+        lb.appendChild(el);
+      });
+    }
+    document.querySelectorAll('#qdSeg button').forEach(b=>{
+      b.addEventListener('click',()=>{
+        document.querySelectorAll('#qdSeg button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active'); QD.period=b.dataset.p; qdRenderLb();
+      });
+    });
+    document.getElementById('qdSetupBtn').addEventListener('click',()=>{
+      document.getElementById('qdSetupBox').classList.toggle('hidden');
+    });
+
+    qdRenderWeek(); qdRenderMonths(); qdRenderMonth(6);
+    qdSetRing(qdStepsOn(QD.today));
+    document.getElementById('qdSelDay').textContent='Бүгін · '+qdFmt(qdStepsOn(QD.today))+' қадам';
+    qdRenderLb();
+  </script>
+</body>
+</html>

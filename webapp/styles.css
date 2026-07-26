@@ -132,3 +132,96 @@ select.input { background-image: none; padding-right: 12px; }
 .tab.center .lbl { color: var(--green-dark); font-weight: 500; margin-top: 4px; }
 
 .hidden { display: none !important; }
+
+/* ---------- Қадам (шаги) ---------- */
+.qd-ringwrap { position: relative; width: 184px; height: 184px; margin: 6px auto 2px; }
+.qd-ringcenter {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.qd-steps { font-size: 34px; font-weight: 700; color: var(--green-dark); line-height: 1; }
+.qd-lbl { font-size: 13px; color: var(--green-soft); margin-top: 2px; }
+.qd-goal { font-size: 11px; color: var(--placeholder); margin-top: 6px; }
+#qdArc { transition: stroke-dashoffset .5s ease; }
+.qd-selday { text-align: center; font-size: 13px; color: var(--green-soft); margin: 2px 0 12px; }
+
+.qd-week { display: flex; gap: 6px; justify-content: space-between; }
+.qd-day {
+  flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px 2px; text-align: center; cursor: pointer;
+}
+.qd-day .wd { font-size: 10px; color: var(--green-soft); }
+.qd-day .dot {
+  width: 26px; height: 26px; border-radius: 50%; margin: 4px auto 3px;
+  background: var(--tint); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: var(--green-dark);
+}
+.qd-day .st { font-size: 10px; color: var(--green-soft); }
+.qd-day.active { border-color: var(--green); background: var(--tint); }
+.qd-day.active .dot { background: var(--green); color: #fff; }
+
+.qd-sect { font-size: 15px; font-weight: 600; margin: 20px 0 10px; }
+
+.qd-months { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.qd-months::-webkit-scrollbar { display: none; }
+.qd-mon {
+  flex: 0 0 auto; background: var(--card); border: 1px solid var(--line);
+  border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--green-dark); cursor: pointer;
+}
+.qd-mon.active { background: var(--green); color: #fff; border-color: var(--green); }
+.qd-montotal { text-align: center; margin: 10px 0; }
+.qd-montotal b { font-size: 20px; color: var(--green-dark); }
+.qd-montotal span { font-size: 12px; color: var(--green-soft); }
+
+.qd-calhead, .qd-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.qd-calhead { margin-bottom: 5px; }
+.qd-calhead div { text-align: center; font-size: 10px; color: var(--green-soft); }
+.qd-cell {
+  aspect-ratio: 1 / 1; background: var(--card); border: 1px solid var(--line); border-radius: 9px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;
+}
+.qd-cell.empty { background: transparent; border: none; cursor: default; }
+.qd-cell .d { font-size: 12px; color: var(--green-dark); }
+.qd-cell .s { font-size: 8px; color: var(--green-soft); line-height: 1; margin-top: 1px; min-height: 8px; }
+.qd-cell.today { border-color: var(--green); }
+.qd-cell.sel { background: var(--green); border-color: var(--green); }
+.qd-cell.sel .d, .qd-cell.sel .s { color: #fff; }
+
+.qd-seg { display: flex; background: var(--tint); border-radius: 11px; padding: 3px; margin-bottom: 12px; }
+.qd-seg button {
+  flex: 1; background: none; border: none; border-radius: 9px; padding: 8px;
+  font-size: 13px; font-weight: 500; color: var(--green-soft); cursor: pointer;
+}
+.qd-seg button.active { background: var(--card); color: var(--green-dark); box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+
+.qd-lbitem {
+  display: flex; align-items: center; gap: 10px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 7px;
+}
+.qd-lbitem .r { width: 20px; font-size: 14px; font-weight: 700; color: var(--green-soft); text-align: center; }
+.qd-lbitem .av {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--tint);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--green-dark);
+}
+.qd-lbitem .nm { flex: 1; font-size: 14px; font-weight: 500; }
+.qd-lbitem .sp { font-size: 14px; font-weight: 600; color: var(--green-dark); }
+.qd-lbitem.you { border-color: var(--green); background: var(--tint); }
+.qd-empty { font-size: 13px; color: var(--green-soft); text-align: center; padding: 16px; }
+
+.qd-connect {
+  margin-top: 22px; background: var(--card); border: 1px dashed var(--line);
+  border-radius: 14px; padding: 14px;
+}
+.qd-connect-t { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.qd-connect-btn {
+  width: 100%; background: var(--tint); color: var(--green-dark); border: none;
+  border-radius: 11px; padding: 11px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.qd-note { font-size: 12px; color: var(--green-soft); margin: 12px 0 4px; }
+.qd-token {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+  padding: 9px 11px; font-size: 12px; word-break: break-all;
+}
+.qd-token code { font-family: ui-monospace, Menlo, monospace; color: var(--green-dark); }
+.qd-list { margin: 12px 0 0; padding-left: 18px; }
+.qd-list li { font-size: 13px; color: var(--green-dark); margin-bottom: 7px; line-height: 1.45; }

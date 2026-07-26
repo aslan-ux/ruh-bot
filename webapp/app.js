@@ -227,6 +227,7 @@ function show(screen) {
   document.getElementById('tabbar').style.display =
     (screen === 'register' || screen === 'pending') ? 'none' : 'flex';
   if (screen === 'home') loadBook();
+  if (screen === 'qadam') loadQadam();
 }
 
 document.querySelectorAll('.tab').forEach((t) => {
@@ -363,6 +364,149 @@ document.getElementById('checkStatusBtn')?.addEventListener('click', async () =>
   if (el) el.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('submitBtn').click(); }
   });
+});
+
+// ---------- Қадам (шаги) ----------
+const QD = { stepsMap: {}, today: '', leaderboard: { day: [], week: [], month: [] }, period: 'day', selMonth: null };
+const KK_WD = ['Жс', 'Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сб']; // index = getUTCDay()
+const KK_MON_SHORT = ['Қаң', 'Ақп', 'Нау', 'Сәу', 'Мам', 'Мау', 'Шіл', 'Там', 'Қыр', 'Қаз', 'Қар', 'Жел'];
+const QD_GOAL = 10000, QD_C = 540.35;
+
+function qdFmt(n) { return (Number(n) || 0).toLocaleString('ru-RU'); }
+function qdPad(n) { return n < 10 ? '0' + n : '' + n; }
+function qdShort(s) { return s ? (s >= 1000 ? (s / 1000).toFixed(s >= 10000 ? 0 : 1) + 'к' : String(s)) : '—'; }
+function qdStepsOn(d) { return QD.stepsMap[d] || 0; }
+function qdSetRing(s) {
+  const arc = document.getElementById('qdArc');
+  arc.setAttribute('stroke-dashoffset', (QD_C * (1 - Math.min(1, (s || 0) / QD_GOAL))).toFixed(1));
+  document.getElementById('qdSteps').textContent = qdFmt(s);
+}
+
+async function loadQadam() {
+  let r;
+  try { r = await api('/api/steps/me', {}); } catch { return; }
+  if (!r || !r.ok || !r.registered) return;
+  QD.stepsMap = {};
+  (r.steps || []).forEach((x) => { QD.stepsMap[x.date] = x.steps; });
+  QD.today = r.today || new Date().toISOString().slice(0, 10);
+  QD.leaderboard = r.leaderboard || { day: [], week: [], month: [] };
+  document.getElementById('qdToken').textContent = r.syncToken || '—';
+  document.getElementById('qdUrl').textContent = location.origin + '/api/steps/push';
+  QD.selMonth = Number(QD.today.slice(5, 7)) - 1;
+  qdRenderWeek();
+  qdRenderMonths();
+  qdRenderMonth(QD.selMonth);
+  qdSetRing(qdStepsOn(QD.today));
+  document.getElementById('qdSelDay').textContent = 'Бүгін · ' + qdFmt(qdStepsOn(QD.today)) + ' қадам';
+  qdRenderLb();
+}
+
+function qdRenderWeek() {
+  const wk = document.getElementById('qdWeek');
+  wk.innerHTML = '';
+  const base = new Date(QD.today + 'T12:00:00Z');
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(base.getTime() - i * 86400000);
+    const ds = d.toISOString().slice(0, 10);
+    const steps = qdStepsOn(ds);
+    const el = document.createElement('div');
+    el.className = 'qd-day' + (i === 0 ? ' active' : '');
+    el.innerHTML = '<div class="wd">' + KK_WD[d.getUTCDay()] + '</div>' +
+      '<div class="dot">' + d.getUTCDate() + '</div>' +
+      '<div class="st">' + qdShort(steps) + '</div>';
+    el.onclick = () => {
+      document.querySelectorAll('.qd-day').forEach((x) => x.classList.remove('active'));
+      document.querySelectorAll('.qd-cell').forEach((x) => x.classList.remove('sel'));
+      el.classList.add('active');
+      qdSetRing(steps);
+      document.getElementById('qdSelDay').textContent =
+        (i === 0 ? 'Бүгін' : d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()]) + ' · ' + qdFmt(steps) + ' қадам';
+    };
+    wk.appendChild(el);
+  }
+}
+
+function qdRenderMonths() {
+  const m = document.getElementById('qdMonths');
+  m.innerHTML = '';
+  KK_MON_SHORT.forEach((nm, mi) => {
+    const el = document.createElement('div');
+    el.className = 'qd-mon';
+    el.textContent = nm;
+    el.onclick = () => qdRenderMonth(mi);
+    m.appendChild(el);
+  });
+}
+
+function qdRenderMonth(mi) {
+  QD.selMonth = mi;
+  const year = Number(QD.today.slice(0, 4));
+  document.querySelectorAll('#qdMonths .qd-mon').forEach((x, i) => x.classList.toggle('active', i === mi));
+  const active = document.querySelector('#qdMonths .qd-mon.active');
+  if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
+
+  const n = new Date(Date.UTC(year, mi + 1, 0)).getUTCDate();
+  let total = 0;
+  for (let d = 1; d <= n; d++) total += qdStepsOn(year + '-' + qdPad(mi + 1) + '-' + qdPad(d));
+  document.getElementById('qdMonTotal').innerHTML =
+    '<b>' + qdFmt(total) + '</b> <span>қадам · ' + KK_MON_SHORT[mi] + '</span>';
+
+  const cal = document.getElementById('qdCal');
+  cal.innerHTML = '';
+  const first = new Date(Date.UTC(year, mi, 1)).getUTCDay(); // 0=Sun..6=Sat
+  const off = (first + 6) % 7; // Пн-первый
+  for (let o = 0; o < off; o++) {
+    const e = document.createElement('div');
+    e.className = 'qd-cell empty';
+    cal.appendChild(e);
+  }
+  for (let d = 1; d <= n; d++) {
+    const ds = year + '-' + qdPad(mi + 1) + '-' + qdPad(d);
+    const steps = qdStepsOn(ds);
+    const c = document.createElement('div');
+    c.className = 'qd-cell' + (ds === QD.today ? ' today' : '');
+    c.innerHTML = '<div class="d">' + d + '</div><div class="s">' + (steps ? qdShort(steps) : '') + '</div>';
+    c.onclick = () => {
+      document.querySelectorAll('.qd-cell').forEach((x) => x.classList.remove('sel'));
+      document.querySelectorAll('.qd-day').forEach((x) => x.classList.remove('active'));
+      c.classList.add('sel');
+      qdSetRing(steps);
+      document.getElementById('qdSelDay').textContent = d + ' ' + MONTHS[mi] + ' · ' + qdFmt(steps) + ' қадам';
+    };
+    cal.appendChild(c);
+  }
+}
+
+function qdRenderLb() {
+  const arr = QD.leaderboard[QD.period] || [];
+  const lb = document.getElementById('qdLb');
+  lb.innerHTML = '';
+  if (!arr.length) {
+    lb.innerHTML = '<div class="qd-empty">Әзірше деректер жоқ. Қадам қосылғаннан кейін көрінеді.</div>';
+    return;
+  }
+  arr.forEach((x, i) => {
+    const el = document.createElement('div');
+    el.className = 'qd-lbitem' + (x.you ? ' you' : '');
+    const ini = (x.name || '?').split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    el.innerHTML = '<div class="r">' + (i + 1) + '</div>' +
+      '<div class="av">' + ini + '</div>' +
+      '<div class="nm">' + x.name + (x.you ? ' <span style="color:var(--green)">(сен)</span>' : '') + '</div>' +
+      '<div class="sp">' + qdFmt(x.steps) + '</div>';
+    lb.appendChild(el);
+  });
+}
+
+document.querySelectorAll('#qdSeg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#qdSeg button').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    QD.period = b.dataset.p;
+    qdRenderLb();
+  });
+});
+document.getElementById('qdSetupBtn')?.addEventListener('click', () => {
+  document.getElementById('qdSetupBox').classList.toggle('hidden');
 });
 
 // ---------- Старт ----------

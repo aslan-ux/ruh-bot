@@ -120,7 +120,51 @@
 
   <!-- ЭКРАН: Заглушки -->
   <section id="screen-qadam" class="screen">
-    <div class="placeholder-screen"><div class="ic">👣</div><div class="t">Қадам</div><div class="d">Бөлім жасалу үстінде</div></div>
+    <h1 style="text-align:center; margin-bottom:12px;">👣 Қадам</h1>
+    <div class="qd-ringwrap">
+      <svg viewBox="0 0 200 200" width="184" height="184">
+        <circle cx="100" cy="100" r="86" fill="none" stroke="#D6ECE0" stroke-width="16"/>
+        <circle id="qdArc" cx="100" cy="100" r="86" fill="none" stroke="#1D9E75" stroke-width="16" stroke-linecap="round" transform="rotate(-90 100 100)" stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
+      </svg>
+      <div class="qd-ringcenter">
+        <div class="qd-steps" id="qdSteps">0</div>
+        <div class="qd-lbl">қадам</div>
+        <div class="qd-goal">мақсат: 10 000</div>
+      </div>
+    </div>
+    <div class="qd-selday" id="qdSelDay">Бүгін</div>
+    <div class="qd-week" id="qdWeek"></div>
+
+    <div class="qd-sect">Айлар</div>
+    <div class="qd-months" id="qdMonths"></div>
+    <div class="qd-montotal" id="qdMonTotal"></div>
+    <div class="qd-calhead"><div>Дс</div><div>Сс</div><div>Ср</div><div>Бс</div><div>Жм</div><div>Сб</div><div>Жс</div></div>
+    <div class="qd-cal" id="qdCal"></div>
+
+    <div class="qd-sect">Рейтинг</div>
+    <div class="qd-seg" id="qdSeg">
+      <button data-p="day" class="active">Күн</button>
+      <button data-p="week">Апта</button>
+      <button data-p="month">Ай</button>
+    </div>
+    <div id="qdLb"></div>
+
+    <div class="qd-connect">
+      <div class="qd-connect-t">📲 Қадамды автоматты санау (iPhone)</div>
+      <button class="qd-connect-btn" id="qdSetupBtn">Қосу нұсқаулығы</button>
+      <div id="qdSetupBox" class="hidden">
+        <div class="qd-note">Құпия токенің (ешкімге көрсетпе):</div>
+        <div class="qd-token"><code id="qdToken">—</code></div>
+        <div class="qd-note">Мекенжай (URL):</div>
+        <div class="qd-token"><code id="qdUrl">—</code></div>
+        <ol class="qd-list">
+          <li>«Пәрмендер» (Shortcuts) қолданбасын аш.</li>
+          <li>Жаңа пәрмен: «Денсаулық» → «Қадам санын алу» (Бүгін).</li>
+          <li>«URL мазмұнын алу»: жоғарыдағы мекенжай, әдіс POST, тип JSON, өрістер: <b>token</b> = токенің, <b>steps</b> = қадам саны.</li>
+          <li>Автоматизация жаса: күн сайын автоматты орындалсын.</li>
+        </ol>
+      </div>
+    </div>
   </section>
   <section id="screen-qarjy" class="screen">
     <div class="placeholder-screen"><div class="ic">💰</div><div class="t">Қаржы</div><div class="d">Бөлім жасалу үстінде</div></div>
