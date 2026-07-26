@@ -5,12 +5,14 @@ import { fileURLToPath } from 'url';
 import { Bot, InlineKeyboard, webhookCallback } from 'grammy';
 import { validateInitData } from './validateInitData.js';
 import {
+  initStorage,
   upsertUser,
   getUser,
   getUsers,
   getBook,
   setBook,
   assignBookToUser,
+  setUserStatus,
 } from './storage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +29,9 @@ const PORT = process.env.PORT || 3000;
 
 if (!BOT_TOKEN) throw new Error('BOT_TOKEN не задан (env BOT_TOKEN)');
 if (!WEBAPP_URL) throw new Error('Публичный адрес не задан (env WEBAPP_URL)');
+
+// Подключаем хранилище (MongoDB, либо файлы, если базы нет)
+await initStorage();
 
 // ---------- Бот ----------
 const bot = new Bot(BOT_TOKEN);
@@ -76,51 +81,53 @@ app.post('/api/register', async (req, res) => {
     }
   }
 
-  const saved = upsertUser({
+  const existing = await getUser(tgUser.id);
+  const saved = await upsertUser({
     telegramId: tgUser.id,
     username: tgUser.username || '',
     firstName: String(f.firstName).trim(),
     lastName: String(f.lastName).trim(),
-    patronymic: String(f.patronymic).trim(),
+    patronymic: String(f.patronymic || '').trim(),
     email: String(f.email).trim(),
     phone: String(f.phone).trim(),
     birthDate: String(f.birthDate).trim(),
-    assignedBookId: null,
+    assignedBookId: existing?.assignedBookId ?? null,
+    status: existing?.status || 'pending',
   });
 
   try {
-    await bot.api.sendMessage(
-      tgUser.id,
-      `✅ Тіркелдің, ${saved.firstName}! Spirit қауымдастығына қош келдің.`
-    );
+    const msg = saved.status === 'approved'
+      ? `✅ Мәліметтерің жаңартылды, ${saved.firstName}!`
+      : `✅ Өтінішің қабылданды, ${saved.firstName}! Әкімші растағаннан кейін қосымша ашылады.`;
+    await bot.api.sendMessage(tgUser.id, msg);
   } catch {}
 
-  res.json({ ok: true });
+  res.json({ ok: true, status: saved.status });
 });
 
-app.post('/api/me', (req, res) => {
+app.post('/api/me', async (req, res) => {
   const tgUser = requireTelegram(req, res);
   if (!tgUser) return;
-  const user = getUser(tgUser.id);
+  const user = await getUser(tgUser.id);
   res.json({ ok: true, registered: !!user, user });
 });
 
-app.post('/api/book', (req, res) => {
+app.post('/api/book', async (req, res) => {
   const tgUser = requireTelegram(req, res);
   if (!tgUser) return;
-  res.json({ ok: true, book: getBook() });
+  res.json({ ok: true, book: await getBook() });
 });
 
 // ---------- Админка ----------
-app.get('/api/admin/data', (req, res) => {
+app.get('/api/admin/data', async (req, res) => {
   if (!requireAdmin(req, res)) return;
-  res.json({ ok: true, book: getBook(), users: getUsers() });
+  res.json({ ok: true, book: await getBook(), users: await getUsers() });
 });
 
-app.post('/api/admin/book', (req, res) => {
+app.post('/api/admin/book', async (req, res) => {
   if (!requireAdmin(req, res)) return;
   const { title, author, cover, progress } = req.body || {};
-  const book = setBook({
+  const book = await setBook({
     title: title ?? undefined,
     author: author ?? undefined,
     cover: cover ?? undefined,
@@ -129,11 +136,31 @@ app.post('/api/admin/book', (req, res) => {
   res.json({ ok: true, book });
 });
 
-app.post('/api/admin/assign', (req, res) => {
+app.post('/api/admin/assign', async (req, res) => {
   if (!requireAdmin(req, res)) return;
   const { telegramId, bookId } = req.body || {};
-  const user = assignBookToUser(Number(telegramId), bookId ?? null);
+  const user = await assignBookToUser(Number(telegramId), bookId ?? null);
   if (!user) return res.status(404).json({ ok: false, error: 'Қатысушы табылмады' });
+  res.json({ ok: true, user });
+});
+
+// Подтверждение/отклонение участника
+app.post('/api/admin/status', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { telegramId, status } = req.body || {};
+  if (!['approved', 'pending', 'rejected'].includes(status)) {
+    return res.status(400).json({ ok: false, error: 'Белгісіз статус' });
+  }
+  const user = await setUserStatus(Number(telegramId), status);
+  if (!user) return res.status(404).json({ ok: false, error: 'Қатысушы табылмады' });
+  if (status === 'approved') {
+    try {
+      await bot.api.sendMessage(
+        Number(telegramId),
+        `🎉 Құттықтаймыз, ${user.firstName}! Сен Spirit қауымдастығына қабылдандың. Қосымшаны қайта аш.`
+      );
+    } catch {}
+  }
   res.json({ ok: true, user });
 });
 
@@ -153,8 +180,6 @@ app.listen(PORT, async () => {
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
   console.log(`Админка: ${WEBAPP_URL}/admin.html`);
 
-  // Настройка Telegram обёрнута в try/catch: даже если токен временно
-  // неверный или Telegram недоступен — веб-сервис остаётся живым.
   try {
     await bot.api.setChatMenuButton({
       menu_button: { type: 'web_app', text: 'Spirit', web_app: { url: WEBAPP_URL } },
