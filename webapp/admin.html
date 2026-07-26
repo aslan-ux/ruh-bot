@@ -5,24 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Spirit — Админка</title>
   <style>
-    :root { --green:#1D9E75; --dark:#0F5C43; --soft:#4b8a72; --bg:#F1F8F4; --line:#CDE7DA; }
+    :root { --green:#1D9E75; --dark:#0F5C43; --soft:#4b8a72; --bg:#F1F8F4; --line:#CDE7DA; --tint:#E3F1EA; }
     * { box-sizing: border-box; }
     body { margin:0; font-family:-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--dark); }
-    .wrap { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
-    h1 { font-size:22px; } h2 { font-size:17px; margin-top:28px; }
+    .wrap { max-width:980px; margin:0 auto; padding:20px 16px 60px; }
+    h1 { font-size:22px; } h2 { font-size:17px; margin:0 0 14px; }
     .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; }
     label { display:block; font-size:13px; color:var(--soft); margin:10px 0 4px; }
     input { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:15px; color:var(--dark); outline:none; }
     input:focus { border-color:var(--green); }
     button { background:var(--green); color:#fff; border:none; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:500; cursor:pointer; }
-    button.ghost { background:#fff; color:var(--green); border:1px solid var(--green); }
     .hint { font-size:13px; color:var(--soft); margin-top:8px; min-height:18px; }
     table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
     th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); }
     th { color:var(--soft); font-weight:500; }
     .row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
-    .preview { width:70px; height:70px; border-radius:50%; object-fit:cover; border:1px solid var(--line); background:#E3F1EA; }
+    .preview { width:70px; height:70px; border-radius:50%; object-fit:cover; border:1px solid var(--line); background:var(--tint); }
     .hidden { display:none; }
+    .search { margin-bottom:14px; }
+
+    .layout { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; margin-top:16px; }
+    .content { flex:1; min-width:280px; }
+    .side-tabs { width:170px; display:flex; flex-direction:column; gap:6px; position:sticky; top:16px; }
+    .side-tabs button { background:#fff; color:var(--dark); border:1px solid var(--line); text-align:left; font-weight:500; padding:11px 12px; }
+    .side-tabs button.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    .ucard { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+    @media (max-width:640px){
+      .side-tabs { width:100%; flex-direction:row; flex-wrap:wrap; position:static; }
+      .side-tabs button { flex:1 1 30%; text-align:center; }
+    }
   </style>
 </head>
 <body>
@@ -41,39 +54,82 @@
 
   <!-- Панель -->
   <div id="panel" class="hidden">
-    <h2>Осы айдың кітабы</h2>
-    <div class="card">
-      <div class="row" style="align-items:center;">
-        <img id="coverPreview" class="preview" src="" alt="" />
-        <div style="flex:1; min-width:200px;">
-          <label>Мұқаба (фото URL)</label>
-          <input id="cover" placeholder="https://…/book.jpg" />
-        </div>
-      </div>
-      <label>Атауы</label>
-      <input id="title" placeholder="Кітап атауы" />
-      <label>Авторы</label>
-      <input id="author" placeholder="Автор" />
-      <label>Прогресс (%)</label>
-      <input id="progress" type="number" min="0" max="100" placeholder="0" />
-      <div style="margin-top:14px;"><button id="saveBook">Сақтау</button></div>
-      <div class="hint" id="bookHint"></div>
-    </div>
+    <div class="layout">
+      <div class="content">
 
-    <h2>Қатысушылар (<span id="count">0</span>)</h2>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr><th>Аты-жөні</th><th>Почта</th><th>Нөмірі</th><th>Туған күні</th><th>Статус</th><th>Кітап</th></tr>
-        </thead>
-        <tbody id="usersBody"></tbody>
-      </table>
+        <!-- Қатысушылар -->
+        <section id="tab-uchastniki" class="tab-content active">
+          <h2>Қатысушылар (<span id="count">0</span>)</h2>
+          <input class="search" id="search-uchastniki" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr><th>Аты-жөні</th><th>Почта</th><th>Нөмірі</th><th>Туған күні</th><th>Статус</th></tr>
+              </thead>
+              <tbody id="tbody-uchastniki"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Кітап -->
+        <section id="tab-kitap" class="tab-content">
+          <h2>Осы айдың кітабы</h2>
+          <div class="card">
+            <div class="row" style="align-items:center;">
+              <img id="coverPreview" class="preview" src="" alt="" />
+              <div style="flex:1; min-width:200px;">
+                <label>Мұқаба (фото URL)</label>
+                <input id="cover" placeholder="https://…/book.jpg" />
+              </div>
+            </div>
+            <label>Атауы</label>
+            <input id="title" placeholder="Кітап атауы" />
+            <label>Авторы</label>
+            <input id="author" placeholder="Автор" />
+            <label>Прогресс (%)</label>
+            <input id="progress" type="number" min="0" max="100" placeholder="0" />
+            <div style="margin-top:14px;"><button id="saveBook">Сақтау</button></div>
+            <div class="hint" id="bookHint"></div>
+          </div>
+        </section>
+
+        <!-- Қадам -->
+        <section id="tab-qadam" class="tab-content">
+          <h2>👣 Қадам</h2>
+          <input class="search" id="search-qadam" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
+          <div id="list-qadam"></div>
+        </section>
+
+        <!-- Қаржы -->
+        <section id="tab-qarjy" class="tab-content">
+          <h2>💰 Қаржы</h2>
+          <input class="search" id="search-qarjy" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
+          <div id="list-qarjy"></div>
+        </section>
+
+        <!-- Прогресс -->
+        <section id="tab-progress" class="tab-content">
+          <h2>📈 Прогресс</h2>
+          <input class="search" id="search-progress" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
+          <div id="list-progress"></div>
+        </section>
+
+      </div>
+
+      <nav class="side-tabs" id="sideTabs">
+        <button data-tab="uchastniki" class="active">Қатысушылар</button>
+        <button data-tab="kitap">Кітап</button>
+        <button data-tab="qadam">Қадам</button>
+        <button data-tab="qarjy">Қаржы</button>
+        <button data-tab="progress">Прогресс</button>
+      </nav>
     </div>
   </div>
 </div>
 
 <script>
 let ADMIN_KEY = '';
+let ALL_USERS = [];
 
 async function adminGet() {
   const res = await fetch('/api/admin/data', { headers: { 'X-Admin-Key': ADMIN_KEY } });
@@ -88,42 +144,101 @@ async function adminPost(path, body) {
   return res.json();
 }
 
+function fullName(u) { return `${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''}`.trim(); }
+
+// Поиск по ФИО, почте и номеру (с форматированием и без)
+function userMatches(u, q) {
+  q = (q || '').trim().toLowerCase();
+  if (!q) return true;
+  const text = `${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''} ${u.email || ''} ${u.phone || ''}`.toLowerCase();
+  if (text.includes(q)) return true;
+  const qDigits = q.replace(/\D/g, '');
+  if (qDigits) {
+    const pDigits = (u.phone || '').replace(/\D/g, '');
+    if (pDigits && pDigits.includes(qDigits)) return true;
+  }
+  return false;
+}
+
+// Переключение вкладок справа
+document.querySelectorAll('#sideTabs button').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#sideTabs button').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach((s) => s.classList.remove('active'));
+    document.getElementById('tab-' + b.dataset.tab).classList.add('active');
+  });
+});
+
 document.getElementById('loginBtn').addEventListener('click', async () => {
   ADMIN_KEY = document.getElementById('key').value.trim();
   const r = await adminGet();
   if (r.ok) {
     document.getElementById('login').classList.add('hidden');
     document.getElementById('panel').classList.remove('hidden');
-    render(r);
+    applyData(r);
   } else {
     document.getElementById('loginHint').textContent = r.error || 'Қате';
   }
 });
 
-function render(data) {
-  const b = data.book;
+function applyData(data) {
+  ALL_USERS = data.users || [];
+  const b = data.book || {};
   document.getElementById('title').value = b.title || '';
   document.getElementById('author').value = b.author || '';
   document.getElementById('cover').value = b.cover || '';
   document.getElementById('progress').value = b.progress || 0;
   document.getElementById('coverPreview').src = b.cover || '';
+  renderUchastniki();
+  ['qadam', 'qarjy', 'progress'].forEach(renderStub);
+}
 
-  const body = document.getElementById('usersBody');
-  document.getElementById('count').textContent = data.users.length;
+function renderUchastniki() {
+  const q = document.getElementById('search-uchastniki').value;
+  const list = ALL_USERS.filter((u) => userMatches(u, q));
+  const body = document.getElementById('tbody-uchastniki');
+  document.getElementById('count').textContent = list.length;
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="5" class="hint" style="text-align:center;">Ешкім табылмады</td></tr>';
+    return;
+  }
   body.innerHTML = '';
-  data.users.forEach((u) => {
+  list.forEach((u) => {
     const tr = document.createElement('tr');
     const statusCell = u.status === 'approved'
       ? '<span style="color:#1D9E75; font-weight:500;">✅ Расталды</span>'
       : `<button onclick="approveUser(${u.telegramId})" style="background:#1D9E75; color:#fff; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px;">Растау</button>`;
     tr.innerHTML =
-      `<td>${u.lastName} ${u.firstName} ${u.patronymic}</td>` +
-      `<td>${u.email}</td><td>${u.phone}</td><td>${u.birthDate}</td>` +
-      `<td>${statusCell}</td>` +
-      `<td>${u.assignedBookId ? '✅' : '—'}</td>`;
+      `<td>${fullName(u)}</td>` +
+      `<td>${u.email || ''}</td><td>${u.phone || ''}</td><td>${u.birthDate || ''}</td>` +
+      `<td>${statusCell}</td>`;
     body.appendChild(tr);
   });
 }
+
+function renderStub(tabKey) {
+  const q = document.getElementById('search-' + tabKey).value;
+  const el = document.getElementById('list-' + tabKey);
+  if (!q.trim()) {
+    el.innerHTML = '<div class="hint">Қатысушыны табу үшін жоғарыдан ізде (аты-жөні, почта немесе нөмір).</div>';
+    return;
+  }
+  const list = ALL_USERS.filter((u) => userMatches(u, q));
+  if (!list.length) { el.innerHTML = '<div class="hint">Ешкім табылмады.</div>'; return; }
+  el.innerHTML = list.map((u) => `
+    <div class="ucard">
+      <div style="font-weight:600;">${fullName(u)}</div>
+      <div class="hint" style="margin:2px 0;">${u.phone || ''} · ${u.email || ''}</div>
+      <div class="hint">Бөлім жасалу үстінде — бұл қатысушыға арналған деректер кейін қосылады.</div>
+    </div>`).join('');
+}
+
+// Слушатели поиска
+document.getElementById('search-uchastniki').addEventListener('input', renderUchastniki);
+['qadam', 'qarjy', 'progress'].forEach((k) => {
+  document.getElementById('search-' + k).addEventListener('input', () => renderStub(k));
+});
 
 document.getElementById('cover').addEventListener('input', (e) => {
   document.getElementById('coverPreview').src = e.target.value;
@@ -143,7 +258,7 @@ document.getElementById('saveBook').addEventListener('click', async () => {
 
 async function approveUser(telegramId) {
   const r = await adminPost('/api/admin/status', { telegramId, status: 'approved' });
-  if (r.ok) { const d = await adminGet(); render(d); }
+  if (r.ok) { const d = await adminGet(); ALL_USERS = d.users || []; renderUchastniki(); }
   else alert('Қате: ' + (r.error || ''));
 }
 </script>
