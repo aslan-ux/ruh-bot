@@ -394,7 +394,8 @@ async function loadQadam() {
   document.getElementById('qdUrl').textContent = location.origin + '/api/steps/push';
   QD.selMonth = Number(QD.today.slice(5, 7)) - 1;
   qdRenderWeek();
-  qdRenderAccordion();
+  qdRenderMonths();
+  qdRenderMonth(QD.selMonth);
   qdSetRing(qdStepsOn(QD.today));
   document.getElementById('qdSelDay').textContent = 'Бүгін · ' + qdFmt(qdStepsOn(QD.today)) + ' қадам';
   qdRenderLb();
@@ -425,66 +426,33 @@ function qdRenderWeek() {
   }
 }
 
-function qdCap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+function qdRenderMonths() {
+  const m = document.getElementById('qdMonths');
+  m.innerHTML = '';
+  KK_MON_SHORT.forEach((nm, mi) => {
+    const el = document.createElement('div');
+    el.className = 'qd-mon';
+    el.textContent = nm;
+    el.onclick = () => qdRenderMonth(mi);
+    m.appendChild(el);
+  });
+}
 
-function qdMonthSum(year, mi) {
+function qdRenderMonth(mi) {
+  QD.selMonth = mi;
+  const year = Number(QD.today.slice(0, 4));
+  document.querySelectorAll('#qdMonths .qd-mon').forEach((x, i) => x.classList.toggle('active', i === mi));
+  const active = document.querySelector('#qdMonths .qd-mon.active');
+  if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
+
   const n = new Date(Date.UTC(year, mi + 1, 0)).getUTCDate();
   let total = 0;
   for (let d = 1; d <= n; d++) total += qdStepsOn(year + '-' + qdPad(mi + 1) + '-' + qdPad(d));
-  return total;
-}
+  document.getElementById('qdMonTotal').innerHTML =
+    '<b>' + qdFmt(total) + '</b> <span>қадам · ' + KK_MON_SHORT[mi] + '</span>';
 
-// Аккордеон: список месяцев, по клику раскрывается календарь месяца
-function qdRenderAccordion() {
-  const acc = document.getElementById('qdAcc');
-  acc.innerHTML = '';
-  const year = Number(QD.today.slice(0, 4));
-  const curMon = Number(QD.today.slice(5, 7)) - 1;
-  MONTHS.forEach((name, mi) => {
-    const total = qdMonthSum(year, mi);
-    const item = document.createElement('div');
-    item.className = 'qd-acc-item';
-    item.dataset.mi = mi;
-
-    const head = document.createElement('button');
-    head.type = 'button';
-    head.className = 'qd-acc-head';
-    head.innerHTML =
-      '<span class="qd-acc-name">' + qdCap(name) + '</span>' +
-      '<span class="qd-acc-total">' + (total ? qdFmt(total) + ' қадам' : '—') + '</span>' +
-      '<span class="qd-acc-chev">⌄</span>';
-
-    const body = document.createElement('div');
-    body.className = 'qd-acc-body';
-    body.innerHTML =
-      '<div class="qd-calhead"><div>Дс</div><div>Сс</div><div>Ср</div><div>Бс</div><div>Жм</div><div>Сб</div><div>Жс</div></div>' +
-      '<div class="qd-cal"></div>';
-
-    head.onclick = () => qdToggleMonth(mi);
-    item.appendChild(head);
-    item.appendChild(body);
-    acc.appendChild(item);
-  });
-  // По умолчанию раскрыт текущий месяц
-  qdToggleMonth(curMon, true);
-}
-
-function qdToggleMonth(mi, forceOpen) {
-  const acc = document.getElementById('qdAcc');
-  const item = acc.querySelector('.qd-acc-item[data-mi="' + mi + '"]');
-  if (!item) return;
-  const isOpen = item.classList.contains('open');
-  if (isOpen && !forceOpen) { item.classList.remove('open'); return; }
-  acc.querySelectorAll('.qd-acc-item.open').forEach((x) => x.classList.remove('open'));
-  item.classList.add('open');
-  QD.selMonth = mi;
-  qdFillMonth(mi, item.querySelector('.qd-cal'));
-}
-
-function qdFillMonth(mi, cal) {
-  const year = Number(QD.today.slice(0, 4));
+  const cal = document.getElementById('qdCal');
   cal.innerHTML = '';
-  const n = new Date(Date.UTC(year, mi + 1, 0)).getUTCDate();
   const first = new Date(Date.UTC(year, mi, 1)).getUTCDay(); // 0=Sun..6=Sat
   const off = (first + 6) % 7; // Пн-первый
   for (let o = 0; o < off; o++) {
