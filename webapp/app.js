@@ -215,7 +215,7 @@ async function api(path, body) {
 }
 
 // ---------- Навигация ----------
-const screens = ['register', 'home', 'qadam', 'qarjy', 'progress', 'profile'];
+const screens = ['register', 'pending', 'home', 'qadam', 'qarjy', 'progress', 'profile'];
 function show(screen) {
   screens.forEach((s) => {
     const el = document.getElementById('screen-' + s);
@@ -225,7 +225,7 @@ function show(screen) {
     t.classList.toggle('active', t.dataset.screen === screen);
   });
   document.getElementById('tabbar').style.display =
-    screen === 'register' ? 'none' : 'flex';
+    (screen === 'register' || screen === 'pending') ? 'none' : 'flex';
   if (screen === 'home') loadBook();
 }
 
@@ -317,7 +317,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     const r = await api('/api/register', { form });
     if (r.ok) {
       tg.HapticFeedback?.notificationOccurred('success');
-      show('home');
+      show('pending');
     } else {
       hint.textContent = 'Қате: ' + r.error;
       btn.disabled = false;
@@ -343,12 +343,30 @@ async function loadBook() {
   } catch {}
 }
 
+// Кнопка «Тексеру» на экране ожидания
+document.getElementById('checkStatusBtn')?.addEventListener('click', async () => {
+  const el = document.getElementById('checkStatusHint');
+  if (el) el.textContent = 'Тексерілуде…';
+  try {
+    const me = await api('/api/me', {});
+    if (me.ok && me.registered && me.user && me.user.status === 'approved') {
+      show('home');
+    } else if (el) {
+      el.textContent = 'Әзірше расталмаған. Кейінірек қайта тексер.';
+    }
+  } catch { if (el) el.textContent = 'Желі қатесі'; }
+});
+
 // ---------- Старт ----------
 async function init() {
   fillDates();
   try {
     const me = await api('/api/me', {});
-    show(me.ok && me.registered ? 'home' : 'register');
+    if (me.ok && me.registered) {
+      show(me.user && me.user.status === 'approved' ? 'home' : 'pending');
+    } else {
+      show('register');
+    }
   } catch {
     show('register');
   }

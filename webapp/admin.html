@@ -64,7 +64,7 @@
     <div style="overflow-x:auto;">
       <table>
         <thead>
-          <tr><th>Аты-жөні</th><th>Почта</th><th>Нөмірі</th><th>Туған күні</th><th>Кітап</th></tr>
+          <tr><th>Аты-жөні</th><th>Почта</th><th>Нөмірі</th><th>Туған күні</th><th>Статус</th><th>Кітап</th></tr>
         </thead>
         <tbody id="usersBody"></tbody>
       </table>
@@ -113,9 +113,13 @@ function render(data) {
   body.innerHTML = '';
   data.users.forEach((u) => {
     const tr = document.createElement('tr');
+    const statusCell = u.status === 'approved'
+      ? '<span style="color:#1D9E75; font-weight:500;">✅ Расталды</span>'
+      : `<button onclick="approveUser(${u.telegramId})" style="background:#1D9E75; color:#fff; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px;">Растау</button>`;
     tr.innerHTML =
       `<td>${u.lastName} ${u.firstName} ${u.patronymic}</td>` +
       `<td>${u.email}</td><td>${u.phone}</td><td>${u.birthDate}</td>` +
+      `<td>${statusCell}</td>` +
       `<td>${u.assignedBookId ? '✅' : '—'}</td>`;
     body.appendChild(tr);
   });
@@ -136,6 +140,12 @@ document.getElementById('saveBook').addEventListener('click', async () => {
   });
   hint.textContent = r.ok ? '✅ Сақталды' : ('Қате: ' + r.error);
 });
+
+async function approveUser(telegramId) {
+  const r = await adminPost('/api/admin/status', { telegramId, status: 'approved' });
+  if (r.ok) { const d = await adminGet(); render(d); }
+  else alert('Қате: ' + (r.error || ''));
+}
 </script>
 </body>
 </html>
