@@ -14,7 +14,7 @@ const DEFAULT_BOOK = {
 };
 
 let useMongo = !!MONGODB_URI;
-const col = { users: null, meta: null };
+const col = { users: null, meta: null, steps: null };
 
 // ---------- Инициализация ----------
 export async function initStorage() {
@@ -27,6 +27,8 @@ export async function initStorage() {
       col.users = db.collection('users');
       col.meta = db.collection('meta');
       await col.users.createIndex({ telegramId: 1 }, { unique: true });
+      col.steps = db.collection('steps');
+      await col.steps.createIndex({ telegramId: 1, date: 1 }, { unique: true });
       console.log('Хранилище: MongoDB (постоянное)');
       return;
     } catch (e) {
@@ -42,6 +44,7 @@ export async function initStorage() {
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const BOOK_FILE = path.join(DATA_DIR, 'book.json');
+const STEPS_FILE = path.join(DATA_DIR, 'steps.json');
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
@@ -110,6 +113,43 @@ export async function setUserStatus(telegramId, status) {
   users[idx].updatedAt = now;
   writeJson(USERS_FILE, users);
   return users[idx];
+}
+
+// Найти участника по его sync-токену (для приёма шагов из iOS «Команд»)
+export async function getUserByToken(token) {
+  if (!token) return null;
+  if (useMongo) return col.users.findOne({ syncToken: token }, { projection: { _id: 0 } });
+  return (readJson(USERS_FILE, [])).find((u) => u.syncToken === token) || null;
+}
+
+// ---------- Қадам (шаги) ----------
+export async function setSteps(telegramId, date, steps) {
+  const now = new Date().toISOString();
+  const s = Math.max(0, Math.floor(Number(steps) || 0));
+  if (useMongo) {
+    await col.steps.updateOne(
+      { telegramId, date },
+      { $set: { telegramId, date, steps: s, updatedAt: now } },
+      { upsert: true }
+    );
+    return { telegramId, date, steps: s };
+  }
+  const arr = readJson(STEPS_FILE, []);
+  const idx = arr.findIndex((x) => x.telegramId === telegramId && x.date === date);
+  if (idx >= 0) arr[idx] = { telegramId, date, steps: s, updatedAt: now };
+  else arr.push({ telegramId, date, steps: s, updatedAt: now });
+  writeJson(STEPS_FILE, arr);
+  return { telegramId, date, steps: s };
+}
+
+export async function getUserSteps(telegramId) {
+  if (useMongo) return col.steps.find({ telegramId }, { projection: { _id: 0 } }).toArray();
+  return (readJson(STEPS_FILE, [])).filter((x) => x.telegramId === telegramId);
+}
+
+export async function getStepsSince(dateStr) {
+  if (useMongo) return col.steps.find({ date: { $gte: dateStr } }, { projection: { _id: 0 } }).toArray();
+  return (readJson(STEPS_FILE, [])).filter((x) => x.date >= dateStr);
 }
 
 // ---------- Книга ----------

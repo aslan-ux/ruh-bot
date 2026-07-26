@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Bot, InlineKeyboard, webhookCallback } from 'grammy';
 import { validateInitData } from './validateInitData.js';
+import crypto from 'crypto';
 import {
   initStorage,
   upsertUser,
@@ -13,7 +14,17 @@ import {
   setBook,
   assignBookToUser,
   setUserStatus,
+  getUserByToken,
+  setSteps,
+  getUserSteps,
+  getStepsSince,
 } from './storage.js';
+
+// Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
+function kzDate(daysAgo = 0) {
+  const t = Date.now() + 5 * 3600 * 1000 - daysAgo * 86400000;
+  return new Date(t).toISOString().slice(0, 10);
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -93,6 +104,7 @@ app.post('/api/register', async (req, res) => {
     birthDate: String(f.birthDate).trim(),
     assignedBookId: existing?.assignedBookId ?? null,
     status: existing?.status || 'pending',
+    syncToken: existing?.syncToken || crypto.randomBytes(16).toString('hex'),
   });
 
   try {
@@ -116,6 +128,59 @@ app.post('/api/book', async (req, res) => {
   const tgUser = requireTelegram(req, res);
   if (!tgUser) return;
   res.json({ ok: true, book: await getBook() });
+});
+
+// ---------- Қадам (шаги) ----------
+// Мини-апп: мои шаги + рейтинг (день/неделя/месяц)
+app.post('/api/steps/me', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const user = await getUser(tgUser.id);
+  if (!user) return res.json({ ok: true, registered: false });
+
+  const mySteps = await getUserSteps(tgUser.id); // [{date, steps}]
+  const today = kzDate(0);
+  const weekStart = kzDate(6);
+  const monthStart = today.slice(0, 8) + '01';
+  const since = monthStart < weekStart ? monthStart : weekStart;
+
+  const all = await getStepsSince(since);
+  const users = await getUsers();
+  const nameById = {};
+  users.forEach((u) => {
+    nameById[u.telegramId] = `${u.lastName || ''} ${u.firstName || ''}`.trim() || (u.firstName || 'Қатысушы');
+  });
+
+  function board(ok) {
+    const sums = {};
+    all.forEach((s) => { if (ok(s.date)) sums[s.telegramId] = (sums[s.telegramId] || 0) + s.steps; });
+    return Object.entries(sums)
+      .map(([id, steps]) => ({ name: nameById[id] || 'Қатысушы', steps, you: Number(id) === tgUser.id }))
+      .sort((a, b) => b.steps - a.steps);
+  }
+
+  res.json({
+    ok: true,
+    registered: true,
+    syncToken: user.syncToken || '',
+    steps: mySteps,
+    today,
+    leaderboard: {
+      day: board((d) => d === today),
+      week: board((d) => d >= weekStart),
+      month: board((d) => d >= monthStart),
+    },
+  });
+});
+
+// Приём шагов из iOS «Команд» (по токену, без Telegram initData)
+app.post('/api/steps/push', async (req, res) => {
+  const { token, steps, date } = req.body || {};
+  const user = await getUserByToken(token);
+  if (!user) return res.status(401).json({ ok: false, error: 'bad token' });
+  const d = (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : kzDate(0);
+  await setSteps(user.telegramId, d, steps);
+  res.json({ ok: true });
 });
 
 // ---------- Админка ----------
