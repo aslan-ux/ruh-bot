@@ -240,6 +240,16 @@ document.getElementById('search-uchastniki').addEventListener('input', renderUch
   document.getElementById('search-' + k).addEventListener('input', () => renderStub(k));
 });
 
+// Enter: вход по ключу и сохранение книги
+document.getElementById('key').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+['title', 'author', 'cover', 'progress'].forEach((id) => {
+  document.getElementById(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('saveBook').click();
+  });
+});
+
 document.getElementById('cover').addEventListener('input', (e) => {
   document.getElementById('coverPreview').src = e.target.value;
 });

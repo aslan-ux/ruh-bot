@@ -357,6 +357,14 @@ document.getElementById('checkStatusBtn')?.addEventListener('click', async () =>
   } catch { if (el) el.textContent = 'Желі қатесі'; }
 });
 
+// Enter в полях регистрации → отправка
+['firstName', 'lastName', 'patronymic', 'email', 'phone'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('submitBtn').click(); }
+  });
+});
+
 // ---------- Старт ----------
 async function init() {
   fillDates();
