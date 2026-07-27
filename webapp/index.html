@@ -179,12 +179,40 @@
         <div class="qd-token"><code id="qdToken">—</code><button type="button" class="qd-copy" data-copy="qdToken">Көшіру</button></div>
         <div class="qd-note">Мекенжай (URL):</div>
         <div class="qd-token"><code id="qdUrl">—</code><button type="button" class="qd-copy" data-copy="qdUrl">Көшіру</button></div>
+        <div class="qd-guide-h">Дайындық</div>
+        <ul class="qd-list">
+          <li>iPhone-да <b>Health</b> қосымшасы қадамыңды жазып тұруы керек (әдетте өзі жазады).</li>
+          <li>Жоғарыдағы токен мен мекенжайды «Көшіру» батырмасымен алып қой.</li>
+        </ul>
+
+        <div class="qd-guide-h">1-бөлім · Пәрмен жасау</div>
         <ol class="qd-list">
-          <li>«Пәрмендер» (Shortcuts) қолданбасын аш.</li>
-          <li>Жаңа пәрмен: «Денсаулық» → «Қадам санын алу» (Бүгін).</li>
-          <li>«URL мазмұнын алу»: жоғарыдағы мекенжай, әдіс POST, тип JSON, өрістер: <b>token</b> = токенің, <b>steps</b> = қадам саны.</li>
-          <li>Автоматизация жаса: күн сайын автоматты орындалсын.</li>
+          <li><b>Shortcuts</b> қосымшасын аш.</li>
+          <li>Оң жақ жоғарыдан <b>+</b> басып, жаңа пәрмен жаса.</li>
+          <li><b>Add Action</b> бас → іздеуге <b>Find Health Samples</b> деп жазып, оны таңда. Сосын: <b>Sample Type</b> → <b>Steps</b>, ал фильтрге <b>Start Date</b> → <b>Today</b> қой (бүгінгі қадам үшін).</li>
+          <li>Тағы <b>Add Action</b> → <b>Calculate Statistics</b>. Ішінде: <b>Operation</b> → <b>Sum</b>, кіріс ретінде алдыңғы қадамның <b>Health Sample Values</b> нәтижесі тұрсын.</li>
+          <li>Тағы <b>Add Action</b> → <b>Get Contents of URL</b>. URL жолына жоғарыдағы мекенжайды қой, <b>Show More</b> бас, сосын <b>Method</b> → <b>POST</b>, <b>Request Body</b> → <b>JSON</b>.</li>
+          <li><b>Add new field</b> дегенді екі рет бас: біріншісі <b>token</b> (<b>Text</b>) = сенің токенің; екіншісі <b>steps</b> (<b>Number</b>) = <b>Calculate Statistics</b> нәтижесі.</li>
+          <li>Пәрменге ат бер (мысалы «Qadam») да, <b>Done</b> бас.</li>
         </ol>
+
+        <div class="qd-guide-h">2-бөлім · Тексеру</div>
+        <ol class="qd-list">
+          <li>Пәрменді бір рет қолмен іске қос (▶ батырмасы).</li>
+          <li>Алғаш рет <b>Health</b>-ке рұқсат сұрайды — <b>Allow</b> бас.</li>
+          <li>Ботты ашып, «Қадам» экранында бүгінгі сан жаңарғанын тексер.</li>
+        </ol>
+
+        <div class="qd-guide-h">3-бөлім · Автоматтандыру (өзі жіберсін)</div>
+        <ol class="qd-list">
+          <li><b>Shortcuts</b>-те төменнен <b>Automation</b> қойындысын аш.</li>
+          <li><b>+</b> → <b>Create Personal Automation</b>.</li>
+          <li><b>Time of Day</b> → уақыт таңда (мысалы 23:59) → <b>Daily</b>.</li>
+          <li>Әрекет: <b>Run Shortcut</b> → «Qadam» пәрменін таңда.</li>
+          <li><b>Ask Before Running</b> дегенді өшір (<b>Run Immediately</b>). Осыдан кейін күн сайын өзі жібереді.</li>
+        </ol>
+
+        <div class="qd-tip">Қаласаң, «Telegram-ды ашқан сайын жаңарсын» деп қоюға болады: тағы бір Automation жаса — <b>App</b> → <b>Telegram</b> → <b>Is Opened</b> → сол «Qadam» пәрменін қос. Токенді ешкімге көрсетпе.</div>
       </div>
     </div>
   </section>
