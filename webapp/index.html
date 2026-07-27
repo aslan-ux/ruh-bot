@@ -42,6 +42,7 @@
     <symbol id="i-briefcase" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="11" rx="2"/><path d="M9 7.5V6.2A2.2 2.2 0 0 1 11.2 4h1.6A2.2 2.2 0 0 1 15 6.2v1.3"/><path d="M3.5 12.5h17"/></g></symbol>
     <symbol id="i-trend" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15l5-5 3.5 3.5L20 6"/><path d="M15 6h5v5"/></g></symbol>
     <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9.5" width="16" height="10.5" rx="1.5"/><path d="M4 13h16M12 9.5V20"/><path d="M12 9.5C11 6.6 9.2 5.2 8 6.4 6.9 7.5 8.6 9.5 12 9.5ZM12 9.5C13 6.6 14.8 5.2 16 6.4 17.1 7.5 15.4 9.5 12 9.5Z"/></g></symbol>
+    <symbol id="i-diamond" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l3 5-9 13L3 8Z"/><path d="M3 8h18M9 3 7.5 8 12 21M15 3l1.5 5L12 21"/></g></symbol>
   </svg>
 
   <!-- ЭКРАН: Регистрация -->
@@ -261,6 +262,7 @@
       <div class="d">Жақында қосылады</div>
     </div>
 
+    <div id="finInvestHead" class="fin-invest-head hidden"></div>
     <div id="finCats" class="fin-cats"></div>
     <div id="finList" class="fin-list"></div>
   </section>
@@ -351,6 +353,35 @@
       <input id="finDNote" class="input" placeholder="Ескертпе (міндетті емес)" style="margin-top:10px;" />
       <button type="button" id="finDSave" class="btn-primary">Сақтау</button>
       <div class="hint" id="finDHint"></div>
+    </div>
+  </div>
+
+  <!-- Модалка добавления актива (инвестиции) -->
+  <div id="finAssetModal" class="fin-modal hidden">
+    <div class="fin-sheet">
+      <div class="fin-sheet-top">
+        <div class="fin-sheet-title" id="finAssetTitle">Актив қосу</div>
+        <button type="button" id="finAssetClose" class="fin-x" aria-label="Жабу"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="fin-lbl">Атауы</div>
+      <input id="finAName" class="input" placeholder="Мысалы: Apple, Алтын құйма" />
+      <div id="finATickerWrap">
+        <div class="fin-lbl">Тикер (АҚШ акциясы, мыс. AAPL)</div>
+        <input id="finATicker" class="input" placeholder="AAPL" />
+      </div>
+      <div id="finATypeWrap" class="hidden">
+        <div class="fin-lbl">Түрі</div>
+        <select id="finAType" class="input"></select>
+      </div>
+      <div class="fin-lbl" id="finAQtyLbl">Саны</div>
+      <input id="finAQty" class="input" inputmode="decimal" placeholder="0" />
+      <div class="fin-lbl" id="finABuyLbl">Сатып алу бағасы (₸)</div>
+      <input id="finABuy" class="input" inputmode="numeric" placeholder="0" />
+      <div class="fin-lbl">Қазіргі баға (₸, онлайн болмаса)</div>
+      <input id="finACur" class="input" inputmode="numeric" placeholder="міндетті емес" />
+      <input id="finANote" class="input" placeholder="Ескертпе (міндетті емес)" style="margin-top:10px;" />
+      <button type="button" id="finASave" class="btn-primary">Сақтау</button>
+      <div class="hint" id="finAHint"></div>
     </div>
   </div>
 

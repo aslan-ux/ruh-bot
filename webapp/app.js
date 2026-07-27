@@ -613,8 +613,18 @@ const FIN_TABS = [
   { k: 'qaryz', n: 'Қарыз', kind: 'debt' },
   { k: 'kredit', n: 'Кредит', kind: 'debt' },
   { k: 'bolip', n: 'Бөліп төлеу', kind: 'debt' },
-  { k: 'qujat', n: 'Құнды қағаздар', kind: 'soon' },
-  { k: 'tas', n: 'Бағалы тастар', kind: 'soon' },
+  { k: 'qujat', n: 'Құнды қағаздар', kind: 'invest' },
+  { k: 'tas', n: 'Бағалы тастар', kind: 'invest' },
+];
+const FIN_INVEST = {
+  qujat: { c: '#5E5CE6', i: 'i-chart', unit: 'дана' },
+  tas: { c: '#F59E0B', i: 'i-diamond', unit: 'г' },
+};
+const FIN_METALS = [
+  { n: 'Алтын', s: 'xauusd' },
+  { n: 'Күміс', s: 'xagusd' },
+  { n: 'Платина', s: 'xptusd' },
+  { n: 'Басқа (қолмен)', s: '' },
 ];
 const FIN_DEBT = {
   qaryz: { c: '#8B5CF6', i: 'i-people', titleLbl: 'Кім', dueLbl: 'Қайтару күні', dir: true, monthly: false },
@@ -648,7 +658,7 @@ const FIN_PER = [
   { k: 'week', n: 'Осы апта' },
   { k: 'month', n: 'Осы ай' },
 ];
-const FIN = { txs: [], debts: [], tabI: 0, per: 1, menuOpen: false, perOpen: false, modalCat: null, debtMetric: 'remaining' };
+const FIN = { txs: [], debts: [], assets: [], prices: {}, fx: null, tabI: 0, per: 1, menuOpen: false, perOpen: false, modalCat: null, debtMetric: 'remaining' };
 
 function finToday() { return new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10); }
 function finShift(days) { return new Date(Date.now() + 5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10); }
@@ -668,11 +678,34 @@ function finInPeriod(date, perKey) {
 
 async function loadFin() {
   try {
-    const [r1, r2] = await Promise.all([api('/api/fin/list', {}), api('/api/fin/debt/list', {})]);
+    const [r1, r2, r3] = await Promise.all([api('/api/fin/list', {}), api('/api/fin/debt/list', {}), api('/api/fin/asset/list', {})]);
     if (r1 && r1.ok) FIN.txs = r1.txs || [];
     if (r2 && r2.ok) FIN.debts = r2.debts || [];
+    if (r3 && r3.ok) FIN.assets = r3.assets || [];
   } catch {}
   renderFin();
+  finLoadPrices();
+}
+async function finLoadPrices() {
+  const syms = new Set();
+  FIN.assets.forEach((a) => { if ((a.market === 'us' || a.market === 'metal') && a.symbol) syms.add(a.symbol); });
+  if (!syms.size) { FIN.prices = {}; FIN.fx = null; return; }
+  syms.add('usdkzt');
+  try {
+    const r = await fetch('/api/fin/prices?symbols=' + encodeURIComponent([...syms].join(',')));
+    const j = await r.json();
+    FIN.prices = (j && j.prices) || {};
+    FIN.fx = FIN.prices['usdkzt'] || null;
+  } catch { FIN.prices = {}; FIN.fx = null; }
+  if (FIN_TABS[FIN.tabI].kind === 'invest') renderFin();
+}
+function finAssetCur(a) {
+  if (a.market === 'us' && a.symbol && FIN.prices[a.symbol] && FIN.fx) return FIN.prices[a.symbol] * FIN.fx;
+  if (a.market === 'metal' && a.symbol && FIN.prices[a.symbol] && FIN.fx) return FIN.prices[a.symbol] / 31.1035 * FIN.fx;
+  return a.curManual || a.buyPrice;
+}
+function finAssetLive(a) {
+  return (a.market === 'us' || a.market === 'metal') && a.symbol && FIN.prices[a.symbol] && FIN.fx;
 }
 
 function renderFin() {
@@ -681,13 +714,16 @@ function renderFin() {
   finRenderTabMenu();
 
   const kind = tab.kind;
+  const isInvest = kind === 'invest';
   const showCircle = kind === 'tx' || kind === 'debt';
   document.getElementById('finCircle').style.display = showCircle ? 'block' : 'none';
   document.getElementById('finCats').style.display = kind === 'tx' ? 'flex' : 'none';
-  document.getElementById('finList').style.display = showCircle ? 'flex' : 'none';
+  document.getElementById('finList').style.display = (showCircle || isInvest) ? 'flex' : 'none';
+  document.getElementById('finInvestHead').classList.toggle('hidden', !isInvest);
   document.getElementById('finNoCircle').classList.toggle('hidden', kind !== 'soon');
   if (kind === 'soon') { document.getElementById('finNoCircleT').textContent = tab.n; return; }
   if (kind === 'debt') { renderDebt(tab.k); return; }
+  if (kind === 'invest') { renderInvest(tab.k); return; }
 
   const type = tab.k;
   const perKey = FIN_PER[FIN.per].k;
@@ -765,6 +801,92 @@ function finRenderList(type, periodTx) {
     await loadFin();
   }));
 }
+
+// ----- Инвестиции (портфель) -----
+function renderInvest(kind) {
+  const def = FIN_INVEST[kind];
+  const assets = FIN.assets.filter((a) => a.kind === kind);
+  let invested = 0, value = 0;
+  assets.forEach((a) => { invested += a.qty * a.buyPrice; value += a.qty * finAssetCur(a); });
+  const pl = value - invested;
+  const plPct = invested > 0 ? (pl / invested) * 100 : 0;
+  const plColor = pl > 0 ? '#16a34a' : pl < 0 ? '#dc2626' : 'var(--green-soft)';
+  const sgn = pl > 0 ? '+' : pl < 0 ? '−' : '';
+  document.getElementById('finInvestHead').innerHTML =
+    '<div class="fin-pv-cap">Портфель құны</div>' +
+    '<div class="fin-pv">' + finFmt(value) + '</div>' +
+    '<div class="fin-pl" style="color:' + plColor + '">' + sgn + finFmt(Math.abs(pl)) + ' · ' + sgn + Math.abs(plPct).toFixed(1) + '%</div>' +
+    '<div class="fin-pv-sub">Салынған: ' + finFmt(invested) + (FIN.fx ? '' : ' · онлайн баға жүктелуде…') + '</div>';
+
+  const box = document.getElementById('finList');
+  if (!assets.length) { box.innerHTML = '<div class="fin-empty">Әзірше актив жоқ. «+» арқылы қос.</div>'; return; }
+  box.innerHTML = assets.map((a) => {
+    const cur = finAssetCur(a);
+    const av = a.qty * cur, ai = a.qty * a.buyPrice;
+    const p = av - ai, ppct = ai > 0 ? (p / ai) * 100 : 0;
+    const col = p > 0 ? '#16a34a' : p < 0 ? '#dc2626' : 'var(--green-soft)';
+    const s = p > 0 ? '+' : p < 0 ? '−' : '';
+    const live = finAssetLive(a) ? '' : ' <span class="fin-manual">қолмен</span>';
+    const sub = a.qty + ' ' + (a.unit === 'gram' ? 'г' : def.unit) + ' · ' + finFmt(cur) + live;
+    return '<div class="fin-item">' +
+      '<div class="ic-c" style="background:' + def.c + '22;color:' + def.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + def.i + '"></use></svg></div>' +
+      '<div class="mid"><div class="nm">' + a.name + '</div><div class="sb">' + sub + '</div></div>' +
+      '<div class="rt"><div class="am">' + finFmt(av) + '</div><div class="dt" style="color:' + col + '">' + s + Math.abs(ppct).toFixed(1) + '%</div></div>' +
+      '<button class="del" data-del="' + a.id + '" aria-label="Жою"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>';
+  }).join('');
+  box.querySelectorAll('.del[data-del]').forEach((el) => el.addEventListener('click', async () => {
+    tg.HapticFeedback?.impactOccurred('light');
+    try { await api('/api/fin/asset/delete', { id: el.dataset.del }); } catch {}
+    await loadFin();
+  }));
+}
+function finNormTicker(t) { t = (t || '').trim().toLowerCase(); if (!t) return ''; return t.includes('.') ? t : t + '.us'; }
+function finOpenAssetModal(kind) {
+  const m = document.getElementById('finAssetModal');
+  m.dataset.kind = kind;
+  document.getElementById('finAssetTitle').textContent = FIN_TABS[FIN.tabI].n + ' қосу';
+  const isQujat = kind === 'qujat';
+  document.getElementById('finATickerWrap').classList.toggle('hidden', !isQujat);
+  document.getElementById('finATypeWrap').classList.toggle('hidden', isQujat);
+  document.getElementById('finAQtyLbl').textContent = 'Саны (' + (isQujat ? 'дана' : 'грамм') + ')';
+  document.getElementById('finABuyLbl').textContent = 'Сатып алу бағасы (₸ / ' + (isQujat ? 'дана' : 'г') + ')';
+  ['finAName', 'finATicker', 'finAQty', 'finABuy', 'finACur', 'finANote'].forEach((id) => { document.getElementById(id).value = ''; });
+  if (!isQujat) {
+    const sel = document.getElementById('finAType');
+    sel.innerHTML = FIN_METALS.map((mt, i) => '<option value="' + i + '">' + mt.n + '</option>').join('');
+    sel.value = '0';
+  }
+  document.getElementById('finAHint').textContent = '';
+  m.classList.remove('hidden');
+}
+function finCloseAssetModal() { document.getElementById('finAssetModal').classList.add('hidden'); }
+document.getElementById('finAssetClose')?.addEventListener('click', finCloseAssetModal);
+document.getElementById('finAssetModal')?.addEventListener('click', (e) => { if (e.target.id === 'finAssetModal') finCloseAssetModal(); });
+document.getElementById('finASave')?.addEventListener('click', async () => {
+  const kind = document.getElementById('finAssetModal').dataset.kind || 'qujat';
+  const hint = document.getElementById('finAHint');
+  const name = document.getElementById('finAName').value.trim();
+  const qty = Number((document.getElementById('finAQty').value || '').replace(',', '.')) || 0;
+  const buyPrice = Math.round(Number((document.getElementById('finABuy').value || '').replace(/\s/g, '')) || 0);
+  if (!name) { hint.textContent = 'Атауын жаз'; return; }
+  if (qty <= 0) { hint.textContent = 'Санын енгіз'; return; }
+  if (buyPrice <= 0) { hint.textContent = 'Сатып алу бағасын енгіз'; return; }
+  let market = 'manual', symbol = '', unit = 'piece';
+  if (kind === 'qujat') {
+    const tick = finNormTicker(document.getElementById('finATicker').value);
+    if (tick) { market = 'us'; symbol = tick; unit = 'share'; } else { market = 'manual'; unit = 'share'; }
+  } else {
+    const mt = FIN_METALS[+document.getElementById('finAType').value] || FIN_METALS[3];
+    if (mt.s) { market = 'metal'; symbol = mt.s; unit = 'gram'; } else { market = 'manual'; unit = 'piece'; }
+  }
+  const curManual = Math.max(0, Math.round(Number((document.getElementById('finACur').value || '').replace(/\s/g, '')) || 0));
+  hint.textContent = 'Сақталуда…';
+  try {
+    const r = await api('/api/fin/asset/add', { kind, name, market, symbol, qty, buyPrice, curManual, unit });
+    if (r && r.ok) { tg.HapticFeedback?.notificationOccurred('success'); finCloseAssetModal(); await loadFin(); }
+    else hint.textContent = 'Қате: ' + ((r && r.error) || '');
+  } catch { hint.textContent = 'Қате'; }
+});
 
 // ----- Долги/кредиты/рассрочка -----
 function renderDebt(kind) {
@@ -898,6 +1020,7 @@ document.getElementById('finAddBtn')?.addEventListener('click', () => {
   const tab = FIN_TABS[FIN.tabI];
   if (tab.kind === 'tx') finOpenModal(tab.k);
   else if (tab.kind === 'debt') finOpenDebtModal(tab.k);
+  else if (tab.kind === 'invest') finOpenAssetModal(tab.k);
   else tg.HapticFeedback?.notificationOccurred('warning');
 });
 document.getElementById('finModalClose')?.addEventListener('click', finCloseModal);
