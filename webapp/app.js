@@ -262,6 +262,7 @@ function show(screen) {
   if (screen === 'home') loadBook();
   if (screen === 'qadam') loadQadam();
   if (screen === 'qarjy') loadFin();
+  if (screen === 'profile') loadFriends();
 }
 
 document.querySelectorAll('.tab').forEach((t) => {
@@ -401,7 +402,7 @@ document.getElementById('checkStatusBtn')?.addEventListener('click', async () =>
 });
 
 // ---------- Қадам (шаги) ----------
-const QD = { stepsMap: {}, today: '', leaderboard: { day: [], week: [], month: [] }, period: 'day', selMonth: null };
+const QD = { stepsMap: {}, today: '', leaderboard: { day: [], week: [], month: [] }, friendsBoard: { day: [], week: [], month: [] }, period: 'day', scope: 'spirit', selMonth: null };
 const KK_WD = ['Жс', 'Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сб']; // index = getUTCDay()
 const KK_MON_SHORT = ['Қаң', 'Ақп', 'Нау', 'Сәу', 'Мам', 'Мау', 'Шіл', 'Там', 'Қыр', 'Қаз', 'Қар', 'Жел'];
 let QD_GOAL = 10000;
@@ -427,6 +428,7 @@ async function loadQadam() {
   (r.steps || []).forEach((x) => { QD.stepsMap[x.date] = x.steps; });
   QD.today = r.today || new Date().toISOString().slice(0, 10);
   QD.leaderboard = r.leaderboard || { day: [], week: [], month: [] };
+  QD.friendsBoard = r.friendsBoard || { day: [], week: [], month: [] };
   QD_GOAL = Number(r.goal) || 10000;
   const goalEl = document.getElementById('qdGoal');
   if (goalEl) goalEl.textContent = 'мақсат: ' + qdFmt(QD_GOAL);
@@ -533,11 +535,14 @@ function qdRenderMonth(mi) {
 }
 
 function qdRenderLb() {
-  const arr = QD.leaderboard[QD.period] || [];
+  const src = QD.scope === 'dostar' ? (QD.friendsBoard || {}) : (QD.leaderboard || {});
+  const arr = src[QD.period] || [];
   const lb = document.getElementById('qdLb');
   lb.innerHTML = '';
   if (!arr.length) {
-    lb.innerHTML = '<div class="qd-empty">Әзірше деректер жоқ. Қадам қосылғаннан кейін көрінеді.</div>';
+    lb.innerHTML = QD.scope === 'dostar'
+      ? '<div class="qd-empty">Достар әлі жоқ немесе деректер жоқ. «Профиль» → «Достар» бөлімінде дос қос.</div>'
+      : '<div class="qd-empty">Әзірше деректер жоқ. Қадам қосылғаннан кейін көрінеді.</div>';
     return;
   }
   arr.forEach((x, i) => {
@@ -552,6 +557,12 @@ function qdRenderLb() {
   });
 }
 
+document.querySelectorAll('#qdScope button').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#qdScope button').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active'); QD.scope = b.dataset.s; qdRenderLb();
+  });
+});
 document.querySelectorAll('#qdSeg button').forEach((b) => {
   b.addEventListener('click', () => {
     document.querySelectorAll('#qdSeg button').forEach((x) => x.classList.remove('active'));
@@ -1096,6 +1107,53 @@ document.getElementById('finSave')?.addEventListener('click', async () => {
     else hint.textContent = 'Қате: ' + ((r && r.error) || '');
   } catch (e) { hint.textContent = 'Қате'; }
 });
+
+// ---------- Достар (друзья) ----------
+function frIni(n) { return (n || '?').split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase(); }
+async function loadFriends() {
+  let r;
+  try { r = await api('/api/friends/me', {}); } catch { return; }
+  if (!r || !r.ok) return;
+  document.getElementById('frCode').textContent = r.code || '—';
+  renderFriends(r);
+}
+function renderFriends(r) {
+  const inc = document.getElementById('frIncoming');
+  inc.innerHTML = (r.incoming || []).length
+    ? '<div class="qd-note">Сұраныстар:</div>' + r.incoming.map((f) =>
+      '<div class="fr-item"><div class="fr-av">' + frIni(f.name) + '</div><div class="fr-nm">' + f.name + '</div>' +
+      '<button class="fr-ok" data-acc="' + f.id + '">Растау</button>' +
+      '<button class="fr-x" data-rem="' + f.id + '" aria-label="Бас тарту"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-x"></use></svg></button></div>').join('')
+    : '';
+  const list = document.getElementById('frList');
+  list.innerHTML = (r.friends || []).length
+    ? '<div class="qd-note">Достарым (' + r.friends.length + '):</div>' + r.friends.map((f) =>
+      '<div class="fr-item"><div class="fr-av">' + frIni(f.name) + '</div><div class="fr-nm">' + f.name + '</div>' +
+      '<button class="fr-x" data-rem="' + f.id + '" aria-label="Өшіру"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>').join('')
+    : '<div class="qd-empty">Әзірше досың жоқ. Кодыңды досыңа беріп, оны қос.</div>';
+  document.querySelectorAll('#frIncoming [data-acc]').forEach((el) => el.addEventListener('click', async () => {
+    tg.HapticFeedback?.impactOccurred('light');
+    try { await api('/api/friends/accept', { id: Number(el.dataset.acc) }); } catch {}
+    await loadFriends(); loadQadam();
+  }));
+  document.querySelectorAll('#frIncoming [data-rem], #frList [data-rem]').forEach((el) => el.addEventListener('click', async () => {
+    try { await api('/api/friends/remove', { id: Number(el.dataset.rem) }); } catch {}
+    await loadFriends(); loadQadam();
+  }));
+}
+document.getElementById('frAddBtn')?.addEventListener('click', async () => {
+  const inp = document.getElementById('frAddInput');
+  const hint = document.getElementById('frAddHint');
+  const code = inp.value.trim().toUpperCase();
+  if (!code) { hint.textContent = 'Кодты енгіз'; return; }
+  hint.textContent = 'Жіберілуде…';
+  try {
+    const r = await api('/api/friends/add', { code });
+    if (r && r.ok) { hint.textContent = r.accepted ? '✅ Дос қосылды' : '✅ Сұраныс жіберілді'; inp.value = ''; await loadFriends(); loadQadam(); }
+    else hint.textContent = (r && r.error) || 'Қате';
+  } catch { hint.textContent = 'Қате'; }
+});
+document.getElementById('frAddInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('frAddBtn').click(); });
 
 // ---------- Профиль: имя ----------
 function setProfileName(user) {

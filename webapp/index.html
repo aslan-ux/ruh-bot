@@ -180,7 +180,11 @@
     </div>
 
     <div class="qd-sect">Рейтинг</div>
-    <div class="qd-seg" id="qdSeg">
+    <div class="qd-seg" id="qdScope">
+      <button data-s="spirit" class="active">Spirit</button>
+      <button data-s="dostar">Достар</button>
+    </div>
+    <div class="qd-seg" id="qdSeg" style="margin-top:8px;">
       <button data-p="day" class="active">Күн</button>
       <button data-p="week">Апта</button>
       <button data-p="month">Ай</button>
@@ -283,6 +287,18 @@
       <button type="button" data-theme-val="dark">Күңгірт</button>
     </div>
     <div class="profile-hint">«Авто» — телефон/Telegram параметріне сай ауысады.</div>
+
+    <div class="qd-sect">Достар</div>
+    <div class="qd-note">Менің кодым (досыңа бер):</div>
+    <div class="qd-token"><code id="frCode">—</code><button type="button" class="qd-copy" data-copy="frCode">Көшіру</button></div>
+    <div class="qd-note">Досты қосу (код арқылы):</div>
+    <div class="fr-add">
+      <input class="input" id="frAddInput" placeholder="Мысалы: A1B2C3" />
+      <button type="button" class="fr-add-btn" id="frAddBtn">Қосу</button>
+    </div>
+    <div class="hint" id="frAddHint" style="text-align:left; min-height:0;"></div>
+    <div id="frIncoming" class="fr-block"></div>
+    <div id="frList" class="fr-block"></div>
   </section>
 
   <!-- Нижняя панель -->

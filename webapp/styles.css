@@ -363,6 +363,18 @@ input, textarea, select {
 }
 .profile-avatar .ic-svg { width: 34px; height: 34px; }
 
+/* Достар (друзья) */
+.fr-add { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.fr-add .input { flex: 1; text-transform: uppercase; }
+.fr-add-btn { flex: 0 0 auto; background: var(--accent); color: #fff; border: none; border-radius: 11px; padding: 12px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.fr-block { margin-top: 8px; }
+.fr-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 0.5px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 7px; }
+.fr-av { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: 0 0 auto; }
+.fr-nm { flex: 1; font-size: 14px; font-weight: 500; }
+.fr-ok { background: var(--accent); color: #fff; border: none; border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.fr-x { background: none; border: none; color: var(--placeholder); cursor: pointer; padding: 4px; }
+.fr-x .ic-svg { width: 17px; height: 17px; }
+
 /* ================= Қаржы (финансы) ================= */
 #screen-qarjy { position: relative; }
 .fin-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -520,5 +532,7 @@ button:active { transform: scale(.96); }
 .fin-modal:not(.hidden) .fin-sheet,
 #countryModal:not(.hidden) > div { animation: sheetIn .3s cubic-bezier(.2, .8, .2, 1); }
 .fin-menu:not(.hidden) { animation: popIn .18s cubic-bezier(.2, .8, .2, 1); transform-origin: top; }
+@keyframes popInCenter { from { opacity: 0; transform: translateX(-50%) translateY(-6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.fin-menu-center:not(.hidden) { animation: popInCenter .18s cubic-bezier(.2, .8, .2, 1); }
 .screen.active { animation: screenIn .3s cubic-bezier(.2, .8, .2, 1); }
 #qdSetupBox:not(.hidden), #qdCalWrap:not(.hidden) { animation: fadeSlide .25s ease; }
