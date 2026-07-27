@@ -323,6 +323,37 @@
     </div>
   </div>
 
+  <!-- Модалка добавления долга/кредита/рассрочки -->
+  <div id="finDebtModal" class="fin-modal hidden">
+    <div class="fin-sheet">
+      <div class="fin-sheet-top">
+        <div class="fin-sheet-title" id="finDebtTitle">Кредит қосу</div>
+        <button type="button" id="finDebtClose" class="fin-x" aria-label="Жабу"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="fin-lbl" id="finDTitleLbl">Атауы</div>
+      <input id="finDTitle" class="input" placeholder="Мысалы: Kaspi" />
+      <div id="finDDirWrap" class="hidden">
+        <div class="fin-lbl">Бағыты</div>
+        <div class="qd-seg" id="finDDir">
+          <button type="button" data-d="borrowed" class="active">Алдым</button>
+          <button type="button" data-d="lent">Бердім</button>
+        </div>
+      </div>
+      <div class="fin-lbl">Жалпы сома</div>
+      <input id="finDTotal" class="input" inputmode="numeric" placeholder="0" />
+      <div id="finDMonthlyWrap">
+        <div class="fin-lbl">Айлық төлем</div>
+        <input id="finDMonthly" class="input" inputmode="numeric" placeholder="0" />
+      </div>
+      <div class="fin-lbl" id="finDDueLbl">Келесі төлем күні</div>
+      <input id="finDDue" type="date" class="input" />
+      <label class="fin-remind"><input type="checkbox" id="finDRemind" checked /> Төлем күні еске салу</label>
+      <input id="finDNote" class="input" placeholder="Ескертпе (міндетті емес)" style="margin-top:10px;" />
+      <button type="button" id="finDSave" class="btn-primary">Сақтау</button>
+      <div class="hint" id="finDHint"></div>
+    </div>
+  </div>
+
   <script src="./app.js"></script>
 </body>
 </html>

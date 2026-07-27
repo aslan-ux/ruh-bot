@@ -454,3 +454,18 @@ input, textarea, select {
 .fin-chip .cic .ic-svg { width: 19px; height: 19px; }
 .fin-chip .cl { font-size: 10px; color: var(--text); text-align: center; line-height: 1.2; }
 .fin-chip.sel { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Долги */
+.fin-debt .mid .nm { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.fin-dir { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px; }
+.fin-dir.lent { background: rgba(34,197,94,.14); color: #16a34a; }
+.fin-dir.bor { background: rgba(239,68,68,.14); color: #dc2626; }
+.fin-pay {
+  background: var(--accent); color: #fff; border: none; border-radius: 9px;
+  padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.fin-pay:active { transform: scale(.97); }
+.fin-pay:disabled { opacity: .6; }
+.fin-done { font-size: 12px; font-weight: 600; color: #16a34a; }
+.fin-remind { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin-top: 14px; cursor: pointer; }
+.fin-remind input { width: 18px; height: 18px; accent-color: var(--accent); }

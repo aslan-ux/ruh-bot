@@ -610,12 +610,17 @@ document.getElementById('qdRefreshBtn')?.addEventListener('click', () => qdRefre
 const FIN_TABS = [
   { k: 'expense', n: 'Шығыс', kind: 'tx' },
   { k: 'income', n: 'Кіріс', kind: 'tx' },
-  { k: 'qaryz', n: 'Қарыз', kind: 'soon' },
-  { k: 'kredit', n: 'Кредит', kind: 'soon' },
-  { k: 'bolip', n: 'Бөліп төлеу', kind: 'soon' },
+  { k: 'qaryz', n: 'Қарыз', kind: 'debt' },
+  { k: 'kredit', n: 'Кредит', kind: 'debt' },
+  { k: 'bolip', n: 'Бөліп төлеу', kind: 'debt' },
   { k: 'qujat', n: 'Құнды қағаздар', kind: 'soon' },
   { k: 'tas', n: 'Бағалы тастар', kind: 'soon' },
 ];
+const FIN_DEBT = {
+  qaryz: { c: '#8B5CF6', i: 'i-people', titleLbl: 'Кім', dueLbl: 'Қайтару күні', dir: true, monthly: false },
+  kredit: { c: '#F59E0B', i: 'i-cash', titleLbl: 'Банк / атауы', dueLbl: 'Келесі төлем күні', dir: false, monthly: true },
+  bolip: { c: '#06B6D4', i: 'i-cart', titleLbl: 'Тауар', dueLbl: 'Келесі төлем күні', dir: false, monthly: true },
+};
 const FIN_CATS = {
   expense: [
     { k: 'azyk', n: 'Азық-түлік', i: 'i-cart', c: '#FF6B6B' },
@@ -643,7 +648,7 @@ const FIN_PER = [
   { k: 'week', n: 'Осы апта' },
   { k: 'month', n: 'Осы ай' },
 ];
-const FIN = { txs: [], tabI: 0, per: 1, menuOpen: false, perOpen: false, modalCat: null };
+const FIN = { txs: [], debts: [], tabI: 0, per: 1, menuOpen: false, perOpen: false, modalCat: null, debtMetric: 'remaining' };
 
 function finToday() { return new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10); }
 function finShift(days) { return new Date(Date.now() + 5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10); }
@@ -662,9 +667,11 @@ function finInPeriod(date, perKey) {
 }
 
 async function loadFin() {
-  let r;
-  try { r = await api('/api/fin/list', {}); } catch { renderFin(); return; }
-  if (r && r.ok) FIN.txs = r.txs || [];
+  try {
+    const [r1, r2] = await Promise.all([api('/api/fin/list', {}), api('/api/fin/debt/list', {})]);
+    if (r1 && r1.ok) FIN.txs = r1.txs || [];
+    if (r2 && r2.ok) FIN.debts = r2.debts || [];
+  } catch {}
   renderFin();
 }
 
@@ -673,13 +680,14 @@ function renderFin() {
   document.getElementById('finTabName').textContent = tab.n;
   finRenderTabMenu();
 
-  const isTx = tab.kind === 'tx';
-  document.getElementById('finCircle').style.display = isTx ? 'block' : 'none';
-  document.getElementById('finCats').style.display = isTx ? 'flex' : 'none';
-  document.getElementById('finList').style.display = isTx ? 'flex' : 'none';
-  const noc = document.getElementById('finNoCircle');
-  noc.classList.toggle('hidden', isTx);
-  if (!isTx) { document.getElementById('finNoCircleT').textContent = tab.n; return; }
+  const kind = tab.kind;
+  const showCircle = kind === 'tx' || kind === 'debt';
+  document.getElementById('finCircle').style.display = showCircle ? 'block' : 'none';
+  document.getElementById('finCats').style.display = kind === 'tx' ? 'flex' : 'none';
+  document.getElementById('finList').style.display = showCircle ? 'flex' : 'none';
+  document.getElementById('finNoCircle').classList.toggle('hidden', kind !== 'soon');
+  if (kind === 'soon') { document.getElementById('finNoCircleT').textContent = tab.n; return; }
+  if (kind === 'debt') { renderDebt(tab.k); return; }
 
   const type = tab.k;
   const perKey = FIN_PER[FIN.per].k;
@@ -758,6 +766,103 @@ function finRenderList(type, periodTx) {
   }));
 }
 
+// ----- Долги/кредиты/рассрочка -----
+function renderDebt(kind) {
+  const def = FIN_DEBT[kind];
+  const debts = FIN.debts.filter((d) => d.kind === kind);
+  const totalAll = debts.reduce((s, d) => s + d.total, 0);
+  const paidAll = debts.reduce((s, d) => s + Math.min(d.paid, d.total), 0);
+  const remainAll = Math.max(0, totalAll - paidAll);
+  const m = FIN.debtMetric;
+  const val = m === 'paid' ? paidAll : m === 'total' ? totalAll : remainAll;
+  const mlabel = m === 'paid' ? 'Төленген' : m === 'total' ? 'Барлығы' : 'Қалдық';
+  document.getElementById('finRingVal').textContent = finFmt(val);
+  document.getElementById('finPeriodName').textContent = mlabel;
+  document.getElementById('finPeriodMenu').classList.add('hidden');
+  const frac = totalAll > 0 ? Math.min(1, paidAll / totalAll) : 0;
+  document.getElementById('finArc').setAttribute('stroke-dashoffset', (540.35 * (1 - frac)).toFixed(1));
+
+  const box = document.getElementById('finList');
+  if (!debts.length) { box.innerHTML = '<div class="fin-empty">Әзірше жазба жоқ. «+» арқылы қос.</div>'; return; }
+  box.innerHTML = debts.map((d) => {
+    const remaining = Math.max(0, d.total - d.paid);
+    const pct = d.total > 0 ? Math.round((d.paid / d.total) * 100) : 0;
+    let payLbl = 'Төлеу';
+    if (kind === 'qaryz') payLbl = d.direction === 'lent' ? 'Қайтарылды' : 'Қайтару';
+    const badge = kind === 'qaryz'
+      ? '<span class="fin-dir ' + (d.direction === 'lent' ? 'lent' : 'bor') + '">' + (d.direction === 'lent' ? 'Бердім' : 'Алдым') + '</span>' : '';
+    const sub = 'Қалдық: ' + finFmt(remaining) + ' / ' + finFmt(d.total) + (d.dueDate ? ' · ' + d.dueDate.slice(5) : '');
+    const action = d.done
+      ? '<span class="fin-done">Жабылды</span>'
+      : '<button class="fin-pay" data-id="' + d.id + '">' + payLbl + '</button>';
+    return '<div class="fin-item fin-debt">' +
+      '<div class="ic-c" style="background:' + def.c + '22;color:' + def.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + def.i + '"></use></svg></div>' +
+      '<div class="mid"><div class="nm">' + d.title + badge + '</div><div class="sb">' + sub + '</div>' +
+      '<div class="fin-bar" style="margin-top:6px"><span style="width:' + pct + '%;background:' + def.c + '"></span></div></div>' +
+      '<div class="rt">' + action + '</div>' +
+      '<button class="del" data-del="' + d.id + '" aria-label="Жою"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>';
+  }).join('');
+  box.querySelectorAll('.fin-pay').forEach((el) => el.addEventListener('click', async () => {
+    el.disabled = true; tg.HapticFeedback?.impactOccurred('medium');
+    try { await api('/api/fin/debt/pay', { id: el.dataset.id }); } catch {}
+    await loadFin();
+  }));
+  box.querySelectorAll('.del[data-del]').forEach((el) => el.addEventListener('click', async () => {
+    tg.HapticFeedback?.impactOccurred('light');
+    try { await api('/api/fin/debt/delete', { id: el.dataset.del }); } catch {}
+    await loadFin();
+  }));
+}
+function finCycleMetric() {
+  FIN.debtMetric = FIN.debtMetric === 'remaining' ? 'paid' : FIN.debtMetric === 'paid' ? 'total' : 'remaining';
+  renderFin();
+}
+function finOpenDebtModal(kind) {
+  const def = FIN_DEBT[kind];
+  document.getElementById('finDebtModal').dataset.kind = kind;
+  document.getElementById('finDebtTitle').textContent = FIN_TABS[FIN.tabI].n + ' қосу';
+  document.getElementById('finDTitleLbl').textContent = def.titleLbl;
+  document.getElementById('finDDueLbl').textContent = def.dueLbl;
+  document.getElementById('finDDirWrap').classList.toggle('hidden', !def.dir);
+  document.getElementById('finDMonthlyWrap').classList.toggle('hidden', !def.monthly);
+  ['finDTitle', 'finDTotal', 'finDMonthly', 'finDDue', 'finDNote'].forEach((id) => { document.getElementById(id).value = ''; });
+  document.getElementById('finDRemind').checked = true;
+  document.getElementById('finDHint').textContent = '';
+  document.querySelectorAll('#finDDir button').forEach((b, i) => b.classList.toggle('active', i === 0));
+  FIN.debtDir = 'borrowed';
+  document.getElementById('finDebtModal').classList.remove('hidden');
+}
+function finCloseDebtModal() { document.getElementById('finDebtModal').classList.add('hidden'); }
+
+document.querySelectorAll('#finDDir button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('#finDDir button').forEach((x) => x.classList.remove('active'));
+  b.classList.add('active'); FIN.debtDir = b.dataset.d;
+}));
+document.getElementById('finDebtClose')?.addEventListener('click', finCloseDebtModal);
+document.getElementById('finDebtModal')?.addEventListener('click', (e) => { if (e.target.id === 'finDebtModal') finCloseDebtModal(); });
+document.getElementById('finDSave')?.addEventListener('click', async () => {
+  const kind = document.getElementById('finDebtModal').dataset.kind || 'kredit';
+  const def = FIN_DEBT[kind];
+  const hint = document.getElementById('finDHint');
+  const title = document.getElementById('finDTitle').value.trim();
+  const total = Math.round(Number((document.getElementById('finDTotal').value || '').replace(/\s/g, '')) || 0);
+  if (!title) { hint.textContent = 'Атауын жаз'; return; }
+  if (total <= 0) { hint.textContent = 'Жалпы соманы енгіз'; return; }
+  hint.textContent = 'Сақталуда…';
+  try {
+    const r = await api('/api/fin/debt/add', {
+      kind, title, total,
+      monthly: def.monthly ? Math.round(Number((document.getElementById('finDMonthly').value || '').replace(/\s/g, '')) || 0) : 0,
+      direction: def.dir ? (FIN.debtDir || 'borrowed') : '',
+      dueDate: document.getElementById('finDDue').value || '',
+      remind: document.getElementById('finDRemind').checked,
+      note: document.getElementById('finDNote').value.trim(),
+    });
+    if (r && r.ok) { tg.HapticFeedback?.notificationOccurred('success'); finCloseDebtModal(); await loadFin(); }
+    else hint.textContent = 'Қате: ' + ((r && r.error) || '');
+  } catch { hint.textContent = 'Қате'; }
+});
+
 // ----- Модалка добавления -----
 function finOpenModal(type) {
   document.getElementById('finModalTitle').textContent = (type === 'income' ? 'Кіріс' : 'Шығыс') + ' қосу';
@@ -783,11 +888,16 @@ function finOpenModal(type) {
 function finCloseModal() { document.getElementById('finModal').classList.add('hidden'); }
 
 document.getElementById('finTabBtn')?.addEventListener('click', (e) => { e.stopPropagation(); FIN.menuOpen = !FIN.menuOpen; FIN.perOpen = false; renderFin(); });
-document.getElementById('finPeriodBtn')?.addEventListener('click', (e) => { e.stopPropagation(); FIN.perOpen = !FIN.perOpen; FIN.menuOpen = false; renderFin(); });
+document.getElementById('finPeriodBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (FIN_TABS[FIN.tabI].kind === 'debt') { finCycleMetric(); return; }
+  FIN.perOpen = !FIN.perOpen; FIN.menuOpen = false; renderFin();
+});
 document.addEventListener('click', () => { if (FIN.menuOpen || FIN.perOpen) { FIN.menuOpen = false; FIN.perOpen = false; renderFin(); } });
 document.getElementById('finAddBtn')?.addEventListener('click', () => {
   const tab = FIN_TABS[FIN.tabI];
   if (tab.kind === 'tx') finOpenModal(tab.k);
+  else if (tab.kind === 'debt') finOpenDebtModal(tab.k);
   else tg.HapticFeedback?.notificationOccurred('warning');
 });
 document.getElementById('finModalClose')?.addEventListener('click', finCloseModal);
