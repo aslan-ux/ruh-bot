@@ -500,3 +500,25 @@ button {
 }
 button:active { transform: scale(.96); }
 .tabbar .tab:active { transform: scale(.92); }
+
+/* Поле ввода суммы со значком ₸ */
+.fin-money { position: relative; }
+.fin-money .input { padding-right: 36px; }
+.fin-money-cur {
+  position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  color: var(--green-soft); font-weight: 600; font-size: 15px; pointer-events: none;
+}
+
+/* ===== Плавные анимации открытия (весь мини-апп) ===== */
+@keyframes ovIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes popIn { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+.fin-modal:not(.hidden), #countryModal:not(.hidden) { animation: ovIn .2s ease; }
+.fin-modal:not(.hidden) .fin-sheet,
+#countryModal:not(.hidden) > div { animation: sheetIn .3s cubic-bezier(.2, .8, .2, 1); }
+.fin-menu:not(.hidden) { animation: popIn .18s cubic-bezier(.2, .8, .2, 1); transform-origin: top; }
+.screen.active { animation: screenIn .3s cubic-bezier(.2, .8, .2, 1); }
+#qdSetupBox:not(.hidden), #qdCalWrap:not(.hidden) { animation: fadeSlide .25s ease; }

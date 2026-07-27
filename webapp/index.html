@@ -342,10 +342,10 @@
         </div>
       </div>
       <div class="fin-lbl">Жалпы сома</div>
-      <input id="finDTotal" class="input" inputmode="numeric" placeholder="0" />
+      <div class="fin-money"><input id="finDTotal" class="input" inputmode="numeric" placeholder="0" /><span class="fin-money-cur">₸</span></div>
       <div id="finDMonthlyWrap">
         <div class="fin-lbl">Айлық төлем</div>
-        <input id="finDMonthly" class="input" inputmode="numeric" placeholder="0" />
+        <div class="fin-money"><input id="finDMonthly" class="input" inputmode="numeric" placeholder="0" /><span class="fin-money-cur">₸</span></div>
       </div>
       <div class="fin-lbl" id="finDDueLbl">Келесі төлем күні</div>
       <input id="finDDue" type="date" class="input" />
@@ -375,10 +375,10 @@
       </div>
       <div class="fin-lbl" id="finAQtyLbl">Саны</div>
       <input id="finAQty" class="input" inputmode="decimal" placeholder="0" />
-      <div class="fin-lbl" id="finABuyLbl">Сатып алу бағасы (₸)</div>
-      <input id="finABuy" class="input" inputmode="numeric" placeholder="0" />
-      <div class="fin-lbl">Қазіргі баға (₸, онлайн болмаса)</div>
-      <input id="finACur" class="input" inputmode="numeric" placeholder="міндетті емес" />
+      <div class="fin-lbl" id="finABuyLbl">Сатып алу бағасы</div>
+      <div class="fin-money"><input id="finABuy" class="input" inputmode="numeric" placeholder="0" /><span class="fin-money-cur">₸</span></div>
+      <div class="fin-lbl">Қазіргі баға (онлайн болмаса)</div>
+      <div class="fin-money"><input id="finACur" class="input" inputmode="numeric" placeholder="міндетті емес" /><span class="fin-money-cur">₸</span></div>
       <input id="finANote" class="input" placeholder="Ескертпе (міндетті емес)" style="margin-top:10px;" />
       <button type="button" id="finASave" class="btn-primary">Сақтау</button>
       <div class="hint" id="finAHint"></div>
