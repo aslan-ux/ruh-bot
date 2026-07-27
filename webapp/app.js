@@ -703,7 +703,7 @@ function finRenderBanks() {
   box.innerHTML = BANKS.map((b, i) => {
     const ini = b.n === 'Қолма-қол' ? '₸' : b.n === 'Басқа' ? '•' : b.n.slice(0, 2);
     const logo = b.d
-      ? '<img src="https://icons.duckduckgo.com/ip3/' + b.d + '.ico" alt="" loading="lazy" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://www.google.com/s2/favicons?domain=' + b.d + '&sz=64\'}else{this.remove()}"/>'
+      ? '<img src="https://www.google.com/s2/favicons?domain=' + b.d + '&sz=128" alt="" loading="lazy" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://icons.duckduckgo.com/ip3/' + b.d + '.ico\'}else{this.remove()}"/>'
       : '';
     return '<div class="fin-bank' + (i === 0 ? ' sel' : '') + '" data-n="' + b.n + '"><div class="fin-bank-ic" style="color:' + b.c + '"><span>' + ini + '</span>' + logo + '</div><div class="fin-bank-n">' + b.n + '</div></div>';
   }).join('');
@@ -713,6 +713,16 @@ function finRenderBanks() {
     el.classList.add('sel'); FIN.selAccount = el.dataset.n;
   }));
 }
+
+// Красивое форматирование суммы при вводе: 1000000 -> 1 000 000
+function finFormatAmountInput(el) {
+  const d = (el.value || '').replace(/\D/g, '');
+  el.value = d ? d.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : '';
+}
+['finAmount', 'finDTotal', 'finDMonthly', 'finABuy', 'finACur'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => finFormatAmountInput(el));
+});
 
 function finToday() { return new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10); }
 function finShift(days) { return new Date(Date.now() + 5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10); }
