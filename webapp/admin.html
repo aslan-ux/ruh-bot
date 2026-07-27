@@ -190,15 +190,39 @@ document.querySelectorAll('#sideTabs button').forEach((b) => {
   });
 });
 
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  ADMIN_KEY = document.getElementById('key').value.trim();
+const ADMIN_KEY_STORE = 'spirit-admin-key';
+
+async function tryLogin(key, silent) {
+  ADMIN_KEY = (key || '').trim();
+  if (!ADMIN_KEY) return false;
   const r = await adminGet();
   if (r.ok) {
+    try { localStorage.setItem(ADMIN_KEY_STORE, ADMIN_KEY); } catch {}
     document.getElementById('login').classList.add('hidden');
     document.getElementById('panel').classList.remove('hidden');
     applyData(r);
-  } else {
-    document.getElementById('loginHint').textContent = r.error || 'Қате';
+    return true;
+  }
+  ADMIN_KEY = '';
+  try { localStorage.removeItem(ADMIN_KEY_STORE); } catch {}
+  if (!silent) document.getElementById('loginHint').textContent = r.error || 'Қате';
+  return false;
+}
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  tryLogin(document.getElementById('key').value, false);
+});
+document.getElementById('key').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') tryLogin(document.getElementById('key').value, false);
+});
+
+// Бетті жаңартқанда — сақталған кілтпен автоматты түрде қайта кіру (пароль сұрамай)
+window.addEventListener('DOMContentLoaded', () => {
+  let saved = '';
+  try { saved = localStorage.getItem(ADMIN_KEY_STORE) || ''; } catch {}
+  if (saved) {
+    document.getElementById('key').value = saved;
+    tryLogin(saved, true);
   }
 });
 
