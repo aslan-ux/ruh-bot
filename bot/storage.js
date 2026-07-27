@@ -334,3 +334,33 @@ export async function setBook(book) {
   writeJson(BOOK_FILE, next);
   return next;
 }
+
+// ---------- Удаление участника ----------
+export async function deleteUser(telegramId) {
+  if (useMongo) {
+    const r = await col.users.deleteOne({ telegramId });
+    return r.deletedCount > 0;
+  }
+  const users = readJson(USERS_FILE, []);
+  const next = users.filter((u) => u.telegramId !== telegramId);
+  writeJson(USERS_FILE, next);
+  return next.length !== users.length;
+}
+
+// ---------- Настройки Қаржы (категории + банки) — общие для всех ----------
+const FINCFG_FILE = path.join(DATA_DIR, 'finconfig.json');
+export async function getFinConfig() {
+  if (useMongo) {
+    const m = await col.meta.findOne({ _id: 'finConfig' });
+    return m ? m.value : null;
+  }
+  return readJson(FINCFG_FILE, null);
+}
+export async function setFinConfig(cfg) {
+  if (useMongo) {
+    await col.meta.updateOne({ _id: 'finConfig' }, { $set: { value: cfg } }, { upsert: true });
+    return cfg;
+  }
+  writeJson(FINCFG_FILE, cfg);
+  return cfg;
+}

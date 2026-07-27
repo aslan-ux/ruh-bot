@@ -38,7 +38,57 @@ import {
   addFriendReq,
   acceptFriend,
   removeFriend,
+  deleteUser,
+  getFinConfig,
+  setFinConfig,
 } from './storage.js';
+
+// ---------- Қаржы: дефолтные категории и банки (управляются из админки) ----------
+const DEFAULT_FIN = {
+  cats: {
+    expense: [
+      { k: 'azyk', n: 'Азық-түлік', i: 'i-cart', c: '#FF6B6B' },
+      { k: 'kolik', n: 'Көлік', i: 'i-car', c: '#4D96FF' },
+      { k: 'uy', n: 'Үй', i: 'i-home', c: '#9B87F5' },
+      { k: 'kafe', n: 'Кафе', i: 'i-coffee', c: '#F59E0B' },
+      { k: 'kiim', n: 'Киім', i: 'i-shirt', c: '#EC4899' },
+      { k: 'oyyn', n: 'Ойын-сауық', i: 'i-film', c: '#8B5CF6' },
+      { k: 'densaulyk', n: 'Денсаулық', i: 'i-heart', c: '#22C55E' },
+      { k: 'bailanys', n: 'Байланыс', i: 'i-phone', c: '#06B6D4' },
+      { k: 'basqa', n: 'Басқа', i: 'i-dots', c: '#94A3B8' },
+    ],
+    income: [
+      { k: 'jalaqy', n: 'Жалақы', i: 'i-cash', c: '#22C55E' },
+      { k: 'biznes', n: 'Бизнес', i: 'i-briefcase', c: '#4D96FF' },
+      { k: 'investisiya', n: 'Инвестиция', i: 'i-trend', c: '#8B5CF6' },
+      { k: 'syilyq', n: 'Сыйлық', i: 'i-gift', c: '#EC4899' },
+      { k: 'basqa', n: 'Басқа', i: 'i-dots', c: '#94A3B8' },
+    ],
+  },
+  banks: [
+    { n: 'Қолма-қол', d: '', c: '#16a34a' },
+    { n: 'Kaspi', d: 'kaspi.kz', c: '#F14635' },
+    { n: 'Halyk', d: 'halykbank.kz', c: '#16A34A' },
+    { n: 'Jusan', d: 'jusan.kz', c: '#111827' },
+    { n: 'ForteBank', d: 'forte.kz', c: '#FF6A00' },
+    { n: 'Bereke', d: 'berekebank.kz', c: '#15803D' },
+    { n: 'Freedom', d: 'bankffin.kz', c: '#00A651' },
+    { n: 'БЦК', d: 'bcc.kz', c: '#0EA5A0' },
+    { n: 'Eurasian', d: 'eubank.kz', c: '#DC2626' },
+    { n: 'RBK', d: 'bankrbk.kz', c: '#2563EB' },
+    { n: 'Home Credit', d: 'home.kz', c: '#E11D48' },
+    { n: 'Altyn', d: 'altynbank.kz', c: '#CA8A04' },
+    { n: 'Nurbank', d: 'nurbank.kz', c: '#7C3AED' },
+    { n: 'VTB', d: 'vtb-bank.kz', c: '#1D4ED8' },
+    { n: 'Басқа', d: '', c: '#6B7280' },
+  ],
+};
+function mergeFinConfig(saved) {
+  const c = saved && typeof saved === 'object' ? saved : {};
+  const cats = c.cats && c.cats.expense && c.cats.income ? c.cats : DEFAULT_FIN.cats;
+  const banks = Array.isArray(c.banks) && c.banks.length ? c.banks : DEFAULT_FIN.banks;
+  return { cats, banks };
+}
 
 // Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
 function kzDate(daysAgo = 0) {
@@ -507,7 +557,7 @@ app.post('/api/friends/remove', async (req, res) => {
 // ---------- Админка ----------
 app.get('/api/admin/data', async (req, res) => {
   if (!requireAdmin(req, res)) return;
-  res.json({ ok: true, book: await getBook(), users: await getUsers(), goal: await getGoal() });
+  res.json({ ok: true, book: await getBook(), users: await getUsers(), goal: await getGoal(), fin: mergeFinConfig(await getFinConfig()) });
 });
 
 // Изменить общую цель шагов (мақсат) — применится ко всем участникам
@@ -592,6 +642,40 @@ app.post('/api/admin/status', async (req, res) => {
     } catch {}
   }
   res.json({ ok: true, user });
+});
+
+// Публичный конфиг Қаржы (категории + банки) — мини-апп берёт отсюда
+app.get('/api/fin/config', async (_req, res) => {
+  res.json(mergeFinConfig(await getFinConfig()));
+});
+
+// Админ: удалить участника
+app.post('/api/admin/user/delete', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const telegramId = Number(req.body?.telegramId);
+  if (!telegramId) return res.status(400).json({ ok: false, error: 'telegramId жоқ' });
+  const ok = await deleteUser(telegramId);
+  if (!ok) return res.status(404).json({ ok: false, error: 'Қатысушы табылмады' });
+  res.json({ ok: true });
+});
+
+// Админ: задать/исправить шаги участника за дату (по умолчанию — сегодня)
+app.post('/api/admin/steps/set', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const telegramId = Number(req.body?.telegramId);
+  const steps = Math.max(0, Math.floor(Number(req.body?.steps) || 0));
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.date || '') ? req.body.date : kzDate(0);
+  if (!telegramId) return res.status(400).json({ ok: false, error: 'telegramId жоқ' });
+  await setSteps(telegramId, date, steps);
+  res.json({ ok: true, telegramId, date, steps });
+});
+
+// Админ: сохранить конфиг Қаржы (категории + банки)
+app.post('/api/admin/fin', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const cfg = mergeFinConfig(req.body || {});
+  await setFinConfig(cfg);
+  res.json({ ok: true, fin: cfg });
 });
 
 app.get('/health', (_req, res) => res.send('ok'));
