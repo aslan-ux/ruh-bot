@@ -261,6 +261,7 @@ function show(screen) {
     (screen === 'register' || screen === 'pending') ? 'none' : 'flex';
   if (screen === 'home') loadBook();
   if (screen === 'qadam') loadQadam();
+  if (screen === 'qarjy') loadFin();
 }
 
 document.querySelectorAll('.tab').forEach((t) => {
@@ -604,6 +605,211 @@ async function qdRefresh(manual) {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) qdRefresh(); });
 window.addEventListener('focus', () => qdRefresh());
 document.getElementById('qdRefreshBtn')?.addEventListener('click', () => qdRefresh(true));
+
+// ================= Қаржы (финансы) =================
+const FIN_TABS = [
+  { k: 'expense', n: 'Шығыс', kind: 'tx' },
+  { k: 'income', n: 'Кіріс', kind: 'tx' },
+  { k: 'qaryz', n: 'Қарыз', kind: 'soon' },
+  { k: 'kredit', n: 'Кредит', kind: 'soon' },
+  { k: 'bolip', n: 'Бөліп төлеу', kind: 'soon' },
+  { k: 'qujat', n: 'Құнды қағаздар', kind: 'soon' },
+  { k: 'tas', n: 'Бағалы тастар', kind: 'soon' },
+];
+const FIN_CATS = {
+  expense: [
+    { k: 'azyk', n: 'Азық-түлік', i: 'i-cart', c: '#FF6B6B' },
+    { k: 'kolik', n: 'Көлік', i: 'i-car', c: '#4D96FF' },
+    { k: 'uy', n: 'Үй', i: 'i-home', c: '#9B87F5' },
+    { k: 'kafe', n: 'Кафе', i: 'i-coffee', c: '#F59E0B' },
+    { k: 'kiim', n: 'Киім', i: 'i-shirt', c: '#EC4899' },
+    { k: 'oyyn', n: 'Ойын-сауық', i: 'i-film', c: '#8B5CF6' },
+    { k: 'densaulyk', n: 'Денсаулық', i: 'i-heart', c: '#22C55E' },
+    { k: 'bailanys', n: 'Байланыс', i: 'i-phone', c: '#06B6D4' },
+    { k: 'basqa', n: 'Басқа', i: 'i-dots', c: '#94A3B8' },
+  ],
+  income: [
+    { k: 'jalaqy', n: 'Жалақы', i: 'i-cash', c: '#22C55E' },
+    { k: 'biznes', n: 'Бизнес', i: 'i-briefcase', c: '#4D96FF' },
+    { k: 'investisiya', n: 'Инвестиция', i: 'i-trend', c: '#8B5CF6' },
+    { k: 'syilyq', n: 'Сыйлық', i: 'i-gift', c: '#EC4899' },
+    { k: 'basqa', n: 'Басқа', i: 'i-dots', c: '#94A3B8' },
+  ],
+};
+const FIN_ACCOUNTS = ['Қолма-қол', 'Kaspi', 'Halyk', 'Карта', 'Жинақ'];
+const FIN_PER = [
+  { k: 'yesterday', n: 'Кеше' },
+  { k: 'today', n: 'Бүгін' },
+  { k: 'week', n: 'Осы апта' },
+  { k: 'month', n: 'Осы ай' },
+];
+const FIN = { txs: [], tabI: 0, per: 1, menuOpen: false, perOpen: false, modalCat: null };
+
+function finToday() { return new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10); }
+function finShift(days) { return new Date(Date.now() + 5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10); }
+function finFmt(n) { return (Math.round(Number(n)) || 0).toLocaleString('ru-RU') + ' ₸'; }
+function finCatDef(type, key) {
+  const arr = FIN_CATS[type] || [];
+  return arr.find((c) => c.k === key) || arr[arr.length - 1] || { n: '—', i: 'i-dots', c: '#94A3B8' };
+}
+function finInPeriod(date, perKey) {
+  const t = finToday();
+  if (perKey === 'today') return date === t;
+  if (perKey === 'yesterday') return date === finShift(1);
+  if (perKey === 'week') return date >= finShift(6);
+  if (perKey === 'month') return date >= t.slice(0, 8) + '01';
+  return true;
+}
+
+async function loadFin() {
+  let r;
+  try { r = await api('/api/fin/list', {}); } catch { renderFin(); return; }
+  if (r && r.ok) FIN.txs = r.txs || [];
+  renderFin();
+}
+
+function renderFin() {
+  const tab = FIN_TABS[FIN.tabI];
+  document.getElementById('finTabName').textContent = tab.n;
+  finRenderTabMenu();
+
+  const isTx = tab.kind === 'tx';
+  document.getElementById('finCircle').style.display = isTx ? 'block' : 'none';
+  document.getElementById('finCats').style.display = isTx ? 'flex' : 'none';
+  document.getElementById('finList').style.display = isTx ? 'flex' : 'none';
+  const noc = document.getElementById('finNoCircle');
+  noc.classList.toggle('hidden', isTx);
+  if (!isTx) { document.getElementById('finNoCircleT').textContent = tab.n; return; }
+
+  const type = tab.k;
+  const perKey = FIN_PER[FIN.per].k;
+  document.getElementById('finPeriodName').textContent = FIN_PER[FIN.per].n;
+  finRenderPerMenu();
+
+  const typed = FIN.txs.filter((x) => x.type === type);
+  const periodTx = typed.filter((x) => finInPeriod(x.date, perKey));
+  const periodSum = periodTx.reduce((s, x) => s + x.amount, 0);
+  const monthSum = typed.filter((x) => finInPeriod(x.date, 'month')).reduce((s, x) => s + x.amount, 0);
+
+  document.getElementById('finRingVal').textContent = finFmt(periodSum);
+  const frac = monthSum > 0 ? Math.min(1, periodSum / monthSum) : 0;
+  document.getElementById('finArc').setAttribute('stroke-dashoffset', (540.35 * (1 - frac)).toFixed(1));
+
+  finRenderCats(type, periodTx, periodSum);
+  finRenderList(type, periodTx);
+}
+
+function finRenderTabMenu() {
+  const m = document.getElementById('finTabMenu');
+  m.classList.toggle('hidden', !FIN.menuOpen);
+  m.innerHTML = FIN_TABS.map((t, i) =>
+    '<div class="fin-mi' + (i === FIN.tabI ? ' active' : '') + '" data-i="' + i + '">' + t.n +
+    (i === FIN.tabI ? '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-check"></use></svg>' : '') + '</div>'
+  ).join('');
+  m.querySelectorAll('[data-i]').forEach((el) => el.addEventListener('click', (e) => {
+    e.stopPropagation(); FIN.tabI = +el.dataset.i; FIN.menuOpen = false; FIN.perOpen = false; renderFin();
+  }));
+}
+
+function finRenderPerMenu() {
+  const m = document.getElementById('finPeriodMenu');
+  m.classList.toggle('hidden', !FIN.perOpen);
+  m.innerHTML = FIN_PER.map((p, i) =>
+    '<div class="fin-mi' + (i === FIN.per ? ' active' : '') + '" data-p="' + i + '">' + p.n +
+    (i === FIN.per ? '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-check"></use></svg>' : '') + '</div>'
+  ).join('');
+  m.querySelectorAll('[data-p]').forEach((el) => el.addEventListener('click', (e) => {
+    e.stopPropagation(); FIN.per = +el.dataset.p; FIN.perOpen = false; renderFin();
+  }));
+}
+
+function finRenderCats(type, periodTx, total) {
+  const box = document.getElementById('finCats');
+  const sums = {};
+  periodTx.forEach((x) => { sums[x.category] = (sums[x.category] || 0) + x.amount; });
+  const rows = Object.entries(sums).sort((a, b) => b[1] - a[1]);
+  if (!rows.length) { box.innerHTML = ''; return; }
+  box.innerHTML = rows.map(([key, sum]) => {
+    const d = finCatDef(type, key);
+    const pct = total > 0 ? Math.round((sum / total) * 100) : 0;
+    return '<div class="fin-catrow"><div class="top">' +
+      '<div class="fin-cat-ic" style="background:' + d.c + '22;color:' + d.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + d.i + '"></use></svg></div>' +
+      '<div class="nm">' + d.n + '</div><div class="am">' + finFmt(sum) + '</div><div class="pct">' + pct + '%</div></div>' +
+      '<div class="fin-bar"><span style="width:' + pct + '%;background:' + d.c + '"></span></div></div>';
+  }).join('');
+}
+
+function finRenderList(type, periodTx) {
+  const box = document.getElementById('finList');
+  if (!periodTx.length) { box.innerHTML = '<div class="fin-empty">Әзірше жазба жоқ. «+» арқылы қос.</div>'; return; }
+  box.innerHTML = periodTx.map((x) => {
+    const d = finCatDef(type, x.category);
+    const sub = [x.account, x.note].filter(Boolean).join(' · ') || d.n;
+    return '<div class="fin-item">' +
+      '<div class="ic-c" style="background:' + d.c + '22;color:' + d.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + d.i + '"></use></svg></div>' +
+      '<div class="mid"><div class="nm">' + d.n + '</div><div class="sb">' + sub + '</div></div>' +
+      '<div class="rt"><div class="am" style="color:' + (type === 'income' ? '#22C55E' : 'var(--text)') + '">' + (type === 'income' ? '+' : '−') + finFmt(x.amount) + '</div><div class="dt">' + x.date.slice(5) + '</div></div>' +
+      '<button class="del" data-id="' + x.id + '" aria-label="Жою"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>';
+  }).join('');
+  box.querySelectorAll('.del').forEach((el) => el.addEventListener('click', async () => {
+    tg.HapticFeedback?.impactOccurred('light');
+    try { await api('/api/fin/delete', { id: el.dataset.id }); } catch {}
+    await loadFin();
+  }));
+}
+
+// ----- Модалка добавления -----
+function finOpenModal(type) {
+  document.getElementById('finModalTitle').textContent = (type === 'income' ? 'Кіріс' : 'Шығыс') + ' қосу';
+  const pick = document.getElementById('finCatPick');
+  FIN.modalCat = null;
+  pick.innerHTML = (FIN_CATS[type] || []).map((c) =>
+    '<div class="fin-chip" data-c="' + c.k + '"><div class="cic" style="background:' + c.c + '22;color:' + c.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + c.i + '"></use></svg></div><div class="cl">' + c.n + '</div></div>'
+  ).join('');
+  pick.querySelectorAll('.fin-chip').forEach((el) => el.addEventListener('click', () => {
+    pick.querySelectorAll('.fin-chip').forEach((x) => x.classList.remove('sel'));
+    el.classList.add('sel'); FIN.modalCat = el.dataset.c;
+  }));
+  const acc = document.getElementById('finAccount');
+  acc.innerHTML = FIN_ACCOUNTS.map((a) => '<option value="' + a + '">' + a + '</option>').join('');
+  document.getElementById('finDate').value = finToday();
+  document.getElementById('finAmount').value = '';
+  document.getElementById('finNote').value = '';
+  document.getElementById('finSaveHint').textContent = '';
+  document.getElementById('finModal').classList.remove('hidden');
+  document.getElementById('finModal').dataset.type = type;
+  setTimeout(() => document.getElementById('finAmount').focus(), 60);
+}
+function finCloseModal() { document.getElementById('finModal').classList.add('hidden'); }
+
+document.getElementById('finTabBtn')?.addEventListener('click', (e) => { e.stopPropagation(); FIN.menuOpen = !FIN.menuOpen; FIN.perOpen = false; renderFin(); });
+document.getElementById('finPeriodBtn')?.addEventListener('click', (e) => { e.stopPropagation(); FIN.perOpen = !FIN.perOpen; FIN.menuOpen = false; renderFin(); });
+document.addEventListener('click', () => { if (FIN.menuOpen || FIN.perOpen) { FIN.menuOpen = false; FIN.perOpen = false; renderFin(); } });
+document.getElementById('finAddBtn')?.addEventListener('click', () => {
+  const tab = FIN_TABS[FIN.tabI];
+  if (tab.kind === 'tx') finOpenModal(tab.k);
+  else tg.HapticFeedback?.notificationOccurred('warning');
+});
+document.getElementById('finModalClose')?.addEventListener('click', finCloseModal);
+document.getElementById('finModal')?.addEventListener('click', (e) => { if (e.target.id === 'finModal') finCloseModal(); });
+document.getElementById('finSave')?.addEventListener('click', async () => {
+  const type = document.getElementById('finModal').dataset.type || 'expense';
+  const amount = Math.round(Number((document.getElementById('finAmount').value || '').replace(/\s/g, '')) || 0);
+  const hint = document.getElementById('finSaveHint');
+  if (amount <= 0) { hint.textContent = 'Соманы енгіз'; return; }
+  if (!FIN.modalCat) { hint.textContent = 'Категорияны таңда'; return; }
+  hint.textContent = 'Сақталуда…';
+  try {
+    const r = await api('/api/fin/add', {
+      type, amount, category: FIN.modalCat,
+      account: document.getElementById('finAccount').value,
+      date: document.getElementById('finDate').value || finToday(),
+      note: document.getElementById('finNote').value.trim(),
+    });
+    if (r && r.ok) { tg.HapticFeedback?.notificationOccurred('success'); finCloseModal(); await loadFin(); }
+    else hint.textContent = 'Қате: ' + ((r && r.error) || '');
+  } catch (e) { hint.textContent = 'Қате'; }
+});
 
 // ---------- Профиль: имя ----------
 function setProfileName(user) {
