@@ -368,28 +368,58 @@ app.post('/api/fin/asset/delete', async (req, res) => {
   res.json({ ok });
 });
 
-// Онлайн-котировки (Stooq, без ключа). Публичный — цены не персональны.
+// Онлайн-котировки (без ключа). Публичный эндпоинт — цены не персональны.
+// Единая схема символов: usdkzt (курс), xauusd/xagusd/xptusd (металлы), *.us (акции США).
 const priceCache = new Map();
-async function stooqPrice(sym) {
-  const cached = priceCache.get(sym);
-  if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return cached.price;
+const UA = { 'User-Agent': 'Mozilla/5.0 (compatible; SpiritBot/1.0)' };
+
+function mapYahoo(sym) {
+  if (sym === 'usdkzt') return 'KZT=X';
+  if (sym === 'xauusd') return 'GC=F';
+  if (sym === 'xagusd') return 'SI=F';
+  if (sym === 'xptusd') return 'PL=F';
+  if (sym.endsWith('.us')) return sym.slice(0, -3).toUpperCase();
+  return sym.toUpperCase();
+}
+async function yahooPrice(sym) {
   try {
-    const r = await fetch('https://stooq.com/q/l/?s=' + encodeURIComponent(sym) + '&f=sd2t2ohlcv&h&e=csv', {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-    });
-    const txt = await r.text();
-    const lines = txt.trim().split('\n');
-    const cols = (lines[lines.length - 1] || '').split(',');
-    const close = parseFloat(cols[6]);
-    const price = Number.isFinite(close) ? close : null;
-    if (price != null) priceCache.set(sym, { price, ts: Date.now() });
-    return price;
+    const y = mapYahoo(sym);
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(y) + '?interval=1d&range=1d', { headers: UA });
+    const j = await r.json();
+    const p = j && j.chart && j.chart.result && j.chart.result[0] && j.chart.result[0].meta && j.chart.result[0].meta.regularMarketPrice;
+    return Number.isFinite(p) ? p : null;
   } catch { return null; }
+}
+async function stooqPrice(sym) {
+  try {
+    const r = await fetch('https://stooq.com/q/l/?s=' + encodeURIComponent(sym) + '&f=sd2t2ohlcv&h&e=csv', { headers: UA });
+    const txt = await r.text();
+    const cols = (txt.trim().split('\n').pop() || '').split(',');
+    const close = parseFloat(cols[6]);
+    return Number.isFinite(close) ? close : null;
+  } catch { return null; }
+}
+async function fxErApi() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD', { headers: UA });
+    const j = await r.json();
+    const p = j && j.rates && j.rates.KZT;
+    return Number.isFinite(p) ? p : null;
+  } catch { return null; }
+}
+async function priceOf(sym) {
+  const cached = priceCache.get(sym);
+  if (cached && Date.now() - cached.ts < 10 * 60 * 1000) return cached.price;
+  let p = await yahooPrice(sym);
+  if (p == null) p = await stooqPrice(sym);
+  if (p == null && sym === 'usdkzt') p = await fxErApi();
+  if (p != null) priceCache.set(sym, { price: p, ts: Date.now() });
+  return p;
 }
 app.get('/api/fin/prices', async (req, res) => {
   const syms = String(req.query.symbols || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 30);
   const out = {};
-  await Promise.all(syms.map(async (s) => { const p = await stooqPrice(s); if (p != null) out[s] = p; }));
+  await Promise.all(syms.map(async (s) => { const p = await priceOf(s); if (p != null) out[s] = p; }));
   res.json({ ok: true, prices: out, ts: Date.now() });
 });
 
