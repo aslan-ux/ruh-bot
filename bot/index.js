@@ -578,9 +578,12 @@ app.post('/api/admin/status', async (req, res) => {
   if (!['approved', 'pending', 'rejected'].includes(status)) {
     return res.status(400).json({ ok: false, error: 'Белгісіз статус' });
   }
+  const prev = await getUser(Number(telegramId));
   const user = await setUserStatus(Number(telegramId), status);
   if (!user) return res.status(404).json({ ok: false, error: 'Қатысушы табылмады' });
-  if (status === 'approved') {
+  // Хабарламаны тек статус «approved»-қа НАҚТЫ өзгергенде жібереміз (қайталанбас үшін)
+  const justApproved = status === 'approved' && (!prev || prev.status !== 'approved');
+  if (justApproved) {
     try {
       await bot.api.sendMessage(
         Number(telegramId),
