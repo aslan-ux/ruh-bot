@@ -14,7 +14,7 @@ const DEFAULT_BOOK = {
 };
 
 let useMongo = !!MONGODB_URI;
-const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null };
+const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null, friends: null };
 
 // ---------- Инициализация ----------
 export async function initStorage() {
@@ -35,6 +35,9 @@ export async function initStorage() {
       await col.findebt.createIndex({ telegramId: 1 });
       col.finasset = db.collection('finasset');
       await col.finasset.createIndex({ telegramId: 1 });
+      col.friends = db.collection('friends');
+      await col.friends.createIndex({ a: 1 });
+      await col.friends.createIndex({ b: 1 });
       console.log('Хранилище: MongoDB (постоянное)');
       return;
     } catch (e) {
@@ -54,6 +57,7 @@ const STEPS_FILE = path.join(DATA_DIR, 'steps.json');
 const FINTX_FILE = path.join(DATA_DIR, 'fintx.json');
 const FINDEBT_FILE = path.join(DATA_DIR, 'findebt.json');
 const FINASSET_FILE = path.join(DATA_DIR, 'finasset.json');
+const FRIENDS_FILE = path.join(DATA_DIR, 'friends.json');
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
@@ -224,6 +228,43 @@ export async function deleteDebt(telegramId, id) {
 export async function getAllDebts() {
   if (useMongo) return col.findebt.find({}, { projection: { _id: 0 } }).toArray();
   return readJson(FINDEBT_FILE, []);
+}
+
+// ---------- Достар (друзья) ----------
+export async function getUserByFriendCode(code) {
+  if (!code) return null;
+  if (useMongo) return col.users.findOne({ friendCode: code }, { projection: { _id: 0 } });
+  return (readJson(USERS_FILE, [])).find((u) => u.friendCode === code) || null;
+}
+export async function getFriendDocs(telegramId) {
+  if (useMongo) return col.friends.find({ $or: [{ a: telegramId }, { b: telegramId }] }, { projection: { _id: 0 } }).toArray();
+  return (readJson(FRIENDS_FILE, [])).filter((f) => f.a === telegramId || f.b === telegramId);
+}
+export async function addFriendReq(a, b) {
+  if (useMongo) {
+    const exist = await col.friends.findOne({ $or: [{ a, b }, { a: b, b: a }] });
+    if (exist) return null;
+    const doc = { a, b, status: 'pending', createdAt: new Date().toISOString() };
+    await col.friends.insertOne({ ...doc });
+    return doc;
+  }
+  const arr = readJson(FRIENDS_FILE, []);
+  if (arr.find((f) => (f.a === a && f.b === b) || (f.a === b && f.b === a))) return null;
+  const doc = { a, b, status: 'pending', createdAt: new Date().toISOString() };
+  arr.push(doc); writeJson(FRIENDS_FILE, arr); return doc;
+}
+export async function acceptFriend(me, from) {
+  if (useMongo) { const r = await col.friends.updateOne({ a: from, b: me, status: 'pending' }, { $set: { status: 'accepted' } }); return r.modifiedCount > 0; }
+  const arr = readJson(FRIENDS_FILE, []);
+  const i = arr.findIndex((f) => f.a === from && f.b === me && f.status === 'pending');
+  if (i < 0) return false;
+  arr[i].status = 'accepted'; writeJson(FRIENDS_FILE, arr); return true;
+}
+export async function removeFriend(me, other) {
+  if (useMongo) { const r = await col.friends.deleteMany({ $or: [{ a: me, b: other }, { a: other, b: me }] }); return r.deletedCount > 0; }
+  const arr = readJson(FRIENDS_FILE, []);
+  const next = arr.filter((f) => !((f.a === me && f.b === other) || (f.a === other && f.b === me)));
+  writeJson(FRIENDS_FILE, next); return next.length !== arr.length;
 }
 
 // ---------- Қаржы: инвестиции (активы) ----------

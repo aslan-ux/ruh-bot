@@ -33,6 +33,11 @@ import {
   addAsset,
   getUserAssets,
   deleteAsset,
+  getUserByFriendCode,
+  getFriendDocs,
+  addFriendReq,
+  acceptFriend,
+  removeFriend,
 } from './storage.js';
 
 // Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
@@ -173,13 +178,22 @@ app.post('/api/steps/me', async (req, res) => {
     nameById[u.telegramId] = `${u.lastName || ''} ${u.firstName || ''}`.trim() || (u.firstName || 'Қатысушы');
   });
 
-  function board(ok) {
+  function board(ok, onlyIds) {
     const sums = {};
-    all.forEach((s) => { if (ok(s.date)) sums[s.telegramId] = (sums[s.telegramId] || 0) + s.steps; });
+    all.forEach((s) => {
+      if (!ok(s.date)) return;
+      if (onlyIds && !onlyIds.has(Number(s.telegramId))) return;
+      sums[s.telegramId] = (sums[s.telegramId] || 0) + s.steps;
+    });
     return Object.entries(sums)
       .map(([id, steps]) => ({ name: nameById[id] || 'Қатысушы', steps, you: Number(id) === tgUser.id }))
       .sort((a, b) => b.steps - a.steps);
   }
+
+  // Достар: только принятые друзья + я
+  const fdocs = await getFriendDocs(tgUser.id);
+  const friendIds = new Set([tgUser.id]);
+  fdocs.forEach((d) => { if (d.status === 'accepted') friendIds.add(d.a === tgUser.id ? d.b : d.a); });
 
   res.json({
     ok: true,
@@ -192,6 +206,11 @@ app.post('/api/steps/me', async (req, res) => {
       day: board((d) => d === today),
       week: board((d) => d >= weekStart),
       month: board((d) => d >= monthStart),
+    },
+    friendsBoard: {
+      day: board((d) => d === today, friendIds),
+      week: board((d) => d >= weekStart, friendIds),
+      month: board((d) => d >= monthStart, friendIds),
     },
   });
 });
@@ -421,6 +440,68 @@ app.get('/api/fin/prices', async (req, res) => {
   const out = {};
   await Promise.all(syms.map(async (s) => { const p = await priceOf(s); if (p != null) out[s] = p; }));
   res.json({ ok: true, prices: out, ts: Date.now() });
+});
+
+// ---------- Достар (друзья) ----------
+function nameOf(u) {
+  if (!u) return 'Қатысушы';
+  return `${u.lastName || ''} ${u.firstName || ''}`.trim() || (u.firstName || 'Қатысушы');
+}
+app.post('/api/friends/me', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const user = await getUser(tgUser.id);
+  if (!user) return res.json({ ok: true, registered: false });
+  let code = user.friendCode;
+  if (!code) { code = crypto.randomBytes(3).toString('hex').toUpperCase(); await upsertUser({ ...user, friendCode: code }); }
+  const users = await getUsers();
+  const byId = {};
+  users.forEach((u) => { byId[u.telegramId] = nameOf(u); });
+  const docs = await getFriendDocs(tgUser.id);
+  const friends = [], incoming = [], outgoing = [];
+  docs.forEach((d) => {
+    if (d.status === 'accepted') {
+      const other = d.a === tgUser.id ? d.b : d.a;
+      friends.push({ id: other, name: byId[other] || 'Қатысушы' });
+    } else if (d.status === 'pending') {
+      if (d.b === tgUser.id) incoming.push({ id: d.a, name: byId[d.a] || 'Қатысушы' });
+      else outgoing.push({ id: d.b, name: byId[d.b] || 'Қатысушы' });
+    }
+  });
+  res.json({ ok: true, code, friends, incoming, outgoing });
+});
+app.post('/api/friends/add', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const code = String((req.body || {}).code || '').trim().toUpperCase();
+  const target = await getUserByFriendCode(code);
+  if (!target) return res.json({ ok: false, error: 'Код табылмады' });
+  if (target.telegramId === tgUser.id) return res.json({ ok: false, error: 'Бұл сенің кодың' });
+  const docs = await getFriendDocs(tgUser.id);
+  const ex = docs.find((d) => (d.a === target.telegramId && d.b === tgUser.id) || (d.a === tgUser.id && d.b === target.telegramId));
+  if (ex) {
+    if (ex.status === 'accepted') return res.json({ ok: false, error: 'Қазірдің өзінде дос' });
+    if (ex.a === target.telegramId && ex.b === tgUser.id) { await acceptFriend(tgUser.id, target.telegramId); return res.json({ ok: true, accepted: true }); }
+    return res.json({ ok: false, error: 'Сұраныс жіберілген' });
+  }
+  await addFriendReq(tgUser.id, target.telegramId);
+  const me = await getUser(tgUser.id);
+  try { await bot.api.sendMessage(target.telegramId, `👋 ${nameOf(me)} сені досқа қосқысы келеді. «Профиль» → «Достар» бөлімінде растай аласың.`); } catch {}
+  res.json({ ok: true });
+});
+app.post('/api/friends/accept', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const from = Number((req.body || {}).id);
+  const ok = await acceptFriend(tgUser.id, from);
+  if (ok) { const me = await getUser(tgUser.id); try { await bot.api.sendMessage(from, `✅ ${nameOf(me)} сенің дос сұранысыңды растады.`); } catch {} }
+  res.json({ ok });
+});
+app.post('/api/friends/remove', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const ok = await removeFriend(tgUser.id, Number((req.body || {}).id));
+  res.json({ ok });
 });
 
 // ---------- Админка ----------
