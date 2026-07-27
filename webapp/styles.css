@@ -367,11 +367,11 @@ input, textarea, select {
 #screen-qarjy { position: relative; }
 .fin-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .fin-tabbtn {
-  display: inline-flex; align-items: center; gap: 6px; background: transparent;
-  border: 0.5px solid var(--line); border-radius: 999px; padding: 8px 12px;
-  font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft);
+  border: none; border-radius: 999px; padding: 9px 14px;
+  font-size: 15px; font-weight: 600; color: var(--accent); cursor: pointer;
 }
-.fin-tabbtn .ic-svg { width: 18px; height: 18px; color: var(--green-soft); }
+.fin-tabbtn .ic-svg { width: 18px; height: 18px; color: var(--accent); }
 .fin-add {
   width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--accent);
   color: #fff; display: inline-flex; align-items: center; justify-content: center;
@@ -477,3 +477,26 @@ input, textarea, select {
 .fin-pl { font-size: 14px; font-weight: 600; margin-top: 3px; }
 .fin-pv-sub { font-size: 12px; color: var(--green-soft); margin-top: 4px; }
 .fin-manual { font-size: 10px; color: var(--placeholder); border: 1px solid var(--line); border-radius: 6px; padding: 0 5px; }
+
+/* Банки (выбор счёта) */
+.fin-banks { display: flex; gap: 12px; overflow-x: auto; padding: 2px 0 6px; -webkit-overflow-scrolling: touch; }
+.fin-banks::-webkit-scrollbar { display: none; }
+.fin-bank { flex: 0 0 auto; width: 58px; text-align: center; cursor: pointer; }
+.fin-bank-ic {
+  width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 1.5px solid var(--line);
+  position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; margin: 0 auto;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.fin-bank-ic span { font-size: 15px; font-weight: 700; }
+.fin-bank-ic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 5px; background: #fff; }
+.fin-bank-n { font-size: 10px; color: var(--green-soft); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fin-bank.sel .fin-bank-ic { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.fin-bank.sel .fin-bank-n { color: var(--accent); font-weight: 600; }
+
+/* Плавные анимации всех кнопок */
+button {
+  transition: transform .16s cubic-bezier(.2, .8, .2, 1), background-color .22s ease,
+    color .22s ease, box-shadow .22s ease, border-color .22s ease, opacity .2s ease;
+}
+button:active { transform: scale(.96); }
+.tabbar .tab:active { transform: scale(.92); }

@@ -414,7 +414,9 @@ function qdStepsOn(d) { return QD.stepsMap[d] || 0; }
 function qdSetRing(s) {
   const arc = document.getElementById('qdArc');
   arc.setAttribute('stroke-dashoffset', (QD_C * (1 - Math.min(1, (s || 0) / QD_GOAL))).toFixed(1));
-  document.getElementById('qdSteps').textContent = qdFmt(s);
+  const st = document.getElementById('qdSteps');
+  st.textContent = qdFmt(s);
+  fitRingText(st);
 }
 
 async function loadQadam() {
@@ -660,6 +662,45 @@ const FIN_PER = [
 ];
 const FIN = { txs: [], debts: [], assets: [], prices: {}, fx: null, tabI: 0, per: 1, menuOpen: false, perOpen: false, modalCat: null, debtMetric: 'remaining' };
 
+// Автоподбор размера шрифта суммы в круге (чтобы большие числа влезали)
+function fitRingText(el) {
+  if (!el) return;
+  const n = (el.textContent || '').replace(/\s/g, '').length;
+  const size = n <= 6 ? 28 : n <= 8 ? 24 : n <= 10 ? 20 : n <= 12 ? 17 : 15;
+  el.style.fontSize = size + 'px';
+}
+// Банки Казахстана (лого по домену, фолбэк — инициалы)
+const BANKS = [
+  { n: 'Қолма-қол', d: '', c: '#16a34a' },
+  { n: 'Kaspi', d: 'kaspi.kz', c: '#F14635' },
+  { n: 'Halyk', d: 'halykbank.kz', c: '#16A34A' },
+  { n: 'Jusan', d: 'jusan.kz', c: '#111827' },
+  { n: 'ForteBank', d: 'forte.kz', c: '#FF6A00' },
+  { n: 'Bereke', d: 'berekebank.kz', c: '#15803D' },
+  { n: 'Freedom', d: 'bankffin.kz', c: '#00A651' },
+  { n: 'БЦК', d: 'bcc.kz', c: '#0EA5A0' },
+  { n: 'Eurasian', d: 'eubank.kz', c: '#DC2626' },
+  { n: 'RBK', d: 'bankrbk.kz', c: '#2563EB' },
+  { n: 'Home Credit', d: 'home.kz', c: '#E11D48' },
+  { n: 'Altyn', d: 'altynbank.kz', c: '#CA8A04' },
+  { n: 'Nurbank', d: 'nurbank.kz', c: '#7C3AED' },
+  { n: 'VTB', d: 'vtb-bank.kz', c: '#1D4ED8' },
+  { n: 'Басқа', d: '', c: '#6B7280' },
+];
+function finRenderBanks() {
+  const box = document.getElementById('finAccount');
+  box.innerHTML = BANKS.map((b, i) => {
+    const ini = b.n === 'Қолма-қол' ? '₸' : b.n === 'Басқа' ? '•' : b.n.slice(0, 2);
+    const logo = b.d ? '<img src="https://logo.clearbit.com/' + b.d + '?size=64" alt="" onerror="this.remove()"/>' : '';
+    return '<div class="fin-bank' + (i === 0 ? ' sel' : '') + '" data-n="' + b.n + '"><div class="fin-bank-ic" style="color:' + b.c + '"><span>' + ini + '</span>' + logo + '</div><div class="fin-bank-n">' + b.n + '</div></div>';
+  }).join('');
+  FIN.selAccount = BANKS[0].n;
+  box.querySelectorAll('.fin-bank').forEach((el) => el.addEventListener('click', () => {
+    box.querySelectorAll('.fin-bank').forEach((x) => x.classList.remove('sel'));
+    el.classList.add('sel'); FIN.selAccount = el.dataset.n;
+  }));
+}
+
 function finToday() { return new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10); }
 function finShift(days) { return new Date(Date.now() + 5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10); }
 function finFmt(n) { return (Math.round(Number(n)) || 0).toLocaleString('ru-RU') + ' ₸'; }
@@ -735,7 +776,9 @@ function renderFin() {
   const periodSum = periodTx.reduce((s, x) => s + x.amount, 0);
   const monthSum = typed.filter((x) => finInPeriod(x.date, 'month')).reduce((s, x) => s + x.amount, 0);
 
-  document.getElementById('finRingVal').textContent = finFmt(periodSum);
+  const rv = document.getElementById('finRingVal');
+  rv.textContent = finFmt(periodSum);
+  fitRingText(rv);
   const frac = monthSum > 0 ? Math.min(1, periodSum / monthSum) : 0;
   document.getElementById('finArc').setAttribute('stroke-dashoffset', (540.35 * (1 - frac)).toFixed(1));
 
@@ -898,9 +941,19 @@ function renderDebt(kind) {
   const m = FIN.debtMetric;
   const val = m === 'paid' ? paidAll : m === 'total' ? totalAll : remainAll;
   const mlabel = m === 'paid' ? 'Төленген' : m === 'total' ? 'Барлығы' : 'Қалдық';
-  document.getElementById('finRingVal').textContent = finFmt(val);
+  const rv = document.getElementById('finRingVal');
+  rv.textContent = finFmt(val);
+  fitRingText(rv);
   document.getElementById('finPeriodName').textContent = mlabel;
-  document.getElementById('finPeriodMenu').classList.add('hidden');
+  const pm = document.getElementById('finPeriodMenu');
+  pm.classList.toggle('hidden', !FIN.perOpen);
+  const METRICS = [['remaining', 'Қалдық'], ['paid', 'Төленген'], ['total', 'Барлығы']];
+  pm.innerHTML = METRICS.map(([mk, ml]) =>
+    '<div class="fin-mi' + (FIN.debtMetric === mk ? ' active' : '') + '" data-m="' + mk + '">' + ml +
+    (FIN.debtMetric === mk ? '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-check"></use></svg>' : '') + '</div>').join('');
+  pm.querySelectorAll('[data-m]').forEach((el) => el.addEventListener('click', (e) => {
+    e.stopPropagation(); FIN.debtMetric = el.dataset.m; FIN.perOpen = false; renderFin();
+  }));
   const frac = totalAll > 0 ? Math.min(1, paidAll / totalAll) : 0;
   document.getElementById('finArc').setAttribute('stroke-dashoffset', (540.35 * (1 - frac)).toFixed(1));
 
@@ -997,8 +1050,7 @@ function finOpenModal(type) {
     pick.querySelectorAll('.fin-chip').forEach((x) => x.classList.remove('sel'));
     el.classList.add('sel'); FIN.modalCat = el.dataset.c;
   }));
-  const acc = document.getElementById('finAccount');
-  acc.innerHTML = FIN_ACCOUNTS.map((a) => '<option value="' + a + '">' + a + '</option>').join('');
+  finRenderBanks();
   document.getElementById('finDate').value = finToday();
   document.getElementById('finAmount').value = '';
   document.getElementById('finNote').value = '';
@@ -1012,7 +1064,6 @@ function finCloseModal() { document.getElementById('finModal').classList.add('hi
 document.getElementById('finTabBtn')?.addEventListener('click', (e) => { e.stopPropagation(); FIN.menuOpen = !FIN.menuOpen; FIN.perOpen = false; renderFin(); });
 document.getElementById('finPeriodBtn')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (FIN_TABS[FIN.tabI].kind === 'debt') { finCycleMetric(); return; }
   FIN.perOpen = !FIN.perOpen; FIN.menuOpen = false; renderFin();
 });
 document.addEventListener('click', () => { if (FIN.menuOpen || FIN.perOpen) { FIN.menuOpen = false; FIN.perOpen = false; renderFin(); } });
@@ -1035,7 +1086,7 @@ document.getElementById('finSave')?.addEventListener('click', async () => {
   try {
     const r = await api('/api/fin/add', {
       type, amount, category: FIN.modalCat,
-      account: document.getElementById('finAccount').value,
+      account: FIN.selAccount || '',
       date: document.getElementById('finDate').value || finToday(),
       note: document.getElementById('finNote').value.trim(),
     });
