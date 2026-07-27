@@ -21,6 +21,9 @@ import {
   getAllSteps,
   getGoal,
   setGoal,
+  addTx,
+  getUserTx,
+  deleteTx,
 } from './storage.js';
 
 // Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
@@ -192,6 +195,47 @@ app.post('/api/steps/push', async (req, res) => {
   const d = (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : kzDate(0);
   await setSteps(user.telegramId, d, steps);
   res.json({ ok: true });
+});
+
+// ---------- Қаржы (финансы) ----------
+// Список транзакций участника
+app.post('/api/fin/list', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const txs = await getUserTx(tgUser.id);
+  res.json({ ok: true, txs });
+});
+
+// Добавить транзакцию (Шығыс/Кіріс)
+app.post('/api/fin/add', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const b = req.body || {};
+  const type = b.type === 'income' ? 'income' : 'expense';
+  const amount = Math.round(Number(b.amount) || 0);
+  if (amount <= 0) return res.status(400).json({ ok: false, error: 'Сома дұрыс емес' });
+  const date = (typeof b.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.date)) ? b.date : kzDate(0);
+  const tx = {
+    id: crypto.randomBytes(9).toString('hex'),
+    telegramId: tgUser.id,
+    type,
+    amount,
+    category: String(b.category || 'basqa').slice(0, 40),
+    account: String(b.account || '').slice(0, 40),
+    date,
+    note: String(b.note || '').slice(0, 200),
+    createdAt: new Date().toISOString(),
+  };
+  await addTx(tx);
+  res.json({ ok: true, tx });
+});
+
+// Удалить транзакцию
+app.post('/api/fin/delete', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const ok = await deleteTx(tgUser.id, String((req.body || {}).id || ''));
+  res.json({ ok });
 });
 
 // ---------- Админка ----------
