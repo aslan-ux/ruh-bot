@@ -14,7 +14,7 @@ const DEFAULT_BOOK = {
 };
 
 let useMongo = !!MONGODB_URI;
-const col = { users: null, meta: null, steps: null, fintx: null, findebt: null };
+const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null };
 
 // ---------- Инициализация ----------
 export async function initStorage() {
@@ -33,6 +33,8 @@ export async function initStorage() {
       await col.fintx.createIndex({ telegramId: 1, date: 1 });
       col.findebt = db.collection('findebt');
       await col.findebt.createIndex({ telegramId: 1 });
+      col.finasset = db.collection('finasset');
+      await col.finasset.createIndex({ telegramId: 1 });
       console.log('Хранилище: MongoDB (постоянное)');
       return;
     } catch (e) {
@@ -51,6 +53,7 @@ const BOOK_FILE = path.join(DATA_DIR, 'book.json');
 const STEPS_FILE = path.join(DATA_DIR, 'steps.json');
 const FINTX_FILE = path.join(DATA_DIR, 'fintx.json');
 const FINDEBT_FILE = path.join(DATA_DIR, 'findebt.json');
+const FINASSET_FILE = path.join(DATA_DIR, 'finasset.json');
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
@@ -221,6 +224,24 @@ export async function deleteDebt(telegramId, id) {
 export async function getAllDebts() {
   if (useMongo) return col.findebt.find({}, { projection: { _id: 0 } }).toArray();
   return readJson(FINDEBT_FILE, []);
+}
+
+// ---------- Қаржы: инвестиции (активы) ----------
+export async function addAsset(a) {
+  if (useMongo) { await col.finasset.insertOne({ ...a }); return a; }
+  const arr = readJson(FINASSET_FILE, []);
+  arr.push(a); writeJson(FINASSET_FILE, arr); return a;
+}
+export async function getUserAssets(telegramId) {
+  if (useMongo) return col.finasset.find({ telegramId }, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+  return (readJson(FINASSET_FILE, [])).filter((x) => x.telegramId === telegramId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+export async function deleteAsset(telegramId, id) {
+  if (useMongo) { const r = await col.finasset.deleteOne({ telegramId, id }); return r.deletedCount > 0; }
+  const arr = readJson(FINASSET_FILE, []);
+  const next = arr.filter((x) => !(x.telegramId === telegramId && x.id === id));
+  writeJson(FINASSET_FILE, next); return next.length !== arr.length;
 }
 
 export async function getStepsSince(dateStr) {

@@ -30,6 +30,9 @@ import {
   updateDebt,
   deleteDebt,
   getAllDebts,
+  addAsset,
+  getUserAssets,
+  deleteAsset,
 } from './storage.js';
 
 // Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
@@ -322,6 +325,72 @@ app.post('/api/fin/debt/delete', async (req, res) => {
   if (!tgUser) return;
   const ok = await deleteDebt(tgUser.id, String((req.body || {}).id || ''));
   res.json({ ok });
+});
+
+// ----- Инвестиции (активы) -----
+app.post('/api/fin/asset/list', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const assets = await getUserAssets(tgUser.id);
+  res.json({ ok: true, assets });
+});
+
+app.post('/api/fin/asset/add', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const b = req.body || {};
+  const kind = b.kind === 'tas' ? 'tas' : 'qujat';
+  const qty = Number(b.qty) || 0;
+  const buyPrice = Math.round(Number(b.buyPrice) || 0);
+  if (qty <= 0 || buyPrice <= 0) return res.status(400).json({ ok: false, error: 'Сан/баға дұрыс емес' });
+  const asset = {
+    id: crypto.randomBytes(9).toString('hex'),
+    telegramId: tgUser.id,
+    kind,
+    name: String(b.name || '').slice(0, 60) || '—',
+    market: ['us', 'metal', 'manual'].includes(b.market) ? b.market : 'manual',
+    symbol: String(b.symbol || '').slice(0, 20).toLowerCase(),
+    qty,
+    buyPrice,
+    curManual: Math.max(0, Math.round(Number(b.curManual) || 0)),
+    unit: String(b.unit || '').slice(0, 10),
+    note: String(b.note || '').slice(0, 200),
+    createdAt: new Date().toISOString(),
+  };
+  await addAsset(asset);
+  res.json({ ok: true, asset });
+});
+
+app.post('/api/fin/asset/delete', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const ok = await deleteAsset(tgUser.id, String((req.body || {}).id || ''));
+  res.json({ ok });
+});
+
+// Онлайн-котировки (Stooq, без ключа). Публичный — цены не персональны.
+const priceCache = new Map();
+async function stooqPrice(sym) {
+  const cached = priceCache.get(sym);
+  if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return cached.price;
+  try {
+    const r = await fetch('https://stooq.com/q/l/?s=' + encodeURIComponent(sym) + '&f=sd2t2ohlcv&h&e=csv', {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    const txt = await r.text();
+    const lines = txt.trim().split('\n');
+    const cols = (lines[lines.length - 1] || '').split(',');
+    const close = parseFloat(cols[6]);
+    const price = Number.isFinite(close) ? close : null;
+    if (price != null) priceCache.set(sym, { price, ts: Date.now() });
+    return price;
+  } catch { return null; }
+}
+app.get('/api/fin/prices', async (req, res) => {
+  const syms = String(req.query.symbols || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 30);
+  const out = {};
+  await Promise.all(syms.map(async (s) => { const p = await stooqPrice(s); if (p != null) out[s] = p; }));
+  res.json({ ok: true, prices: out, ts: Date.now() });
 });
 
 // ---------- Админка ----------
