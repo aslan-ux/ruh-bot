@@ -58,6 +58,9 @@
 
   <!-- Панель -->
   <div id="panel" class="hidden">
+    <div class="row" style="justify-content:flex-end; margin-bottom:6px;">
+      <button id="logoutBtn" style="background:#fff; color:var(--soft); border:1px solid var(--line); font-weight:500;">Шығу</button>
+    </div>
     <div class="layout">
       <div class="content">
 
@@ -214,6 +217,16 @@ document.getElementById('loginBtn').addEventListener('click', () => {
 });
 document.getElementById('key').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') tryLogin(document.getElementById('key').value, false);
+});
+
+// Шығу — сақталған кілтті өшіріп, кіру терезесіне қайтару
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  ADMIN_KEY = '';
+  try { localStorage.removeItem(ADMIN_KEY_STORE); } catch {}
+  document.getElementById('key').value = '';
+  document.getElementById('loginHint').textContent = '';
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
 });
 
 // Бетті жаңартқанда — сақталған кілтпен автоматты түрде қайта кіру (пароль сұрамай)
