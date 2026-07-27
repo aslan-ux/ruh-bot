@@ -24,6 +24,12 @@ import {
   addTx,
   getUserTx,
   deleteTx,
+  addDebt,
+  getUserDebts,
+  getDebt,
+  updateDebt,
+  deleteDebt,
+  getAllDebts,
 } from './storage.js';
 
 // Дата YYYY-MM-DD в часовом поясе Қазақстана (UTC+5)
@@ -238,6 +244,86 @@ app.post('/api/fin/delete', async (req, res) => {
   res.json({ ok });
 });
 
+// ----- Долги / кредиты / рассрочка -----
+app.post('/api/fin/debt/list', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  maybeSendReminders();
+  const debts = await getUserDebts(tgUser.id);
+  res.json({ ok: true, debts });
+});
+
+app.post('/api/fin/debt/add', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const b = req.body || {};
+  const kind = ['qaryz', 'kredit', 'bolip'].includes(b.kind) ? b.kind : 'kredit';
+  const total = Math.round(Number(b.total) || 0);
+  if (total <= 0) return res.status(400).json({ ok: false, error: 'Сома дұрыс емес' });
+  const debt = {
+    id: crypto.randomBytes(9).toString('hex'),
+    telegramId: tgUser.id,
+    kind,
+    title: String(b.title || '').slice(0, 60) || '—',
+    total,
+    paid: Math.min(total, Math.max(0, Math.round(Number(b.paid) || 0))),
+    monthly: Math.max(0, Math.round(Number(b.monthly) || 0)),
+    direction: b.direction === 'lent' ? 'lent' : (b.direction === 'borrowed' ? 'borrowed' : ''),
+    dueDate: (typeof b.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.dueDate)) ? b.dueDate : '',
+    note: String(b.note || '').slice(0, 200),
+    remind: !!b.remind,
+    done: false,
+    remindedOn: '',
+    createdAt: new Date().toISOString(),
+  };
+  debt.done = debt.paid >= debt.total;
+  await addDebt(debt);
+  res.json({ ok: true, debt });
+});
+
+// Внести платёж/возврат: уменьшает остаток и пишет связанную транзакцию
+app.post('/api/fin/debt/pay', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const b = req.body || {};
+  const d = await getDebt(tgUser.id, String(b.id || ''));
+  if (!d) return res.status(404).json({ ok: false, error: 'Табылмады' });
+  const remaining = Math.max(0, d.total - d.paid);
+  if (remaining <= 0) return res.json({ ok: true, debt: d });
+  let pay;
+  if (b.amount != null) pay = Math.round(Number(b.amount) || 0);
+  else if (d.kind === 'qaryz') pay = remaining;
+  else pay = d.monthly > 0 ? Math.min(d.monthly, remaining) : remaining;
+  pay = Math.max(1, Math.min(pay, remaining));
+  const newPaid = d.paid + pay;
+  const updated = await updateDebt(tgUser.id, d.id, { paid: newPaid, done: newPaid >= d.total });
+
+  // Связанная транзакция: возврат мне (қарыз бердім) = кіріс, иначе шығыс
+  const isIncome = d.kind === 'qaryz' && d.direction === 'lent';
+  const label = d.kind === 'kredit' ? 'Кредит' : d.kind === 'bolip' ? 'Бөліп төлеу' : 'Қарыз';
+  try {
+    await addTx({
+      id: crypto.randomBytes(9).toString('hex'),
+      telegramId: tgUser.id,
+      type: isIncome ? 'income' : 'expense',
+      amount: pay,
+      category: 'basqa',
+      account: String(b.account || ''),
+      date: kzDate(0),
+      note: label + ': ' + (d.title || ''),
+      createdAt: new Date().toISOString(),
+    });
+  } catch {}
+  res.json({ ok: true, debt: updated, paid: pay });
+});
+
+app.post('/api/fin/debt/delete', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const ok = await deleteDebt(tgUser.id, String((req.body || {}).id || ''));
+  res.json({ ok });
+});
+
 // ---------- Админка ----------
 app.get('/api/admin/data', async (req, res) => {
   if (!requireAdmin(req, res)) return;
@@ -326,6 +412,30 @@ app.post('/api/admin/status', async (req, res) => {
 });
 
 app.get('/health', (_req, res) => res.send('ok'));
+
+// ---------- Напоминания о платежах (по сроку) ----------
+let lastRemindCheck = 0;
+async function maybeSendReminders() {
+  const now = Date.now();
+  if (now - lastRemindCheck < 30 * 60 * 1000) return; // не чаще раза в 30 мин
+  lastRemindCheck = now;
+  try {
+    const today = kzDate(0);
+    const debts = await getAllDebts();
+    for (const d of debts) {
+      if (!d.remind || d.done || !d.dueDate) continue;
+      if (d.dueDate > today) continue;        // срок ещё не наступил
+      if (d.remindedOn === today) continue;   // уже напоминали сегодня
+      const remaining = Math.max(0, d.total - (d.paid || 0));
+      if (remaining <= 0) continue;
+      const label = d.kind === 'kredit' ? 'Кредит' : d.kind === 'bolip' ? 'Бөліп төлеу' : 'Қарыз';
+      const msg = `🔔 Еске салу: «${d.title}» (${label}) бойынша төлем мерзімі келді.\nҚалдық: ${Number(remaining).toLocaleString('ru-RU')} ₸.`;
+      try { await bot.api.sendMessage(d.telegramId, msg); } catch {}
+      try { await updateDebt(d.telegramId, d.id, { remindedOn: today }); } catch {}
+    }
+  } catch {}
+}
+setInterval(() => { maybeSendReminders(); }, 60 * 60 * 1000);
 
 // ---------- Запуск: вебхук (хостинг) или long polling (локально) ----------
 const USE_WEBHOOK = !!(process.env.WEBHOOK_URL || process.env.RENDER_EXTERNAL_URL);

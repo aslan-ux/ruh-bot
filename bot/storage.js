@@ -14,7 +14,7 @@ const DEFAULT_BOOK = {
 };
 
 let useMongo = !!MONGODB_URI;
-const col = { users: null, meta: null, steps: null, fintx: null };
+const col = { users: null, meta: null, steps: null, fintx: null, findebt: null };
 
 // ---------- Инициализация ----------
 export async function initStorage() {
@@ -31,6 +31,8 @@ export async function initStorage() {
       await col.steps.createIndex({ telegramId: 1, date: 1 }, { unique: true });
       col.fintx = db.collection('fintx');
       await col.fintx.createIndex({ telegramId: 1, date: 1 });
+      col.findebt = db.collection('findebt');
+      await col.findebt.createIndex({ telegramId: 1 });
       console.log('Хранилище: MongoDB (постоянное)');
       return;
     } catch (e) {
@@ -48,6 +50,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const BOOK_FILE = path.join(DATA_DIR, 'book.json');
 const STEPS_FILE = path.join(DATA_DIR, 'steps.json');
 const FINTX_FILE = path.join(DATA_DIR, 'fintx.json');
+const FINDEBT_FILE = path.join(DATA_DIR, 'findebt.json');
 
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
@@ -182,6 +185,42 @@ export async function deleteTx(telegramId, id) {
   const next = arr.filter((x) => !(x.telegramId === telegramId && x.id === id));
   writeJson(FINTX_FILE, next);
   return next.length !== arr.length;
+}
+
+// ---------- Қаржы: долги/кредиты/рассрочка ----------
+export async function addDebt(d) {
+  if (useMongo) { await col.findebt.insertOne({ ...d }); return d; }
+  const arr = readJson(FINDEBT_FILE, []);
+  arr.push(d); writeJson(FINDEBT_FILE, arr); return d;
+}
+export async function getUserDebts(telegramId) {
+  if (useMongo) return col.findebt.find({ telegramId }, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+  return (readJson(FINDEBT_FILE, [])).filter((x) => x.telegramId === telegramId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+export async function getDebt(telegramId, id) {
+  if (useMongo) return col.findebt.findOne({ telegramId, id }, { projection: { _id: 0 } });
+  return (readJson(FINDEBT_FILE, [])).find((x) => x.telegramId === telegramId && x.id === id) || null;
+}
+export async function updateDebt(telegramId, id, set) {
+  if (useMongo) {
+    await col.findebt.updateOne({ telegramId, id }, { $set: set });
+    return col.findebt.findOne({ telegramId, id }, { projection: { _id: 0 } });
+  }
+  const arr = readJson(FINDEBT_FILE, []);
+  const i = arr.findIndex((x) => x.telegramId === telegramId && x.id === id);
+  if (i < 0) return null;
+  arr[i] = { ...arr[i], ...set }; writeJson(FINDEBT_FILE, arr); return arr[i];
+}
+export async function deleteDebt(telegramId, id) {
+  if (useMongo) { const r = await col.findebt.deleteOne({ telegramId, id }); return r.deletedCount > 0; }
+  const arr = readJson(FINDEBT_FILE, []);
+  const next = arr.filter((x) => !(x.telegramId === telegramId && x.id === id));
+  writeJson(FINDEBT_FILE, next); return next.length !== arr.length;
+}
+export async function getAllDebts() {
+  if (useMongo) return col.findebt.find({}, { projection: { _id: 0 } }).toArray();
+  return readJson(FINDEBT_FILE, []);
 }
 
 export async function getStepsSince(dateStr) {
