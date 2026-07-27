@@ -703,7 +703,7 @@ function finRenderBanks() {
   box.innerHTML = BANKS.map((b, i) => {
     const ini = b.n === 'Қолма-қол' ? '₸' : b.n === 'Басқа' ? '•' : b.n.slice(0, 2);
     const logo = b.d
-      ? '<img src="https://www.google.com/s2/favicons?domain=' + b.d + '&sz=128" alt="" loading="lazy" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://icons.duckduckgo.com/ip3/' + b.d + '.ico\'}else{this.remove()}"/>'
+      ? '<img src="https://www.google.com/s2/favicons?domain=' + b.d + '&sz=128" alt="" loading="eager" decoding="async" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://icons.duckduckgo.com/ip3/' + b.d + '.ico\'}else{this.remove()}"/>'
       : '';
     return '<div class="fin-bank' + (i === 0 ? ' sel' : '') + '" data-n="' + b.n + '"><div class="fin-bank-ic" style="color:' + b.c + '"><span>' + ini + '</span>' + logo + '</div><div class="fin-bank-n">' + b.n + '</div></div>';
   }).join('');
