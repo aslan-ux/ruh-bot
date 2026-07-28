@@ -391,8 +391,8 @@ const RD_CDN = {
   pdfw: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
 };
 const RD_THEMES = { day:{bg:'#ffffff',fg:'#17171F'}, sepia:{bg:'#F4ECD8',fg:'#5B4636'}, night:{bg:'#15151C',fg:'#E7E7EE'} };
-const RD = { fmt:null, book:null, rend:null, pdf:null, page:1, total:1, locReady:false,
-  reading:{ location:'', percent:0, bookmarks:[], highlights:[] }, theme:'day', font:100, saveT:null, sel:null };
+const RD = { fmt:null, book:null, pdf:null, page:1, total:1, ch:0, chapters:[],
+  reading:{ location:'', offset:0, percent:0, bookmarks:[], highlights:[] }, theme:'day', font:100, saveT:null, sel:null };
 
 function rdScript(list){ const urls=Array.isArray(list)?list:[list]; return new Promise((resolve,reject)=>{ let i=0; const tryNext=()=>{ if(i>=urls.length) return reject(new Error('CDN')); const src=urls[i++]; if([...document.scripts].some(s=>s.src===src)) return resolve(); const s=document.createElement('script'); s.src=src; s.onload=()=>resolve(); s.onerror=()=>{ s.remove(); tryNext(); }; document.head.appendChild(s); }; tryNext(); }); }
 function rdMsg(t){ const e=document.getElementById('rdMsg'); e.textContent=t; e.classList.remove('hidden'); }
@@ -421,62 +421,140 @@ async function openReader(){
 function closeReader(){
   rdSave(true);
   document.getElementById('reader').classList.add('hidden'); rdPanelClose();
-  try { if(RD.rend) RD.rend.destroy(); } catch {}
-  RD.book=null; RD.rend=null; RD.pdf=null;
+  try { if(RD.book && RD.book.destroy) RD.book.destroy(); } catch {}
+  RD.book=null; RD.pdf=null; RD.chapters=[]; RD.ch=0;
   document.getElementById('rdView').innerHTML=''; document.getElementById('rdView').className='rd-view';
   loadBook();
 }
 
 async function rdLoadEpub(buf){
   await rdScript(RD_CDN.jszip); await rdScript(RD_CDN.epub);
-  const view=document.getElementById('rdView'); view.className='rd-view'; view.innerHTML='';
+  const view=document.getElementById('rdView');
+  view.className='rd-view epub';
+  view.innerHTML='<div id="rdPage" class="rd-page"></div>';
   RD.book = ePub(buf);
-  RD.rend = RD.book.renderTo('rdView', { width:'100%', height:'100%', flow:'paginated', spread:'none' });
-  Object.entries(RD_THEMES).forEach(([k,v])=>RD.rend.themes.register(k, { 'body':{ background:v.bg+' !important', color:v.fg+' !important' }, 'p,div,span,h1,h2,h3,h4,li,a':{ color:v.fg+' !important' }, '::selection':{ background:'rgba(94,92,230,.3)' } }));
+  await RD.book.ready;
+  const items=(RD.book.spine && RD.book.spine.spineItems) ? RD.book.spine.spineItems : [];
+  RD.chapters = items.map((s)=>({ href:s.href }));
+  RD.total = RD.chapters.length || 1;
+  let start=parseInt(RD.reading.location); if(!(start>=0) || start>=RD.total) start=0;
   rdApplyTheme(); rdApplyFont();
-  await RD.rend.display(RD.reading.location || undefined);
-  RD.book.ready.then(()=>RD.book.locations.generate(1600)).then(()=>{ RD.locReady=true; try{ rdSetProg(RD.reading.percent||0); }catch{} }).catch(()=>{});
-  RD.rend.on('relocated', (loc)=>{
-    const cfi=loc.start.cfi; let pct=loc.start.percentage?Math.round(loc.start.percentage*100):RD.reading.percent;
-    if(RD.locReady){ try{ pct=Math.round(RD.book.locations.percentageFromCfi(cfi)*100); }catch{} }
-    RD.reading.location=cfi; RD.reading.percent=pct; rdSetProg(pct); rdSave();
-  });
-  (RD.reading.highlights||[]).forEach(h=>rdDraw(h));
-  RD.rend.on('selected', (cfiRange, contents)=>{
-    RD.book.getRange(cfiRange).then((range)=>{
-      const text=(range&&range.toString?range.toString():'').trim();
-      const found=(RD.reading.highlights||[]).findIndex(h=>h.cfi===cfiRange);
-      RD.sel={ cfi:cfiRange, text, existing:found };
-      let rect=null;
-      try {
-        const r=range.getBoundingClientRect();
-        const ifr=document.querySelector('#rdView iframe');
-        const off=ifr?ifr.getBoundingClientRect():{left:0,top:0};
-        rect={ left:off.left+r.left, top:off.top+r.top, bottom:off.top+r.bottom, width:r.width };
-      } catch {}
-      rdSelShow(rect, found>=0);
-    }).catch(()=>{});
-  });
-  RD.rend.on('markClicked', (cfiRange)=>{
-    const i=(RD.reading.highlights||[]).findIndex(h=>h.cfi===cfiRange);
+  await rdRenderChapter(start, RD.reading.offset||0);
+  rdSwipe(view, window);
+  view.addEventListener('scroll', ()=>rdUpdateProgress(), { passive:true });
+  const page=document.getElementById('rdPage');
+  page.addEventListener('mouseup', ()=>setTimeout(rdOnSelect,10));
+  page.addEventListener('touchend', ()=>setTimeout(rdOnSelect,60));
+  page.addEventListener('click', (e)=>{
+    const sp=e.target&&e.target.closest?e.target.closest('.rd-hl'):null; if(!sp) return;
+    const i=(RD.reading.highlights||[]).findIndex(h=>String(h.id)===String(sp.dataset.hid));
     if(i<0) return;
-    RD.sel={ cfi:cfiRange, text:RD.reading.highlights[i].text||'', existing:i };
-    rdSelShow(null, true);
+    const h=RD.reading.highlights[i];
+    RD.sel={ ch:h.ch, start:h.start, end:h.end, text:h.text||'', existing:i };
+    const r=sp.getBoundingClientRect();
+    rdSelShow({ left:r.left, top:r.top, bottom:r.bottom, width:r.width }, true);
   });
-  RD.rend.hooks.content.register((contents)=>{ try{ rdSwipe(contents.document.documentElement, contents.window); }catch{} });
 }
 
-/* ---------- Ерекшелеу: сурет салу, мәзір, әрекеттер ---------- */
-function rdDraw(h){
-  if(!RD.rend||!h||!h.cfi) return;
-  try {
-    if(h.underline) RD.rend.annotations.add('underline', h.cfi, {}, null, 'hl-u', { stroke:h.color||'#F6C945', 'stroke-width':'2', 'stroke-opacity':'0.9' });
-    else RD.rend.annotations.add('highlight', h.cfi, {}, null, 'hl', { fill:h.color||'#F6C945', 'fill-opacity':'0.35' });
-  } catch {}
+/* ---------- Бөлімді шығару ---------- */
+async function rdFixImages(root){
+  const imgs=[...root.querySelectorAll('img,image')];
+  for(const im of imgs){
+    const src=im.getAttribute('src')||im.getAttribute('xlink:href')||'';
+    if(!src||/^(data:|blob:|https?:)/.test(src)) continue;
+    try{
+      const abs=RD.book.resolve?RD.book.resolve(src):src;
+      const url=await RD.book.archive.createUrl(abs, { base64:false });
+      im.setAttribute('src', url); im.removeAttribute('xlink:href');
+      im.style.maxWidth='100%'; im.style.height='auto';
+    }catch{ im.remove(); }
+  }
 }
-function rdUndraw(h){
-  if(!RD.rend||!h||!h.cfi) return;
-  try { RD.rend.annotations.remove(h.cfi, h.underline?'underline':'highlight'); } catch {}
+async function rdRenderChapter(i, offset){
+  if(!RD.book) return;
+  i=Math.min(RD.total-1, Math.max(0, i)); RD.ch=i;
+  const view=document.getElementById('rdView');
+  const page=document.getElementById('rdPage');
+  if(!page) return;
+  page.innerHTML='<p class="rd-loading">Жүктелуде…</p>';
+  let html='';
+  try{
+    const doc=await RD.book.load(RD.chapters[i].href);
+    let body=(doc&&doc.body)?doc.body:null;
+    if(!body&&typeof doc==='string'){ body=new DOMParser().parseFromString(doc,'text/html').body; }
+    if(body){
+      const clone=body.cloneNode(true);
+      clone.querySelectorAll('script,style,link,iframe,object,embed,video,audio').forEach(n=>n.remove());
+      await rdFixImages(clone);
+      html=clone.innerHTML;
+    }
+  }catch{ html='<p>Бөлімді ашу мүмкін болмады</p>'; }
+  page.innerHTML=html||'<p>Бос бөлім</p>';
+  rdPaintHighlights();
+  view.scrollTop=offset||0;
+  rdUpdateProgress();
+}
+function rdUpdateProgress(){
+  const view=document.getElementById('rdView'); if(!view||RD.fmt!=='epub') return;
+  const max=Math.max(1, view.scrollHeight-view.clientHeight);
+  const within=Math.min(1, Math.max(0, view.scrollTop/max));
+  const pct=Math.round(((RD.ch+within)/RD.total)*100);
+  RD.reading.location=String(RD.ch);
+  RD.reading.offset=Math.round(view.scrollTop);
+  RD.reading.percent=pct;
+  rdSetProg(pct); rdSave();
+}
+
+/* ---------- Ерекшелеу: мәтін орындары бойынша ---------- */
+function rdTextNodes(root){ const out=[]; const w=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null); let n; while((n=w.nextNode())) out.push(n); return out; }
+function rdOffsetOf(root, node, off){ let sum=0; for(const t of rdTextNodes(root)){ if(t===node) return sum+off; sum+=t.nodeValue.length; } return -1; }
+function rdRangeFrom(root, start, end){
+  let sum=0, started=false; const r=document.createRange();
+  for(const t of rdTextNodes(root)){
+    const len=t.nodeValue.length;
+    if(!started && start>=sum && start<=sum+len){ r.setStart(t, start-sum); started=true; }
+    if(started && end>=sum && end<=sum+len){ r.setEnd(t, end-sum); return r; }
+    sum+=len;
+  }
+  return null;
+}
+function rdWrapRange(range, h){
+  const root=range.commonAncestorContainer;
+  const scope=root.nodeType===3?root.parentNode:root;
+  const nodes=[]; const w=document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null); let n;
+  while((n=w.nextNode())){ try{ if(range.intersectsNode(n)) nodes.push(n); }catch{} }
+  nodes.forEach((t)=>{
+    const s=(t===range.startContainer)?range.startOffset:0;
+    const e=(t===range.endContainer)?range.endOffset:t.nodeValue.length;
+    if(e<=s) return;
+    const sub=document.createRange(); sub.setStart(t,s); sub.setEnd(t,e);
+    const span=document.createElement('span');
+    span.className='rd-hl'; span.dataset.hid=h.id;
+    if(h.underline){ span.style.textDecoration='underline'; span.style.textDecorationColor=h.color||'#F6C945'; span.style.textDecorationThickness='2px'; }
+    else { span.style.background=h.color||'#F6C945'; }
+    try{ sub.surroundContents(span); }catch{}
+  });
+}
+function rdPaintHighlights(){
+  const page=document.getElementById('rdPage'); if(!page) return;
+  (RD.reading.highlights||[]).filter(h=>Number(h.ch)===RD.ch).forEach((h)=>{
+    const r=rdRangeFrom(page, h.start, h.end); if(r) rdWrapRange(r, h);
+  });
+}
+function rdRepaint(){ if(RD.fmt==='epub'){ const v=document.getElementById('rdView'); rdRenderChapter(RD.ch, v?v.scrollTop:0); } }
+function rdOnSelect(){
+  const sel=window.getSelection();
+  if(!sel||sel.isCollapsed||!String(sel).trim()) return;
+  const page=document.getElementById('rdPage'); if(!page) return;
+  let range; try{ range=sel.getRangeAt(0); }catch{ return; }
+  if(!page.contains(range.commonAncestorContainer)) return;
+  const start=rdOffsetOf(page, range.startContainer, range.startOffset);
+  const end=rdOffsetOf(page, range.endContainer, range.endOffset);
+  if(start<0||end<0||end<=start) return;
+  const found=(RD.reading.highlights||[]).findIndex(h=>Number(h.ch)===RD.ch && h.start===start && h.end===end);
+  RD.sel={ ch:RD.ch, start, end, text:String(sel).trim(), existing:found };
+  let rect=null; try{ const r=range.getBoundingClientRect(); rect={ left:r.left, top:r.top, bottom:r.bottom, width:r.width }; }catch{}
+  rdSelShow(rect, found>=0);
 }
 function rdSelShow(rect, existing){
   const el=document.getElementById('rdSel');
@@ -494,22 +572,16 @@ function rdSelShow(rect, existing){
   el.style.left=Math.round(left)+'px'; el.style.top=Math.round(Math.max(66,top))+'px';
 }
 function rdSelHide(){ document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
-function rdClearSelection(){
-  try { const ifr=document.querySelector('#rdView iframe'); if(ifr&&ifr.contentWindow) ifr.contentWindow.getSelection().removeAllRanges(); } catch {}
-  try { window.getSelection().removeAllRanges(); } catch {}
-}
+function rdClearSelection(){ try { window.getSelection().removeAllRanges(); } catch {} }
 function rdSelMark(color, underline){
   const s=RD.sel; if(!s) return;
   if(s.existing>=0){
     const old=RD.reading.highlights[s.existing];
-    rdUndraw(old);
     old.color=color||old.color; old.underline=!!underline;
-    rdDraw(old);
   } else {
-    const h={ cfi:s.cfi, text:(s.text||'').slice(0,220), color:color||'#F6C945', underline:!!underline };
-    RD.reading.highlights.push(h); rdDraw(h);
+    RD.reading.highlights.push({ id:'h'+Date.now()+Math.random().toString(36).slice(2,6), ch:s.ch, start:s.start, end:s.end, text:(s.text||'').slice(0,220), color:color||'#F6C945', underline:!!underline });
   }
-  rdSave(true); rdClearSelection(); rdSelHide(); rdToast(underline?'Асты сызылды':'Ерекшеленді');
+  rdSave(true); rdClearSelection(); rdSelHide(); rdRepaint(); rdToast(underline?'Асты сызылды':'Ерекшеленді');
 }
 async function rdSelCopy(){
   const t=(RD.sel&&RD.sel.text)||''; if(!t) return;
@@ -526,14 +598,13 @@ function rdSelNote(){
   const val=prompt('Жазба:', cur);
   if(val===null){ rdSelHide(); return; }
   if(s.existing>=0){ RD.reading.highlights[s.existing].note=val.slice(0,500); }
-  else { const h={ cfi:s.cfi, text:(s.text||'').slice(0,220), color:'#F6C945', note:val.slice(0,500) }; RD.reading.highlights.push(h); rdDraw(h); }
-  rdSave(true); rdClearSelection(); rdSelHide(); rdToast('Жазба сақталды');
+  else { RD.reading.highlights.push({ id:'h'+Date.now()+Math.random().toString(36).slice(2,6), ch:s.ch, start:s.start, end:s.end, text:(s.text||'').slice(0,220), color:'#F6C945', note:val.slice(0,500) }); }
+  rdSave(true); rdClearSelection(); rdSelHide(); rdRepaint(); rdToast('Жазба сақталды');
 }
 function rdSelRemove(){
   const s=RD.sel; if(!s||s.existing<0) return;
-  rdUndraw(RD.reading.highlights[s.existing]);
   RD.reading.highlights.splice(s.existing,1);
-  rdSave(true); rdClearSelection(); rdSelHide(); rdToast('Жойылды');
+  rdSave(true); rdClearSelection(); rdSelHide(); rdRepaint(); rdToast('Жойылды');
 }
 
 /* ---------- Свайп: беттерді саусақпен аудару ---------- */
@@ -571,15 +642,18 @@ async function rdDoSearch(q){
         if(li>=0) res.push({ page:p, excerpt:txt.slice(Math.max(0,li-45), li+q.length+55), loc:'Бет '+p });
       }
     } else {
-      const items=RD.book.spine.spineItems;
-      for(const it of items){
-        if(res.length>=80) break;
-        try {
-          await it.load(RD.book.load.bind(RD.book));
-          const found=it.find(q)||[];
-          found.forEach(f=>res.push({ href:f.cfi, excerpt:f.excerpt||'', loc:(it.idref||'') }));
-          it.unload();
-        } catch {}
+      const ql=q.toLowerCase();
+      for(let i=0;i<RD.chapters.length && res.length<80;i++){
+        try{
+          const doc=await RD.book.load(RD.chapters[i].href);
+          const txt=((doc&&doc.body)?doc.body.textContent:'')||'';
+          const tl=txt.toLowerCase();
+          let from=0, li;
+          while((li=tl.indexOf(ql, from))>=0 && res.length<80){
+            res.push({ ch:i, excerpt:txt.slice(Math.max(0,li-45), li+q.length+55), loc:'Бөлім '+(i+1) });
+            from=li+q.length;
+          }
+        }catch{}
       }
     }
   } catch {}
@@ -590,7 +664,7 @@ async function rdDoSearch(q){
   }).join('');
   list.querySelectorAll('.rd-srch-item').forEach(el=>el.addEventListener('click',()=>{
     const r=res[+el.dataset.i]; rdPanelClose();
-    if(RD.fmt==='pdf') rdRenderPdf(r.page); else if(RD.rend) RD.rend.display(r.href);
+    if(RD.fmt==='pdf') rdRenderPdf(r.page); else rdRenderChapter(r.ch, 0);
   }));
 }
 function rdOpenSearch(prefill){
@@ -625,34 +699,46 @@ async function rdRenderPdf(n){
   const pct=Math.round(n/RD.total*100);
   RD.reading.location=String(n); RD.reading.percent=pct; rdSetProg(pct); rdSave();
 }
-function rdNext(){ if(RD.fmt==='pdf') rdRenderPdf(RD.page+1); else if(RD.rend) RD.rend.next(); }
-function rdPrev(){ if(RD.fmt==='pdf') rdRenderPdf(RD.page-1); else if(RD.rend) RD.rend.prev(); }
+function rdNext(){ if(RD.fmt==='pdf') rdRenderPdf(RD.page+1); else rdRenderChapter(RD.ch+1, 0); }
+function rdPrev(){ if(RD.fmt==='pdf') rdRenderPdf(RD.page-1); else rdRenderChapter(RD.ch-1, 0); }
 function rdApplyTheme(){
-  document.getElementById('rdView').style.background = RD_THEMES[RD.theme].bg;
+  const v=document.getElementById('rdView'); const t=RD_THEMES[RD.theme]||RD_THEMES.day;
+  v.style.background=t.bg; v.style.color=t.fg;
   document.querySelectorAll('.rd-th').forEach(b=>b.classList.toggle('sel', b.dataset.th===RD.theme));
-  if(RD.rend){ try{ RD.rend.themes.select(RD.theme); }catch{} }
-  if(RD.fmt==='pdf') document.getElementById('rdView').classList.toggle('night', RD.theme==='night');
+  if(RD.fmt==='pdf') v.classList.toggle('night', RD.theme==='night');
 }
-function rdApplyFont(){ document.getElementById('rdFontVal').textContent=RD.font+'%'; if(RD.rend){ try{ RD.rend.themes.fontSize(RD.font+'%'); }catch{} } }
+function rdApplyFont(){
+  document.getElementById('rdFontVal').textContent=RD.font+'%';
+  const p=document.getElementById('rdPage'); if(p) p.style.fontSize=RD.font+'%';
+}
 function rdSave(now){
   clearTimeout(RD.saveT);
-  const go=()=>api('/api/book/read/save',{ location:RD.reading.location, percent:RD.reading.percent, bookmarks:RD.reading.bookmarks, highlights:RD.reading.highlights }).catch(()=>{});
+  const go=()=>api('/api/book/read/save',{ location:RD.reading.location, offset:RD.reading.offset||0, percent:RD.reading.percent, bookmarks:RD.reading.bookmarks, highlights:RD.reading.highlights }).catch(()=>{});
   if(now) go(); else RD.saveT=setTimeout(go, 1200);
 }
 async function rdOpenToc(){
   const panel=document.getElementById('rdToc'); let items=[];
   if(RD.fmt==='pdf'){ try{ const out=await RD.pdf.getOutline(); items=(out||[]).map(o=>({label:o.title,dest:o.dest})); }catch{} }
-  else if(RD.book){ try{ await RD.book.loaded.navigation; items=(RD.book.navigation.toc||[]).map(t=>({label:(t.label||'').trim(),href:t.href})); }catch{} }
+  else if(RD.book){
+    try{ items=(RD.book.navigation.toc||[]).map(t=>({ label:(t.label||'').trim(), href:t.href })); }catch{}
+    if(!items.length) items=RD.chapters.map((c,i)=>({ label:'Бөлім '+(i+1), idx:i }));
+  }
   panel.innerHTML='<div class="rd-panel-title">Мазмұны</div>'+(items.length?items.map((it,i)=>`<div class="rd-toc-item" data-i="${i}">${it.label||('Бөлім '+(i+1))}</div>`).join(''):'<div class="rd-empty">Мазмұны табылмады</div>');
+  const baseOf=(s)=>String(s||'').split('#')[0].replace(/^.*\//,'');
   panel.querySelectorAll('.rd-toc-item').forEach(el=>el.addEventListener('click', async ()=>{
     const it=items[+el.dataset.i]; rdPanelClose();
     if(RD.fmt==='pdf'){ try{ let d=it.dest; if(typeof d==='string') d=await RD.pdf.getDestination(d); const pn=await RD.pdf.getPageIndex(d[0])+1; rdRenderPdf(pn); }catch{} }
-    else if(RD.rend){ RD.rend.display(it.href); }
+    else {
+      let idx=(it.idx!=null)?it.idx:RD.chapters.findIndex(c=>baseOf(c.href)===baseOf(it.href));
+      rdRenderChapter(idx>=0?idx:0, 0);
+    }
   }));
 }
 function rdAddBookmark(){
-  const label=RD.fmt==='pdf'?('Бет '+RD.page):(RD.reading.percent+'%');
-  RD.reading.bookmarks.push({ loc:RD.reading.location, label, pct:RD.reading.percent }); rdSave(true); rdToast('Бетбелгі қосылды'); rdOpenNotes();
+  const view=document.getElementById('rdView');
+  const label=RD.fmt==='pdf'?('Бет '+RD.page):('Бөлім '+(RD.ch+1)+' · '+RD.reading.percent+'%');
+  RD.reading.bookmarks.push({ loc:RD.reading.location, off:view?Math.round(view.scrollTop):0, label, pct:RD.reading.percent });
+  rdSave(true); rdToast('Бетбелгі қосылды'); rdOpenNotes();
 }
 function rdOpenNotes(){
   const p=document.getElementById('rdNotes'); const bm=RD.reading.bookmarks||[], hl=RD.reading.highlights||[];
@@ -669,13 +755,13 @@ function rdOpenNotes(){
   document.getElementById('rdAddBm').addEventListener('click', rdAddBookmark);
   p.querySelectorAll('.rd-note-item').forEach(el=>el.addEventListener('click',(e)=>{
     if(e.target.dataset.del!=null) return; const t=el.dataset.t, i=+el.dataset.i; rdPanelClose();
-    if(t==='bm'){ const b=RD.reading.bookmarks[i]; if(RD.fmt==='pdf') rdRenderPdf(parseInt(b.loc)||1); else if(RD.rend) RD.rend.display(b.loc); }
-    else { const x=RD.reading.highlights[i]; if(RD.rend&&x.cfi) RD.rend.display(x.cfi); }
+    if(t==='bm'){ const b=RD.reading.bookmarks[i]; if(RD.fmt==='pdf') rdRenderPdf(parseInt(b.loc)||1); else rdRenderChapter(parseInt(b.loc)||0, b.off||0); }
+    else { const x=RD.reading.highlights[i]; if(RD.fmt!=='pdf') rdRenderChapter(Number(x.ch)||0, 0); }
   }));
   p.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',(e)=>{
     e.stopPropagation(); const t=el.dataset.del, i=+el.dataset.i;
     if(t==='bm') RD.reading.bookmarks.splice(i,1);
-    else { rdUndraw(RD.reading.highlights[i]); RD.reading.highlights.splice(i,1); }
+    else { RD.reading.highlights.splice(i,1); rdRepaint(); }
     rdSave(true); rdOpenNotes();
   }));
 }

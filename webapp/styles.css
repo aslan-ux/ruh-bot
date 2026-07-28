@@ -600,3 +600,15 @@ button:active { transform: scale(.96); }
 .rd-srch-item { padding:11px 6px; border-bottom:1px solid var(--line); font-size:13.5px; color:var(--text); cursor:pointer; line-height:1.5; }
 .rd-srch-item b { color:var(--accent); }
 .rd-srch-item .loc { display:block; font-size:11.5px; color:var(--green-soft); margin-top:3px; }
+
+/* ---------- EPUB бет мазмұны (өз рендеріміз) ---------- */
+.rd-view.epub { padding:0; }
+.rd-page { max-width:680px; margin:0 auto; padding:22px 20px 60px; line-height:1.62; font-size:100%;
+  -webkit-user-select:text; user-select:text; word-wrap:break-word; overflow-wrap:break-word; }
+.rd-page p { margin:0 0 1em; }
+.rd-page h1,.rd-page h2,.rd-page h3 { line-height:1.3; margin:1.2em 0 .6em; }
+.rd-page img { max-width:100%; height:auto; display:block; margin:1em auto; border-radius:6px; }
+.rd-page a { color:inherit; }
+.rd-page ::selection { background:rgba(94,92,230,.28); }
+.rd-hl { border-radius:3px; padding:1px 0; cursor:pointer; }
+.rd-loading { text-align:center; color:var(--green-soft); padding:30px 0; }
