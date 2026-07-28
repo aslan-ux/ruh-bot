@@ -246,6 +246,7 @@ app.post('/api/book/read/save', async (req, res) => {
   const b = req.body || {};
   const patch = {};
   if (b.location != null) patch.location = String(b.location).slice(0, 500);
+  if (b.offset != null) patch.offset = Math.max(0, Math.floor(Number(b.offset) || 0));
   if (b.percent != null) patch.percent = Math.max(0, Math.min(100, Number(b.percent) || 0));
   if (Array.isArray(b.bookmarks)) patch.bookmarks = b.bookmarks.slice(0, 300);
   if (Array.isArray(b.highlights)) patch.highlights = b.highlights.slice(0, 800);
