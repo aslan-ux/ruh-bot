@@ -41,6 +41,10 @@ import {
   deleteUser,
   getFinConfig,
   setFinConfig,
+  saveBookFile,
+  getBookFileStream,
+  getReading,
+  saveReading,
 } from './storage.js';
 
 // ---------- Қаржы: дефолтные категории и банки (управляются из админки) ----------
@@ -197,7 +201,56 @@ app.post('/api/me', async (req, res) => {
 app.post('/api/book', async (req, res) => {
   const tgUser = requireTelegram(req, res);
   if (!tgUser) return;
-  res.json({ ok: true, book: await getBook() });
+  const book = await getBook();
+  let myProgress = 0;
+  if (book && book.fileId) {
+    const rd = await getReading(tgUser.id, book.fileId);
+    if (rd && typeof rd.percent === 'number') myProgress = rd.percent;
+  }
+  res.json({ ok: true, book, myProgress });
+});
+
+// Файл текущей книги (стрим). Авторизация — initData (заголовок X-Init-Data)
+app.get('/api/book/file', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const book = await getBook();
+  if (!book || !book.fileId) return res.status(404).json({ ok: false, error: 'Файл жоқ' });
+  try {
+    const stream = getBookFileStream(book.fileId);
+    const type = book.format === 'pdf' ? 'application/pdf' : (book.format === 'epub' ? 'application/epub+zip' : 'application/octet-stream');
+    res.setHeader('Content-Type', type);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    stream.on('error', () => { if (!res.headersSent) res.status(404).end(); else res.end(); });
+    stream.pipe(res);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Прогресс чтения текущей книги (получить)
+app.post('/api/book/read/get', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const book = await getBook();
+  const bookId = book && book.fileId ? book.fileId : 'none';
+  const rd = await getReading(tgUser.id, bookId);
+  res.json({ ok: true, reading: rd || null, bookId });
+});
+// Прогресс чтения текущей книги (сохранить: позиция/%, закладки, выделения)
+app.post('/api/book/read/save', async (req, res) => {
+  const tgUser = requireTelegram(req, res);
+  if (!tgUser) return;
+  const book = await getBook();
+  if (!book || !book.fileId) return res.status(400).json({ ok: false, error: 'Кітап жоқ' });
+  const b = req.body || {};
+  const patch = {};
+  if (b.location != null) patch.location = String(b.location).slice(0, 500);
+  if (b.percent != null) patch.percent = Math.max(0, Math.min(100, Number(b.percent) || 0));
+  if (Array.isArray(b.bookmarks)) patch.bookmarks = b.bookmarks.slice(0, 300);
+  if (Array.isArray(b.highlights)) patch.highlights = b.highlights.slice(0, 800);
+  const rd = await saveReading(tgUser.id, book.fileId, patch);
+  res.json({ ok: true, reading: rd });
 });
 
 // ---------- Қадам (шаги) ----------
@@ -676,6 +729,23 @@ app.post('/api/admin/fin', async (req, res) => {
   const cfg = mergeFinConfig(req.body || {});
   await setFinConfig(cfg);
   res.json({ ok: true, fin: cfg });
+});
+
+// Админ: загрузка файла книги (EPUB/PDF). Тело — сырые байты файла.
+app.post('/api/admin/book/upload', express.raw({ type: '*/*', limit: '35mb' }), async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const buf = req.body;
+  if (!buf || !buf.length) return res.status(400).json({ ok: false, error: 'Файл бос' });
+  const fileName = (req.get('X-File-Name') || 'book').slice(0, 200);
+  let format = (req.get('X-File-Format') || '').toLowerCase();
+  if (!['epub', 'pdf'].includes(format)) format = /\.pdf$/i.test(fileName) ? 'pdf' : 'epub';
+  try {
+    const fileId = await saveBookFile(buf, fileName, format);
+    const book = await setBook({ fileId, format, fileName });
+    res.json({ ok: true, book });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 app.get('/health', (_req, res) => res.send('ok'));

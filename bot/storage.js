@@ -14,13 +14,15 @@ const DEFAULT_BOOK = {
 };
 
 let useMongo = !!MONGODB_URI;
-const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null, friends: null };
+let bucket = null; // GridFS — файлы книг
+let OID = null;    // ObjectId
+const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null, friends: null, reading: null };
 
 // ---------- Инициализация ----------
 export async function initStorage() {
   if (useMongo) {
     try {
-      const { MongoClient } = await import('mongodb');
+      const { MongoClient, GridFSBucket, ObjectId } = await import('mongodb');
       const client = new MongoClient(MONGODB_URI);
       await client.connect();
       const db = client.db('spirit');
@@ -38,6 +40,10 @@ export async function initStorage() {
       col.friends = db.collection('friends');
       await col.friends.createIndex({ a: 1 });
       await col.friends.createIndex({ b: 1 });
+      col.reading = db.collection('reading');
+      await col.reading.createIndex({ telegramId: 1, bookId: 1 }, { unique: true });
+      bucket = new GridFSBucket(db, { bucketName: 'books' });
+      OID = ObjectId;
       console.log('Хранилище: MongoDB (постоянное)');
       return;
     } catch (e) {
@@ -363,4 +369,50 @@ export async function setFinConfig(cfg) {
   }
   writeJson(FINCFG_FILE, cfg);
   return cfg;
+}
+
+// ---------- Файл книги (EPUB/PDF) в GridFS ----------
+const BOOKS_DIR = path.join(DATA_DIR, 'books');
+export async function saveBookFile(buffer, fileName, format) {
+  if (useMongo) {
+    try {
+      const olds = await bucket.find({}).toArray();
+      for (const f of olds) { try { await bucket.delete(f._id); } catch {} }
+    } catch {}
+    const id = await new Promise((resolve, reject) => {
+      const up = bucket.openUploadStream(fileName || 'book', { metadata: { format } });
+      up.on('error', reject);
+      up.on('finish', () => resolve(up.id));
+      up.end(buffer);
+    });
+    return String(id);
+  }
+  if (!fs.existsSync(BOOKS_DIR)) fs.mkdirSync(BOOKS_DIR, { recursive: true });
+  try { for (const f of fs.readdirSync(BOOKS_DIR)) fs.unlinkSync(path.join(BOOKS_DIR, f)); } catch {}
+  const id = Date.now().toString();
+  fs.writeFileSync(path.join(BOOKS_DIR, id), buffer);
+  return id;
+}
+export function getBookFileStream(fileId) {
+  if (useMongo) return bucket.openDownloadStream(new OID(fileId));
+  return fs.createReadStream(path.join(BOOKS_DIR, String(fileId)));
+}
+
+// ---------- Прогресс чтения (по пользователю и книге) ----------
+const READING_FILE = path.join(DATA_DIR, 'reading.json');
+export async function getReading(telegramId, bookId) {
+  if (useMongo) return col.reading.findOne({ telegramId, bookId }, { projection: { _id: 0 } });
+  return (readJson(READING_FILE, [])).find((r) => r.telegramId === telegramId && r.bookId === bookId) || null;
+}
+export async function saveReading(telegramId, bookId, patch) {
+  const set = { ...patch, telegramId, bookId, updatedAt: new Date().toISOString() };
+  if (useMongo) {
+    await col.reading.updateOne({ telegramId, bookId }, { $set: set }, { upsert: true });
+    return set;
+  }
+  const arr = readJson(READING_FILE, []);
+  const i = arr.findIndex((r) => r.telegramId === telegramId && r.bookId === bookId);
+  if (i < 0) arr.push(set); else arr[i] = { ...arr[i], ...set };
+  writeJson(READING_FILE, arr);
+  return set;
 }
