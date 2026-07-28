@@ -365,19 +365,178 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 });
 
 // ---------- Книга ----------
+let RD_BOOK = null;
 async function loadBook() {
   try {
     const r = await api('/api/book', {});
     if (!r.ok) return;
-    const b = r.book;
+    const b = r.book; RD_BOOK = b;
     document.getElementById('bookTitle').textContent = b.title || '—';
     document.getElementById('bookAuthor').textContent = b.author || '';
-    document.getElementById('bookProgress').textContent = Math.round(b.progress || 0) + '%';
+    const pct = b.fileId ? Math.round(r.myProgress || 0) : Math.round(b.progress || 0);
+    document.getElementById('bookProgress').textContent = pct + '%';
     const cover = document.getElementById('bookCover');
     if (b.cover) cover.innerHTML = `<img src="${b.cover}" alt="" />`;
     else cover.innerHTML = '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-book"/></svg>';
+    const rb = document.getElementById('readBookBtn');
+    if (rb) rb.style.display = b.fileId ? 'inline-flex' : 'none';
   } catch {}
 }
+
+/* ================= РИДЕР (EPUB/PDF) ================= */
+const RD_CDN = {
+  jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  epub: 'https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.93/epub.min.js',
+  pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfw: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+};
+const RD_THEMES = { day:{bg:'#ffffff',fg:'#17171F'}, sepia:{bg:'#F4ECD8',fg:'#5B4636'}, night:{bg:'#15151C',fg:'#E7E7EE'} };
+const RD = { fmt:null, book:null, rend:null, pdf:null, page:1, total:1, locReady:false,
+  reading:{ location:'', percent:0, bookmarks:[], highlights:[] }, theme:'day', font:100, saveT:null };
+
+function rdScript(src){ return new Promise((res,rej)=>{ if([...document.scripts].some(s=>s.src===src)) return res(); const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('CDN')); document.head.appendChild(s); }); }
+function rdMsg(t){ const e=document.getElementById('rdMsg'); e.textContent=t; e.classList.remove('hidden'); }
+function rdMsgHide(){ document.getElementById('rdMsg').classList.add('hidden'); }
+function rdSetProg(p){ document.getElementById('rdFill').style.width=p+'%'; document.getElementById('rdPct').textContent=p+'%'; }
+function rdToast(msg){ let t=document.getElementById('rdToastEl'); if(!t){ t=document.createElement('div'); t.id='rdToastEl'; t.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:1100;opacity:0;transition:opacity .2s;pointer-events:none'; document.body.appendChild(t);} t.textContent=msg; t.style.opacity='1'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.opacity='0',1500); }
+function rdPanel(id){ ['rdToc','rdNotes','rdAa'].forEach(x=>document.getElementById(x).classList.toggle('hidden', x!==id)); }
+function rdPanelClose(){ ['rdToc','rdNotes','rdAa'].forEach(x=>document.getElementById(x).classList.add('hidden')); }
+function rdToggle(id, fill){ const open=!document.getElementById(id).classList.contains('hidden'); if(open) rdPanelClose(); else { if(fill) fill(); rdPanel(id); } }
+
+async function openReader(){
+  if(!RD_BOOK || !RD_BOOK.fileId) return;
+  document.getElementById('reader').classList.remove('hidden');
+  document.getElementById('rdTitle').textContent = RD_BOOK.title || 'Кітап';
+  rdPanelClose(); rdMsg('Жүктелуде…');
+  try { RD.theme=localStorage.getItem('spirit-rd-theme')||'day'; RD.font=+(localStorage.getItem('spirit-rd-font')||100); } catch {}
+  try { const rr=await api('/api/book/read/get',{}); if(rr.ok&&rr.reading) RD.reading=Object.assign({location:'',percent:0,bookmarks:[],highlights:[]}, rr.reading); } catch {}
+  RD.reading.bookmarks=RD.reading.bookmarks||[]; RD.reading.highlights=RD.reading.highlights||[];
+  let buf;
+  try { const resp=await fetch('/api/book/file',{ headers:{ 'X-Init-Data': tg.initData } }); if(!resp.ok) throw 0; buf=await resp.arrayBuffer(); }
+  catch { rdMsg('Файлды жүктеу қатесі'); return; }
+  RD.fmt = RD_BOOK.format==='pdf' ? 'pdf' : 'epub';
+  try { if(RD.fmt==='pdf') await rdLoadPdf(buf); else await rdLoadEpub(buf); rdMsgHide(); }
+  catch(e){ rdMsg('Ашу қатесі: '+(e&&e.message||e)); }
+}
+function closeReader(){
+  rdSave(true);
+  document.getElementById('reader').classList.add('hidden'); rdPanelClose();
+  try { if(RD.rend) RD.rend.destroy(); } catch {}
+  RD.book=null; RD.rend=null; RD.pdf=null;
+  document.getElementById('rdView').innerHTML=''; document.getElementById('rdView').className='rd-view';
+  loadBook();
+}
+
+async function rdLoadEpub(buf){
+  await rdScript(RD_CDN.jszip); await rdScript(RD_CDN.epub);
+  const view=document.getElementById('rdView'); view.className='rd-view'; view.innerHTML='';
+  RD.book = ePub(buf);
+  RD.rend = RD.book.renderTo('rdView', { width:'100%', height:'100%', flow:'paginated', spread:'none' });
+  Object.entries(RD_THEMES).forEach(([k,v])=>RD.rend.themes.register(k, { 'body':{ background:v.bg+' !important', color:v.fg+' !important' }, 'p,div,span,h1,h2,h3,h4,li,a':{ color:v.fg+' !important' }, '::selection':{ background:'rgba(94,92,230,.3)' } }));
+  rdApplyTheme(); rdApplyFont();
+  await RD.rend.display(RD.reading.location || undefined);
+  RD.book.ready.then(()=>RD.book.locations.generate(1600)).then(()=>{ RD.locReady=true; try{ rdSetProg(RD.reading.percent||0); }catch{} }).catch(()=>{});
+  RD.rend.on('relocated', (loc)=>{
+    const cfi=loc.start.cfi; let pct=loc.start.percentage?Math.round(loc.start.percentage*100):RD.reading.percent;
+    if(RD.locReady){ try{ pct=Math.round(RD.book.locations.percentageFromCfi(cfi)*100); }catch{} }
+    RD.reading.location=cfi; RD.reading.percent=pct; rdSetProg(pct); rdSave();
+  });
+  (RD.reading.highlights||[]).forEach(h=>{ try{ RD.rend.annotations.add('highlight', h.cfi, {}, null, 'hl', { fill:h.color||'#F6C945','fill-opacity':'0.35' }); }catch{} });
+  RD.rend.on('selected', (cfiRange, contents)=>{
+    try {
+      RD.book.getRange(cfiRange).then((range)=>{
+        const text=(range&&range.toString?range.toString():'').trim().slice(0,220);
+        try{ RD.rend.annotations.add('highlight', cfiRange, {}, null, 'hl', { fill:'#F6C945','fill-opacity':'0.35' }); }catch{}
+        RD.reading.highlights.push({ cfi:cfiRange, text, color:'#F6C945' }); rdSave(true); rdToast('Ерекшеленді');
+      }).catch(()=>{});
+      if(contents&&contents.window) contents.window.getSelection().removeAllRanges();
+    } catch {}
+  });
+}
+async function rdLoadPdf(buf){
+  await rdScript(RD_CDN.pdf);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = RD_CDN.pdfw;
+  const view=document.getElementById('rdView'); view.className='rd-view pdf'; view.innerHTML='';
+  RD.pdf = await window.pdfjsLib.getDocument({ data:new Uint8Array(buf) }).promise;
+  RD.total = RD.pdf.numPages;
+  RD.page = Math.min(RD.total, Math.max(1, parseInt(RD.reading.location)||1));
+  rdApplyTheme(); await rdRenderPdf(RD.page);
+}
+async function rdRenderPdf(n){
+  if(!RD.pdf) return; n=Math.min(RD.total, Math.max(1,n)); RD.page=n;
+  const view=document.getElementById('rdView'); view.innerHTML='';
+  const page=await RD.pdf.getPage(n);
+  const vw=Math.max(280, view.clientWidth-20);
+  const base=page.getViewport({ scale:1 });
+  const scale=Math.min(3, Math.max(0.5, vw/base.width))*(RD.font/100);
+  const vp=page.getViewport({ scale });
+  const canvas=document.createElement('canvas'); canvas.width=vp.width; canvas.height=vp.height;
+  view.appendChild(canvas);
+  await page.render({ canvasContext:canvas.getContext('2d'), viewport:vp }).promise;
+  const pct=Math.round(n/RD.total*100);
+  RD.reading.location=String(n); RD.reading.percent=pct; rdSetProg(pct); rdSave();
+}
+function rdNext(){ if(RD.fmt==='pdf') rdRenderPdf(RD.page+1); else if(RD.rend) RD.rend.next(); }
+function rdPrev(){ if(RD.fmt==='pdf') rdRenderPdf(RD.page-1); else if(RD.rend) RD.rend.prev(); }
+function rdApplyTheme(){
+  document.getElementById('rdView').style.background = RD_THEMES[RD.theme].bg;
+  document.querySelectorAll('.rd-th').forEach(b=>b.classList.toggle('sel', b.dataset.th===RD.theme));
+  if(RD.rend){ try{ RD.rend.themes.select(RD.theme); }catch{} }
+  if(RD.fmt==='pdf') document.getElementById('rdView').classList.toggle('night', RD.theme==='night');
+}
+function rdApplyFont(){ document.getElementById('rdFontVal').textContent=RD.font+'%'; if(RD.rend){ try{ RD.rend.themes.fontSize(RD.font+'%'); }catch{} } }
+function rdSave(now){
+  clearTimeout(RD.saveT);
+  const go=()=>api('/api/book/read/save',{ location:RD.reading.location, percent:RD.reading.percent, bookmarks:RD.reading.bookmarks, highlights:RD.reading.highlights }).catch(()=>{});
+  if(now) go(); else RD.saveT=setTimeout(go, 1200);
+}
+async function rdOpenToc(){
+  const panel=document.getElementById('rdToc'); let items=[];
+  if(RD.fmt==='pdf'){ try{ const out=await RD.pdf.getOutline(); items=(out||[]).map(o=>({label:o.title,dest:o.dest})); }catch{} }
+  else if(RD.book){ try{ await RD.book.loaded.navigation; items=(RD.book.navigation.toc||[]).map(t=>({label:(t.label||'').trim(),href:t.href})); }catch{} }
+  panel.innerHTML='<div class="rd-panel-title">Мазмұны</div>'+(items.length?items.map((it,i)=>`<div class="rd-toc-item" data-i="${i}">${it.label||('Бөлім '+(i+1))}</div>`).join(''):'<div class="rd-empty">Мазмұны табылмады</div>');
+  panel.querySelectorAll('.rd-toc-item').forEach(el=>el.addEventListener('click', async ()=>{
+    const it=items[+el.dataset.i]; rdPanelClose();
+    if(RD.fmt==='pdf'){ try{ let d=it.dest; if(typeof d==='string') d=await RD.pdf.getDestination(d); const pn=await RD.pdf.getPageIndex(d[0])+1; rdRenderPdf(pn); }catch{} }
+    else if(RD.rend){ RD.rend.display(it.href); }
+  }));
+}
+function rdAddBookmark(){
+  const label=RD.fmt==='pdf'?('Бет '+RD.page):(RD.reading.percent+'%');
+  RD.reading.bookmarks.push({ loc:RD.reading.location, label, pct:RD.reading.percent }); rdSave(true); rdToast('Бетбелгі қосылды'); rdOpenNotes();
+}
+function rdOpenNotes(){
+  const p=document.getElementById('rdNotes'); const bm=RD.reading.bookmarks||[], hl=RD.reading.highlights||[];
+  let h='<button type="button" class="read-btn" id="rdAddBm" style="margin:0 0 14px;"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-bookmark"/></svg>Осы жерге бетбелгі</button>';
+  h+='<div class="rd-panel-title">Бетбелгілер</div>';
+  h+=bm.length?bm.map((b,i)=>`<div class="rd-note-item" data-t="bm" data-i="${i}"><span class="dot" style="background:var(--accent)"></span><span class="txt">${b.label||''}</span><span class="rd-note-del" data-del="bm" data-i="${i}">жою</span></div>`).join(''):'<div class="rd-empty">Әзірге жоқ</div>';
+  h+='<div class="rd-panel-title" style="margin-top:18px;">Ерекшелеулер мен жазбалар</div>';
+  h+=hl.length?hl.map((x,i)=>`<div class="rd-note-item" data-t="hl" data-i="${i}"><span class="dot" style="background:${x.color||'#F6C945'}"></span><span class="txt">${(x.text||'').slice(0,100)||'—'}</span><span class="rd-note-del" data-del="hl" data-i="${i}">жою</span></div>`).join(''):'<div class="rd-empty">Әзірге жоқ</div>';
+  p.innerHTML=h;
+  document.getElementById('rdAddBm').addEventListener('click', rdAddBookmark);
+  p.querySelectorAll('.rd-note-item').forEach(el=>el.addEventListener('click',(e)=>{
+    if(e.target.dataset.del!=null) return; const t=el.dataset.t, i=+el.dataset.i; rdPanelClose();
+    if(t==='bm'){ const b=RD.reading.bookmarks[i]; if(RD.fmt==='pdf') rdRenderPdf(parseInt(b.loc)||1); else if(RD.rend) RD.rend.display(b.loc); }
+    else { const x=RD.reading.highlights[i]; if(RD.rend&&x.cfi) RD.rend.display(x.cfi); }
+  }));
+  p.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',(e)=>{
+    e.stopPropagation(); const t=el.dataset.del, i=+el.dataset.i;
+    if(t==='bm') RD.reading.bookmarks.splice(i,1);
+    else { const x=RD.reading.highlights[i]; if(x&&x.cfi&&RD.rend){ try{ RD.rend.annotations.remove(x.cfi,'highlight'); }catch{} } RD.reading.highlights.splice(i,1); }
+    rdSave(true); rdOpenNotes();
+  }));
+}
+
+document.getElementById('readBookBtn')?.addEventListener('click', openReader);
+document.getElementById('rdClose')?.addEventListener('click', closeReader);
+document.getElementById('rdNext')?.addEventListener('click', rdNext);
+document.getElementById('rdPrev')?.addEventListener('click', rdPrev);
+document.getElementById('rdTocBtn')?.addEventListener('click', ()=>rdToggle('rdToc', rdOpenToc));
+document.getElementById('rdMarkBtn')?.addEventListener('click', ()=>rdToggle('rdNotes', rdOpenNotes));
+document.getElementById('rdAaBtn')?.addEventListener('click', ()=>rdToggle('rdAa'));
+document.getElementById('rdFontMinus')?.addEventListener('click', ()=>{ RD.font=Math.max(70,RD.font-10); try{localStorage.setItem('spirit-rd-font',RD.font);}catch{} rdApplyFont(); if(RD.fmt==='pdf') rdRenderPdf(RD.page); });
+document.getElementById('rdFontPlus')?.addEventListener('click', ()=>{ RD.font=Math.min(180,RD.font+10); try{localStorage.setItem('spirit-rd-font',RD.font);}catch{} rdApplyFont(); if(RD.fmt==='pdf') rdRenderPdf(RD.page); });
+document.querySelectorAll('.rd-th').forEach(b=>b.addEventListener('click', ()=>{ RD.theme=b.dataset.th; try{localStorage.setItem('spirit-rd-theme',RD.theme);}catch{} rdApplyTheme(); }));
 
 // Кнопка «Тексеру» на экране ожидания
 document.getElementById('checkStatusBtn')?.addEventListener('click', async () => {

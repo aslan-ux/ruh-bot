@@ -277,6 +277,14 @@
           <button id="saveBook" class="btn btn-full" style="margin-top:14px;">Сақтау</button>
           <div class="hint" id="bookHint"></div>
         </div>
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-book"/></svg>Оқуға арналған файл</h2>
+          <p class="sub">EPUB немесе PDF жүкте — қатысушылар мини-аппта осы кітапты оқи алады. EPUB толық мүмкіндік береді (қаріп, тема, белгілер, ерекшелеу). Тек өз құқығың бар кітаптарды жүкте.</p>
+          <div class="hint" id="fileStatus" style="margin-bottom:10px;"></div>
+          <input id="bookFile" type="file" accept=".epub,.pdf,application/epub+zip,application/pdf" class="input" />
+          <button id="uploadBook" class="btn btn-full" style="margin-top:12px;"><svg class="ic"><use href="#i-book"/></svg>Файлды жүктеу</button>
+          <div class="hint" id="uploadHint"></div>
+        </div>
       </section>
 
       <!-- Қаржы -->
@@ -417,9 +425,15 @@ function applyData(data){
   document.getElementById('bProgress').value = b.progress || 0;
   document.getElementById('coverPreview').src = b.cover || '';
   document.getElementById('goalInput').value = data.goal || 10000;
+  const fst = document.getElementById('fileStatus');
+  if (fst) fst.innerHTML = b.fileId
+    ? ('Ағымдағы файл: <b>' + (b.fileName ? decodeURIComponent(b.fileName) : 'book') + '</b> · ' + String(b.format || '').toUpperCase())
+    : 'Файл әлі жүктелмеген.';
+  LAST_BOOK = b;
   FIN = data.fin && data.fin.cats ? data.fin : FIN;
   renderParticipants(); renderFinConfig(); loadSteps();
 }
+let LAST_BOOK = {};
 
 /* ---------- Қатысушылар ---------- */
 function statusBadge(s){
@@ -528,6 +542,34 @@ document.getElementById('saveBook').addEventListener('click', async () => {
   });
   hint.textContent = r.ok ? '✓ Сақталды' : ('Қате: ' + (r.error || ''));
   if (r.ok) toast('Кітап сақталды');
+});
+
+document.getElementById('uploadBook').addEventListener('click', () => {
+  const f = document.getElementById('bookFile').files[0];
+  const hint = document.getElementById('uploadHint');
+  if (!f) { hint.textContent = 'Алдымен файл таңда'; return; }
+  const fmt = /\.pdf$/i.test(f.name) ? 'pdf' : (/\.epub$/i.test(f.name) ? 'epub' : '');
+  if (!fmt) { hint.textContent = 'Тек EPUB немесе PDF файл'; return; }
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/admin/book/upload');
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.setRequestHeader('X-Admin-Key', ADMIN_KEY);
+  xhr.setRequestHeader('X-File-Name', encodeURIComponent(f.name));
+  xhr.setRequestHeader('X-File-Format', fmt);
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) hint.textContent = 'Жүктелуде… ' + Math.round(e.loaded / e.total * 100) + '%'; };
+  xhr.onload = () => {
+    try {
+      const r = JSON.parse(xhr.responseText);
+      if (r.ok) {
+        hint.textContent = '✓ Жүктелді'; toast('Кітап файлы жүктелді');
+        document.getElementById('bookFile').value = '';
+        applyData({ users: ALL_USERS, book: r.book, goal: Number(document.getElementById('goalInput').value) || 10000, fin: FIN });
+      } else hint.textContent = 'Қате: ' + (r.error || xhr.status);
+    } catch { hint.textContent = 'Қате: ' + xhr.status; }
+  };
+  xhr.onerror = () => { hint.textContent = 'Желі қатесі'; };
+  hint.textContent = 'Жүктелуде…';
+  f.arrayBuffer().then((buf) => xhr.send(buf));
 });
 
 /* ---------- Қаржы: категории + банки ---------- */

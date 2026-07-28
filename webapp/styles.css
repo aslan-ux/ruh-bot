@@ -536,3 +536,43 @@ button:active { transform: scale(.96); }
 .fin-menu-center:not(.hidden) { animation: popInCenter .18s cubic-bezier(.2, .8, .2, 1); }
 .screen.active { animation: screenIn .3s cubic-bezier(.2, .8, .2, 1); }
 #qdSetupBox:not(.hidden), #qdCalWrap:not(.hidden) { animation: fadeSlide .25s ease; }
+
+/* ---------- Оқу батырмасы + Ридер ---------- */
+.read-btn { display:inline-flex; align-items:center; gap:6px; margin-top:10px; background:var(--accent); color:var(--on-accent); border:none; border-radius:12px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-accent); transition:transform .12s ease, background-color .2s ease; }
+.read-btn .ic-svg { width:17px; height:17px; }
+.read-btn:hover { background:var(--accent-strong); }
+.read-btn:active { transform:scale(.97); }
+
+.reader { position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex; flex-direction:column; animation:screenIn .28s ease; }
+.reader.hidden { display:none; }
+.rd-top { display:flex; align-items:center; gap:8px; padding:11px 12px; border-bottom:1px solid var(--line); }
+.rd-ic { width:38px; height:38px; border-radius:11px; border:1px solid var(--line); background:var(--card); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto; }
+.rd-ic .ic-svg { width:20px; height:20px; }
+.rd-title { flex:1; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rd-view { flex:1; overflow:auto; position:relative; -webkit-overflow-scrolling:touch; }
+.rd-view.pdf { text-align:center; padding:10px 0; background:var(--surface); }
+.rd-view.pdf canvas { max-width:100%; margin:0 auto 10px; display:block; box-shadow:0 1px 8px rgba(0,0,0,.18); border-radius:4px; }
+.rd-view.pdf.night canvas { filter:invert(1) hue-rotate(180deg); }
+.rd-bottom { display:flex; align-items:center; gap:10px; padding:10px 14px; border-top:1px solid var(--line); }
+.rd-nav { width:40px; height:40px; border-radius:12px; border:none; background:var(--accent-soft); color:var(--accent); cursor:pointer; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.rd-nav .ic-svg { width:20px; height:20px; }
+.rd-nav:active { transform:scale(.94); }
+.rd-track { flex:1; height:6px; border-radius:3px; background:var(--ring-track); overflow:hidden; }
+.rd-fill { height:100%; background:var(--accent); width:0%; transition:width .3s ease; }
+.rd-pct { font-size:12px; color:var(--green-soft); min-width:36px; text-align:right; }
+.rd-msg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--green-soft); padding:24px; font-size:15px; }
+.rd-panel { position:absolute; top:61px; left:0; right:0; bottom:0; background:var(--bg); overflow:auto; padding:14px 16px 28px; z-index:5; }
+.rd-panel-title { font-size:13px; color:var(--green-soft); margin:2px 0 10px; }
+.rd-toc-item { padding:12px 6px; border-bottom:1px solid var(--line); font-size:14px; color:var(--text); cursor:pointer; }
+.rd-toc-item:active { color:var(--accent); }
+.rd-note-item { padding:11px 6px; border-bottom:1px solid var(--line); font-size:13px; cursor:pointer; display:flex; gap:9px; align-items:flex-start; }
+.rd-note-item .dot { width:10px; height:10px; border-radius:3px; margin-top:3px; flex:0 0 auto; }
+.rd-note-item .txt { flex:1; color:var(--text); }
+.rd-note-del { color:var(--green-soft); font-size:12px; }
+.rd-empty { color:var(--green-soft); font-size:14px; text-align:center; padding:24px 0; }
+.rd-aa-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; font-size:14px; }
+.rd-aa-font { display:flex; align-items:center; gap:12px; }
+.rd-aa-font button { border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:14px; }
+.rd-themes { display:flex; gap:8px; }
+.rd-themes button { border:1px solid var(--line); border-radius:10px; padding:9px 14px; cursor:pointer; font-size:13px; font-weight:600; }
+.rd-th.sel { outline:2px solid var(--accent); outline-offset:1px; }
