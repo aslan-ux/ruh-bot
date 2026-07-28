@@ -3,397 +3,633 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Spirit — Админка</title>
+  <title>Spirit — Админ</title>
   <style>
-    :root { --green:#1D9E75; --dark:#0F5C43; --soft:#4b8a72; --bg:#F1F8F4; --line:#CDE7DA; --tint:#E3F1EA; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--dark); }
-    .wrap { max-width:980px; margin:0 auto; padding:20px 16px 60px; }
-    h1 { font-size:22px; } h2 { font-size:17px; margin:0 0 14px; }
-    .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; }
-    label { display:block; font-size:13px; color:var(--soft); margin:10px 0 4px; }
-    input { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:15px; color:var(--dark); outline:none; }
-    input:focus { border-color:var(--green); }
-    input, textarea, select {
-      -webkit-user-select:text !important; user-select:text !important;
-      -webkit-touch-callout:default !important; caret-color:var(--green);
+    :root {
+      --accent:#5E5CE6; --accent-strong:#4B49C8; --accent-soft:rgba(94,92,230,.10); --on-accent:#fff;
+      --bg:#fff; --card:#fff; --surface:#F6F6FA; --line:#ECECF2; --text:#17171F; --muted:#6E6E7C;
+      --placeholder:#A6A6B4; --shadow:0 1px 3px rgba(20,20,40,.06); --shadow-accent:0 6px 18px rgba(94,92,230,.28);
+      --ok:#22C55E; --warn:#F59E0B; --danger:#EF4444; --danger-soft:rgba(239,68,68,.10);
     }
-    button { background:var(--green); color:#fff; border:none; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:500; cursor:pointer; }
-    .hint { font-size:13px; color:var(--soft); margin-top:8px; min-height:18px; }
-    table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
-    th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); }
-    th { color:var(--soft); font-weight:500; }
-    .row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
-    .preview { width:70px; height:70px; border-radius:50%; object-fit:cover; border:1px solid var(--line); background:var(--tint); }
-    .hidden { display:none; }
-    .search { margin-bottom:14px; }
+    :root[data-theme="dark"] {
+      --accent:#7D7AFF; --accent-strong:#9B99FF; --accent-soft:rgba(125,122,255,.16); --on-accent:#fff;
+      --bg:#0F0F14; --card:#191921; --surface:#20202B; --line:#2A2A36; --text:#F3F3F8; --muted:#9A9AAB;
+      --placeholder:#6C6C7C; --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-accent:0 6px 18px rgba(125,122,255,.32);
+      --danger:#FF6B6B; --danger-soft:rgba(255,107,107,.14);
+    }
+    html { color-scheme: light dark; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      margin:0; font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;
+      transition:background-color .25s ease, color .25s ease;
+    }
+    .wrap { max-width:960px; margin:0 auto; padding:16px 16px 80px; }
+    .ic { width:1em; height:1em; display:inline-block; vertical-align:-.125em; }
 
-    .layout { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; margin-top:16px; }
-    .content { flex:1; min-width:280px; }
-    .side-tabs { width:170px; display:flex; flex-direction:column; gap:6px; position:sticky; top:16px; }
-    .side-tabs button { background:#fff; color:var(--dark); border:1px solid var(--line); text-align:left; font-weight:500; padding:11px 12px; }
-    .side-tabs button.active { background:var(--green); color:#fff; border-color:var(--green); }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
-    .ucard { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
-    @media (max-width:640px){
-      .side-tabs { width:100%; flex-direction:row; flex-wrap:wrap; position:static; }
-      .side-tabs button { flex:1 1 30%; text-align:center; }
-    }
+    /* Верхняя панель */
+    .top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+    .brand { display:flex; align-items:center; gap:10px; font-size:19px; font-weight:600; }
+    .brand .logo { width:34px; height:34px; border-radius:10px; background:var(--accent); color:var(--on-accent);
+      display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:var(--shadow-accent); }
+    .top-actions { display:flex; align-items:center; gap:8px; }
+    .icon-btn { width:40px; height:40px; border-radius:12px; border:1px solid var(--line); background:var(--card);
+      color:var(--text); display:flex; align-items:center; justify-content:center; font-size:19px; cursor:pointer;
+      transition:transform .12s ease, background-color .2s ease, border-color .2s ease; }
+    .icon-btn:active { transform:scale(.94); }
+
+    /* Навигация-сегменты */
+    .nav { display:flex; gap:6px; overflow-x:auto; padding:4px; background:var(--surface); border:1px solid var(--line);
+      border-radius:16px; margin-bottom:18px; -ms-overflow-style:none; scrollbar-width:none; }
+    .nav::-webkit-scrollbar { display:none; }
+    .nav button { flex:0 0 auto; display:flex; align-items:center; gap:7px; white-space:nowrap; border:none;
+      background:transparent; color:var(--muted); font-size:14px; font-weight:600; padding:10px 14px; border-radius:12px;
+      cursor:pointer; transition:background-color .2s ease, color .2s ease, transform .12s ease; }
+    .nav button .ic { font-size:17px; }
+    .nav button.active { background:var(--card); color:var(--accent); box-shadow:var(--shadow); }
+    .nav button:active { transform:scale(.97); }
+
+    /* Карточки/формы */
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow);
+      transition:background-color .25s ease, border-color .25s ease; }
+    .card + .card { margin-top:12px; }
+    h1 { font-size:20px; font-weight:600; margin:0 0 2px; }
+    h2 { font-size:16px; font-weight:600; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+    h2 .ic { font-size:19px; color:var(--accent); }
+    .sub { color:var(--muted); font-size:13px; margin:0 0 14px; }
+    label { display:block; font-size:12px; color:var(--muted); margin:12px 0 5px; }
+    label:first-child { margin-top:0; }
+    .input { width:100%; background:var(--card); border:1px solid var(--line); border-radius:11px; padding:11px 12px;
+      font-size:15px; color:var(--text); outline:none; -webkit-appearance:none; appearance:none;
+      transition:border-color .2s ease, background-color .25s ease; }
+    .input:focus { border-color:var(--accent); }
+    .input::placeholder { color:var(--placeholder); }
+    textarea.input { min-height:70px; resize:vertical; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .grow { flex:1; min-width:160px; }
+
+    .btn { background:var(--accent); color:var(--on-accent); border:none; border-radius:12px; padding:11px 16px;
+      font-size:15px; font-weight:600; cursor:pointer; box-shadow:var(--shadow-accent);
+      display:inline-flex; align-items:center; justify-content:center; gap:7px;
+      transition:transform .12s ease, background-color .2s ease, box-shadow .2s ease; }
+    .btn:hover { background:var(--accent-strong); }
+    .btn:active { transform:scale(.97); }
+    .btn:disabled { opacity:.5; box-shadow:none; }
+    .btn-ghost { background:var(--surface); color:var(--text); border:1px solid var(--line); box-shadow:none; }
+    .btn-ghost:hover { background:var(--surface); border-color:var(--accent); }
+    .btn-danger { background:var(--danger-soft); color:var(--danger); border:1px solid transparent; box-shadow:none; }
+    .btn-sm { padding:8px 12px; font-size:13px; border-radius:10px; }
+    .btn-full { width:100%; }
+    .hint { font-size:13px; color:var(--muted); min-height:18px; margin-top:8px; }
+
+    .search { position:relative; margin-bottom:14px; }
+    .search .ic { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--placeholder); font-size:18px; }
+    .search .input { padding-left:38px; }
+
+    /* Список карточек */
+    .list { display:flex; flex-direction:column; gap:10px; }
+    .item { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px 14px;
+      display:flex; align-items:center; gap:12px; transition:border-color .2s ease, transform .12s ease; }
+    .item .av { width:40px; height:40px; border-radius:12px; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+      background:var(--accent-soft); color:var(--accent); font-size:20px; overflow:hidden; }
+    .item .av img { width:100%; height:100%; object-fit:contain; }
+    .item .main { flex:1; min-width:0; }
+    .item .nm { font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .item .meta { color:var(--muted); font-size:12.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .item .side { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+
+    .badge { font-size:11.5px; font-weight:600; padding:4px 9px; border-radius:999px; white-space:nowrap; }
+    .b-ok { background:rgba(34,197,94,.14); color:var(--ok); }
+    .b-warn { background:rgba(245,158,11,.16); color:var(--warn); }
+    .b-danger { background:var(--danger-soft); color:var(--danger); }
+
+    .seg { display:inline-flex; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px; }
+    .seg button { border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:6px 10px;
+      border-radius:8px; cursor:pointer; transition:background-color .2s, color .2s; }
+    .seg button.on { background:var(--accent); color:var(--on-accent); }
+
+    .iconbtn-s { width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--muted);
+      display:flex; align-items:center; justify-content:center; font-size:17px; cursor:pointer; transition:transform .12s, color .2s, border-color .2s; }
+    .iconbtn-s:active { transform:scale(.92); }
+    .iconbtn-s.danger { color:var(--danger); }
+    .iconbtn-s.danger:hover { border-color:var(--danger); }
+
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; font-size:12px; }
+    td .steps-edit { width:92px; }
+
+    .swatch { width:22px; height:22px; border-radius:7px; border:1px solid var(--line); flex:0 0 auto; }
+    .muted-c { color:var(--muted); }
+    .hidden { display:none !important; }
+    .center { text-align:center; }
+
+    /* Модалка */
+    .ov { position:fixed; inset:0; background:rgba(10,10,20,.45); display:flex; align-items:flex-end; justify-content:center;
+      z-index:50; padding:0; animation:ovIn .2s ease; }
+    :root[data-theme="dark"] .ov { background:rgba(0,0,0,.6); }
+    @keyframes ovIn { from { opacity:0; } to { opacity:1; } }
+    .sheet { background:var(--card); width:100%; max-width:560px; border-radius:20px 20px 0 0; padding:18px 16px 24px;
+      max-height:90vh; overflow:auto; animation:sheetIn .28s cubic-bezier(.22,1,.36,1); }
+    @media (min-width:600px){ .ov { align-items:center; } .sheet { border-radius:20px; } }
+    @keyframes sheetIn { from { transform:translateY(24px); opacity:.4; } to { transform:translateY(0); opacity:1; } }
+    .sheet-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .sheet-head h3 { margin:0; font-size:17px; font-weight:600; }
+
+    .iconpick { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+    .iconpick button { aspect-ratio:1; border-radius:12px; border:1px solid var(--line); background:var(--surface); color:var(--text);
+      display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; transition:transform .12s, border-color .2s; }
+    .iconpick button.on { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+    .iconpick button:active { transform:scale(.9); }
+    .colorpick { display:flex; gap:8px; flex-wrap:wrap; }
+    .colorpick .c { width:30px; height:30px; border-radius:9px; cursor:pointer; border:2px solid transparent; }
+    .colorpick .c.on { border-color:var(--text); }
+
+    .empty { color:var(--muted); font-size:14px; text-align:center; padding:22px 0; }
+    .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--text); color:var(--bg);
+      padding:11px 18px; border-radius:12px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; z-index:80;
+      transition:opacity .25s, transform .25s; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* Вход */
+    .login-wrap { max-width:380px; margin:12vh auto 0; }
+    .login-badge { width:64px; height:64px; border-radius:18px; background:var(--accent); color:var(--on-accent);
+      display:flex; align-items:center; justify-content:center; font-size:30px; margin:0 auto 14px; box-shadow:var(--shadow-accent); }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Spirit — Админка</h1>
+  <!-- SVG-иконки (как в мини-аппе) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.5"/><path d="M9.5 20v-5.5h5V20"/></g></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.6"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h15"/><path d="M8 19v-4"/><path d="M12.5 19v-8"/><path d="M17 19v-5.5"/></g></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></g></symbol>
+    <symbol id="i-sprout" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8"/><path d="M12 13.5C12 10.5 9.5 8 6.5 8c0 3 2.5 5.5 5.5 5.5Z"/><path d="M12 11.5C12 9 14 7 16.5 7c0 2.5-2 4.5-4.5 4.5Z"/></g></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.2" r="2.9"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.2 6a2.9 2.9 0 0 1 0 5.6"/><path d="M17.5 14.3c1.9.5 3.5 2 3.5 4.2"/></g></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.4C10 5.1 7.5 4.7 4.5 4.7V17c3 0 5.4.4 7.5 1.8 2.1-1.4 4.5-1.8 7.5-1.8V4.7c-3 0-5.5.4-7.5 1.7Z"/><path d="M12 6.4v12.4"/></g></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.6"/><path d="M11 18h2"/></g></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.1-5.2"/><path d="M20 4.5V9h-4.5"/></g></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A7.5 7.5 0 1 1 10.5 4 6 6 0 0 0 20 13.5Z"/></g></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"/></g></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></g></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7M6.5 7l.9 11.2A1.4 1.4 0 0 0 8.8 19.5h6.4a1.4 1.4 0 0 0 1.4-1.3L17.5 7"/></g></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.8-2.8L5 17.2V20Z"/><path d="M13.5 6.5l4 4"/></g></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-3.8-3.8"/></g></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.1 10.3a1 1 0 0 0 1 .8h8.2a1 1 0 0 0 1-.78L20 8H6.2"/><circle cx="9" cy="19" r="1.3" fill="currentColor" stroke="none"/><circle cx="17" cy="19" r="1.3" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12l1.4-4a2 2 0 0 1 1.9-1.3h8.4a2 2 0 0 1 1.9 1.3l1.4 4v4.5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7.5v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1Z"/><path d="M4.7 12h14.6"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></g></symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h11v4.5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4Z"/><path d="M16 9.5h1.8a2 2 0 0 1 0 4H16"/><path d="M8 3.6v1.6M11.5 3.6v1.6"/></g></symbol>
+    <symbol id="i-shirt" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4 12 5.7 15.5 4l4.4 3-2.4 2.9-2-.9V20H8.5V9l-2 .9L4 7Z"/></g></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8 5v14M16 5v14M3.5 9.5h4.5M16 9.5h4.5M3.5 14.5h4.5M16 14.5h4.5"/></g></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20C7.5 16.5 4 13.2 4 9.6A3.6 3.6 0 0 1 12 7.2 3.6 3.6 0 0 1 20 9.6c0 3.6-3.5 6.9-8 10.4Z"/></g></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></g></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5h.01M17.5 14.5h.01"/></g></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="11" rx="2"/><path d="M9 7.5V6.2A2.2 2.2 0 0 1 11.2 4h1.6A2.2 2.2 0 0 1 15 6.2v1.3"/><path d="M3.5 12.5h17"/></g></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15l5-5 3.5 3.5L20 6"/><path d="M15 6h5v5"/></g></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9.5" width="16" height="10.5" rx="1.5"/><path d="M4 13h16M12 9.5V20"/><path d="M12 9.5C11 6.6 9.2 5.2 8 6.4 6.9 7.5 8.6 9.5 12 9.5ZM12 9.5C13 6.6 14.8 5.2 16 6.4 17.1 7.5 15.4 9.5 12 9.5Z"/></g></symbol>
+    <symbol id="i-diamond" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l3 5-9 13L3 8Z"/><path d="M3 8h18M9 3 7.5 8 12 21M15 3l1.5 5L12 21"/></g></symbol>
+  </svg>
 
-  <!-- Вход -->
-  <div id="login" class="card" style="margin-top:16px;">
-    <label>Админ кілті (ADMIN_KEY)</label>
-    <div class="row">
-      <input id="key" type="password" placeholder="кілт" style="flex:1;" />
-      <button id="loginBtn">Кіру</button>
+  <div class="wrap">
+    <!-- Вход -->
+    <div id="login" class="login-wrap">
+      <div class="login-badge">S</div>
+      <div class="card">
+        <label>Админ кілті (ADMIN_KEY)</label>
+        <input id="key" class="input" type="password" placeholder="кілт" autocomplete="current-password" />
+        <button id="loginBtn" class="btn btn-full" style="margin-top:12px;">Кіру</button>
+        <div class="hint center" id="loginHint"></div>
+      </div>
     </div>
-    <div class="hint" id="loginHint"></div>
-  </div>
 
-  <!-- Панель -->
-  <div id="panel" class="hidden">
-    <div class="row" style="justify-content:flex-end; margin-bottom:6px;">
-      <button id="logoutBtn" style="background:#fff; color:var(--soft); border:1px solid var(--line); font-weight:500;">Шығу</button>
-    </div>
-    <div class="layout">
-      <div class="content">
-
-        <!-- Қатысушылар -->
-        <section id="tab-uchastniki" class="tab-content active">
-          <h2>Қатысушылар (<span id="count">0</span>)</h2>
-          <input class="search" id="search-uchastniki" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
-          <div style="overflow-x:auto;">
-            <table>
-              <thead>
-                <tr><th>Аты-жөні</th><th>Почта</th><th>Нөмірі</th><th>Туған күні</th><th>Статус</th></tr>
-              </thead>
-              <tbody id="tbody-uchastniki"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Кітап -->
-        <section id="tab-kitap" class="tab-content">
-          <h2>Осы айдың кітабы</h2>
-          <div class="card">
-            <div class="row" style="align-items:center;">
-              <img id="coverPreview" class="preview" src="" alt="" />
-              <div style="flex:1; min-width:200px;">
-                <label>Мұқаба (фото URL)</label>
-                <input id="cover" placeholder="https://…/book.jpg" />
-              </div>
-            </div>
-            <label>Атауы</label>
-            <input id="title" placeholder="Кітап атауы" />
-            <label>Авторы</label>
-            <input id="author" placeholder="Автор" />
-            <label>Прогресс (%)</label>
-            <input id="progress" type="number" min="0" max="100" placeholder="0" />
-            <div style="margin-top:14px;"><button id="saveBook">Сақтау</button></div>
-            <div class="hint" id="bookHint"></div>
-          </div>
-        </section>
-
-        <!-- Қадам -->
-        <section id="tab-qadam" class="tab-content">
-          <h2>👣 Қадам</h2>
-          <div class="card" style="margin-bottom:14px;">
-            <label>Күнделікті мақсат (қадам) — барлық қатысушыға ортақ</label>
-            <div class="row">
-              <input id="goalInput" type="number" min="1" step="500" placeholder="10000" style="flex:1; min-width:160px;" />
-              <button id="saveGoal">Сақтау</button>
-            </div>
-            <div class="hint" id="goalHint">Өзгертсең, мини-аппта барлық қатысушыда жаңа мақсат көрінеді.</div>
-          </div>
-          <input class="search" id="search-qadam" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
-          <div class="hint" id="qadamMeta" style="margin-bottom:8px;"></div>
-          <div style="overflow-x:auto;">
-            <table>
-              <thead>
-                <tr><th>Аты-жөні</th><th>Бүгін</th><th>Апта</th><th>Ай</th><th>Барлығы</th></tr>
-              </thead>
-              <tbody id="tbody-qadam"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Қаржы -->
-        <section id="tab-qarjy" class="tab-content">
-          <h2>💰 Қаржы</h2>
-          <input class="search" id="search-qarjy" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
-          <div id="list-qarjy"></div>
-        </section>
-
-        <!-- Прогресс -->
-        <section id="tab-progress" class="tab-content">
-          <h2>📈 Прогресс</h2>
-          <input class="search" id="search-progress" placeholder="Іздеу: аты-жөні, почта немесе нөмір" />
-          <div id="list-progress"></div>
-        </section>
-
+    <!-- Панель -->
+    <div id="panel" class="hidden">
+      <div class="top">
+        <div class="brand"><span class="logo">S</span> Spirit · Админ</div>
+        <div class="top-actions">
+          <button id="themeBtn" class="icon-btn" title="Тема"><svg class="ic"><use href="#i-moon"/></svg></button>
+          <button id="refreshBtn" class="icon-btn" title="Жаңарту"><svg class="ic"><use href="#i-refresh"/></svg></button>
+          <button id="logoutBtn" class="btn btn-ghost btn-sm">Шығу</button>
+        </div>
       </div>
 
-      <nav class="side-tabs" id="sideTabs">
-        <button data-tab="uchastniki" class="active">Қатысушылар</button>
-        <button data-tab="kitap">Кітап</button>
-        <button data-tab="qadam">Қадам</button>
-        <button data-tab="qarjy">Қаржы</button>
-        <button data-tab="progress">Прогресс</button>
+      <nav class="nav" id="nav">
+        <button data-tab="uchastniki" class="active"><svg class="ic"><use href="#i-people"/></svg>Қатысушылар</button>
+        <button data-tab="qadam"><svg class="ic"><use href="#i-sprout"/></svg>Қадам</button>
+        <button data-tab="kitap"><svg class="ic"><use href="#i-book"/></svg>Кітап</button>
+        <button data-tab="qarjy"><svg class="ic"><use href="#i-wallet"/></svg>Қаржы</button>
       </nav>
+
+      <!-- Қатысушылар -->
+      <section id="tab-uchastniki" class="tab">
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-people"/></svg>Қатысушылар (<span id="uCount">0</span>)</h2>
+          <div class="search"><svg class="ic"><use href="#i-search"/></svg>
+            <input id="uSearch" class="input" placeholder="Іздеу: аты-жөні, почта немесе нөмір" /></div>
+          <div id="uList" class="list"></div>
+        </div>
+      </section>
+
+      <!-- Қадам -->
+      <section id="tab-qadam" class="tab hidden">
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-target"/></svg>Күнделікті мақсат (мақсат)</h2>
+          <p class="sub">Барлық қатысушыға ортақ. Өзгертсең — мини-аппта бәрінде жаңа мақсат көрінеді.</p>
+          <div class="row">
+            <input id="goalInput" class="input grow" type="number" min="1" step="500" placeholder="10000" />
+            <button id="saveGoal" class="btn">Сақтау</button>
+          </div>
+          <div class="hint" id="goalHint"></div>
+        </div>
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-sprout"/></svg>Қатысушылардың қадамдары</h2>
+          <div class="search"><svg class="ic"><use href="#i-search"/></svg>
+            <input id="sSearch" class="input" placeholder="Іздеу: аты-жөні" /></div>
+          <div class="hint" id="sMeta" style="margin-bottom:6px;"></div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Аты-жөні</th><th>Бүгін</th><th>Апта</th><th>Ай</th><th>Барлығы</th><th></th></tr></thead>
+              <tbody id="sBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Кітап -->
+      <section id="tab-kitap" class="tab hidden">
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-book"/></svg>Осы айдың кітабы</h2>
+          <div class="row" style="align-items:center; gap:14px;">
+            <img id="coverPreview" alt="" style="width:66px; height:88px; border-radius:12px; object-fit:cover; border:1px solid var(--line); background:var(--surface);" />
+            <div class="grow">
+              <label>Мұқаба (фото URL)</label>
+              <input id="bCover" class="input" placeholder="https://…/book.jpg" />
+            </div>
+          </div>
+          <label>Атауы</label>
+          <input id="bTitle" class="input" placeholder="Кітап атауы" />
+          <label>Авторы</label>
+          <input id="bAuthor" class="input" placeholder="Автор" />
+          <label>Прогресс (%)</label>
+          <input id="bProgress" class="input" type="number" min="0" max="100" placeholder="0" />
+          <button id="saveBook" class="btn btn-full" style="margin-top:14px;">Сақтау</button>
+          <div class="hint" id="bookHint"></div>
+        </div>
+      </section>
+
+      <!-- Қаржы -->
+      <section id="tab-qarjy" class="tab hidden">
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-wallet"/></svg>Қаржы бөлімі</h2>
+          <p class="sub">Мұнда өзгерткен категориялар мен банктер мини-аппта барлық қатысушыға көрінеді.</p>
+        </div>
+        <div class="card">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+            <h2 style="margin:0;"><svg class="ic"><use href="#i-cart"/></svg>Шығыс категориялары</h2>
+            <button class="btn btn-sm" onclick="finAddCat('expense')"><svg class="ic"><use href="#i-plus"/></svg>Қосу</button>
+          </div>
+          <div id="catExpense" class="list"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+            <h2 style="margin:0;"><svg class="ic"><use href="#i-cash"/></svg>Кіріс категориялары</h2>
+            <button class="btn btn-sm" onclick="finAddCat('income')"><svg class="ic"><use href="#i-plus"/></svg>Қосу</button>
+          </div>
+          <div id="catIncome" class="list"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+            <h2 style="margin:0;"><svg class="ic"><use href="#i-wallet"/></svg>Банктер / шоттар</h2>
+            <button class="btn btn-sm" onclick="finAddBank()"><svg class="ic"><use href="#i-plus"/></svg>Қосу</button>
+          </div>
+          <div id="bankList" class="list"></div>
+        </div>
+      </section>
     </div>
   </div>
-</div>
+
+  <div id="modalRoot"></div>
+  <div id="toast" class="toast"></div>
 
 <script>
+const ADMIN_KEY_STORE = 'spirit-admin-key';
+const THEME_STORE = 'spirit-admin-theme';
 let ADMIN_KEY = '';
 let ALL_USERS = [];
+let STEPS_ROWS = [];
+let FIN = { cats: { expense: [], income: [] }, banks: [] };
+const ICONS = ['i-cart','i-car','i-home','i-coffee','i-shirt','i-film','i-heart','i-phone','i-cash','i-briefcase','i-trend','i-gift','i-chart','i-diamond','i-wallet','i-target','i-book','i-people','i-dots','i-user'];
+const COLORS = ['#FF6B6B','#F59E0B','#22C55E','#06B6D4','#4D96FF','#5E5CE6','#8B5CF6','#EC4899','#EF4444','#14B8A6','#CA8A04','#94A3B8'];
 
-async function adminGet() {
+/* ---------- Тема ---------- */
+function systemDark(){ return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+function themePref(){ try { return localStorage.getItem(THEME_STORE) || 'auto'; } catch { return 'auto'; } }
+function applyTheme(){
+  const p = themePref();
+  const dark = p === 'dark' || (p === 'auto' && systemDark());
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  const use = document.querySelector('#themeBtn use');
+  if (use) use.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+}
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  try { localStorage.setItem(THEME_STORE, dark ? 'light' : 'dark'); } catch {}
+  applyTheme();
+});
+if (window.matchMedia){ const mq = window.matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener && mq.addEventListener('change', applyTheme); }
+applyTheme();
+
+/* ---------- Тост ---------- */
+let toastT = null;
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1900);
+}
+
+/* ---------- API ---------- */
+async function adminGet(){
   const res = await fetch('/api/admin/data', { headers: { 'X-Admin-Key': ADMIN_KEY } });
   return res.json();
 }
-async function adminPost(path, body) {
-  const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
-    body: JSON.stringify(body),
-  });
+async function adminPost(path, body){
+  const res = await fetch(path, { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Admin-Key':ADMIN_KEY }, body:JSON.stringify(body) });
   return res.json();
 }
 
-function fullName(u) { return `${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''}`.trim(); }
-
-// Поиск по ФИО, почте и номеру (с форматированием и без)
-function userMatches(u, q) {
-  q = (q || '').trim().toLowerCase();
-  if (!q) return true;
+/* ---------- Вход ---------- */
+function fullName(u){ return `${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''}`.trim() || (u.firstName || 'Қатысушы'); }
+function userMatches(u, q){
+  q = (q || '').trim().toLowerCase(); if (!q) return true;
   const text = `${u.name || ''} ${u.lastName || ''} ${u.firstName || ''} ${u.patronymic || ''} ${u.email || ''} ${u.phone || ''}`.toLowerCase();
   if (text.includes(q)) return true;
-  const qDigits = q.replace(/\D/g, '');
-  if (qDigits) {
-    const pDigits = (u.phone || '').replace(/\D/g, '');
-    if (pDigits && pDigits.includes(qDigits)) return true;
-  }
+  const qd = q.replace(/\D/g, ''); if (qd){ const pd = (u.phone || '').replace(/\D/g, ''); if (pd && pd.includes(qd)) return true; }
   return false;
 }
 
-// Переключение вкладок справа
-document.querySelectorAll('#sideTabs button').forEach((b) => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('#sideTabs button').forEach((x) => x.classList.remove('active'));
-    b.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach((s) => s.classList.remove('active'));
-    document.getElementById('tab-' + b.dataset.tab).classList.add('active');
-  });
-});
-
-const ADMIN_KEY_STORE = 'spirit-admin-key';
-
-async function tryLogin(key, silent) {
-  ADMIN_KEY = (key || '').trim();
-  if (!ADMIN_KEY) return false;
+async function tryLogin(key, silent){
+  ADMIN_KEY = (key || '').trim(); if (!ADMIN_KEY) return false;
   const r = await adminGet();
-  if (r.ok) {
+  if (r.ok){
     try { localStorage.setItem(ADMIN_KEY_STORE, ADMIN_KEY); } catch {}
     document.getElementById('login').classList.add('hidden');
     document.getElementById('panel').classList.remove('hidden');
     applyData(r);
     return true;
   }
-  ADMIN_KEY = '';
-  try { localStorage.removeItem(ADMIN_KEY_STORE); } catch {}
+  ADMIN_KEY = ''; try { localStorage.removeItem(ADMIN_KEY_STORE); } catch {}
   if (!silent) document.getElementById('loginHint').textContent = r.error || 'Қате';
   return false;
 }
-
-document.getElementById('loginBtn').addEventListener('click', () => {
-  tryLogin(document.getElementById('key').value, false);
-});
-document.getElementById('key').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') tryLogin(document.getElementById('key').value, false);
-});
-
-// Шығу — сақталған кілтті өшіріп, кіру терезесіне қайтару
+document.getElementById('loginBtn').addEventListener('click', () => tryLogin(document.getElementById('key').value, false));
+document.getElementById('key').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(document.getElementById('key').value, false); });
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  ADMIN_KEY = '';
-  try { localStorage.removeItem(ADMIN_KEY_STORE); } catch {}
-  document.getElementById('key').value = '';
-  document.getElementById('loginHint').textContent = '';
-  document.getElementById('panel').classList.add('hidden');
-  document.getElementById('login').classList.remove('hidden');
+  ADMIN_KEY = ''; try { localStorage.removeItem(ADMIN_KEY_STORE); } catch {}
+  document.getElementById('key').value = ''; document.getElementById('loginHint').textContent = '';
+  document.getElementById('panel').classList.add('hidden'); document.getElementById('login').classList.remove('hidden');
 });
-
-// Бетті жаңартқанда — сақталған кілтпен автоматты түрде қайта кіру (пароль сұрамай)
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  const r = await adminGet(); if (r.ok){ applyData(r); toast('Жаңартылды'); }
+});
 window.addEventListener('DOMContentLoaded', () => {
-  let saved = '';
-  try { saved = localStorage.getItem(ADMIN_KEY_STORE) || ''; } catch {}
-  if (saved) {
-    document.getElementById('key').value = saved;
-    tryLogin(saved, true);
-  }
+  let saved = ''; try { saved = localStorage.getItem(ADMIN_KEY_STORE) || ''; } catch {}
+  if (saved){ document.getElementById('key').value = saved; tryLogin(saved, true); }
 });
 
-function applyData(data) {
+/* ---------- Навигация ---------- */
+document.querySelectorAll('#nav button').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#nav button').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.tab').forEach((s) => s.classList.add('hidden'));
+    document.getElementById('tab-' + b.dataset.tab).classList.remove('hidden');
+  });
+});
+
+/* ---------- Данные ---------- */
+function applyData(data){
   ALL_USERS = data.users || [];
   const b = data.book || {};
-  document.getElementById('title').value = b.title || '';
-  document.getElementById('author').value = b.author || '';
-  document.getElementById('cover').value = b.cover || '';
-  document.getElementById('progress').value = b.progress || 0;
+  document.getElementById('bTitle').value = b.title || '';
+  document.getElementById('bAuthor').value = b.author || '';
+  document.getElementById('bCover').value = b.cover || '';
+  document.getElementById('bProgress').value = b.progress || 0;
   document.getElementById('coverPreview').src = b.cover || '';
   document.getElementById('goalInput').value = data.goal || 10000;
-  renderUchastniki();
-  ['qarjy', 'progress'].forEach(renderStub);
-  loadQadamAdmin();
+  FIN = data.fin && data.fin.cats ? data.fin : FIN;
+  renderParticipants(); renderFinConfig(); loadSteps();
 }
 
-// ---------- Қадам: цель + таблица шагов ----------
-let STEPS_ROWS = [];
-function fmt(n) { return (Number(n) || 0).toLocaleString('ru-RU'); }
-
-async function loadQadamAdmin() {
-  const meta = document.getElementById('qadamMeta');
-  meta.textContent = 'Жүктелуде…';
-  try {
-    const res = await fetch('/api/admin/steps', { headers: { 'X-Admin-Key': ADMIN_KEY } });
-    const r = await res.json();
-    if (!r.ok) { meta.textContent = 'Қате: ' + (r.error || ''); return; }
-    STEPS_ROWS = r.rows || [];
-    meta.textContent = `Бүгін: ${r.today} · мақсат: ${fmt(r.goal)} қадам`;
-    renderQadamTable();
-  } catch (e) {
-    meta.textContent = 'Қате: ' + e.message;
-  }
+/* ---------- Қатысушылар ---------- */
+function statusBadge(s){
+  if (s === 'approved') return '<span class="badge b-ok">Расталды</span>';
+  if (s === 'rejected') return '<span class="badge b-danger">Бас тартылды</span>';
+  return '<span class="badge b-warn">Күтуде</span>';
 }
-
-function renderQadamTable() {
-  const q = document.getElementById('search-qadam').value;
-  const rows = STEPS_ROWS.filter((u) => userMatches(u, q));
-  const body = document.getElementById('tbody-qadam');
-  if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="5" class="hint" style="text-align:center;">Ешкім табылмады</td></tr>';
-    return;
-  }
-  const goal = Number(document.getElementById('goalInput').value) || 10000;
-  body.innerHTML = rows.map((u) => {
-    const done = u.today >= goal;
-    const todayCell = `<b style="color:${done ? '#1D9E75' : 'inherit'}">${fmt(u.today)}</b>` + (done ? ' ✅' : '');
-    return `<tr>
-      <td>${u.name}</td>
-      <td>${todayCell}</td>
-      <td>${fmt(u.week)}</td>
-      <td>${fmt(u.month)}</td>
-      <td>${fmt(u.total)}</td>
-    </tr>`;
+function renderParticipants(){
+  const q = document.getElementById('uSearch').value;
+  const list = ALL_USERS.filter((u) => userMatches(u, q));
+  document.getElementById('uCount').textContent = list.length;
+  const box = document.getElementById('uList');
+  if (!list.length){ box.innerHTML = '<div class="empty">Ешкім табылмады</div>'; return; }
+  box.innerHTML = list.map((u) => {
+    const st = u.status || 'pending';
+    return `<div class="item">
+      <div class="av"><svg class="ic"><use href="#i-user"/></svg></div>
+      <div class="main">
+        <div class="nm">${fullName(u)} ${statusBadge(st)}</div>
+        <div class="meta">${u.phone || '—'} · ${u.email || '—'}${u.birthDate ? ' · ' + u.birthDate : ''}</div>
+        <div class="seg" style="margin-top:8px;">
+          <button class="${st==='approved'?'on':''}" onclick="setStatus(${u.telegramId},'approved')">Растау</button>
+          <button class="${st==='pending'?'on':''}" onclick="setStatus(${u.telegramId},'pending')">Күту</button>
+          <button class="${st==='rejected'?'on':''}" onclick="setStatus(${u.telegramId},'rejected')">Бас тарту</button>
+        </div>
+      </div>
+      <div class="side"><button class="iconbtn-s danger" title="Жою" onclick="delUser(${u.telegramId})"><svg class="ic"><use href="#i-trash"/></svg></button></div>
+    </div>`;
   }).join('');
 }
-
-function renderUchastniki() {
-  const q = document.getElementById('search-uchastniki').value;
-  const list = ALL_USERS.filter((u) => userMatches(u, q));
-  const body = document.getElementById('tbody-uchastniki');
-  document.getElementById('count').textContent = list.length;
-  if (!list.length) {
-    body.innerHTML = '<tr><td colspan="5" class="hint" style="text-align:center;">Ешкім табылмады</td></tr>';
-    return;
-  }
-  body.innerHTML = '';
-  list.forEach((u) => {
-    const tr = document.createElement('tr');
-    const statusCell = u.status === 'approved'
-      ? '<span style="color:#1D9E75; font-weight:500;">✅ Расталды</span>'
-      : `<button onclick="approveUser(${u.telegramId})" style="background:#1D9E75; color:#fff; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px;">Растау</button>`;
-    tr.innerHTML =
-      `<td>${fullName(u)}</td>` +
-      `<td>${u.email || ''}</td><td>${u.phone || ''}</td><td>${u.birthDate || ''}</td>` +
-      `<td>${statusCell}</td>`;
-    body.appendChild(tr);
-  });
+async function setStatus(telegramId, status){
+  const r = await adminPost('/api/admin/status', { telegramId, status });
+  if (r.ok){ const u = ALL_USERS.find((x) => x.telegramId === telegramId); if (u) u.status = status; renderParticipants(); toast('Статус жаңартылды'); }
+  else toast('Қате: ' + (r.error || ''));
 }
-
-function renderStub(tabKey) {
-  const q = document.getElementById('search-' + tabKey).value;
-  const el = document.getElementById('list-' + tabKey);
-  if (!q.trim()) {
-    el.innerHTML = '<div class="hint">Қатысушыны табу үшін жоғарыдан ізде (аты-жөні, почта немесе нөмір).</div>';
-    return;
-  }
-  const list = ALL_USERS.filter((u) => userMatches(u, q));
-  if (!list.length) { el.innerHTML = '<div class="hint">Ешкім табылмады.</div>'; return; }
-  el.innerHTML = list.map((u) => `
-    <div class="ucard">
-      <div style="font-weight:600;">${fullName(u)}</div>
-      <div class="hint" style="margin:2px 0;">${u.phone || ''} · ${u.email || ''}</div>
-      <div class="hint">Бөлім жасалу үстінде — бұл қатысушыға арналған деректер кейін қосылады.</div>
-    </div>`).join('');
+async function delUser(telegramId){
+  const u = ALL_USERS.find((x) => x.telegramId === telegramId);
+  if (!confirm((u ? fullName(u) : 'Қатысушыны') + ' — жоямыз ба?')) return;
+  const r = await adminPost('/api/admin/user/delete', { telegramId });
+  if (r.ok){ ALL_USERS = ALL_USERS.filter((x) => x.telegramId !== telegramId); renderParticipants(); loadSteps(); toast('Жойылды'); }
+  else toast('Қате: ' + (r.error || ''));
 }
+document.getElementById('uSearch').addEventListener('input', renderParticipants);
 
-// Слушатели поиска
-document.getElementById('search-uchastniki').addEventListener('input', renderUchastniki);
-['qarjy', 'progress'].forEach((k) => {
-  document.getElementById('search-' + k).addEventListener('input', () => renderStub(k));
-});
-document.getElementById('search-qadam').addEventListener('input', renderQadamTable);
-
-// Enter: вход по ключу и сохранение книги
-document.getElementById('key').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-['title', 'author', 'cover', 'progress'].forEach((id) => {
-  document.getElementById(id).addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') document.getElementById('saveBook').click();
-  });
-});
-
-document.getElementById('cover').addEventListener('input', (e) => {
-  document.getElementById('coverPreview').src = e.target.value;
-});
-
-document.getElementById('saveBook').addEventListener('click', async () => {
-  const hint = document.getElementById('bookHint');
-  hint.textContent = 'Сақталуда…';
-  const r = await adminPost('/api/admin/book', {
-    title: document.getElementById('title').value.trim(),
-    author: document.getElementById('author').value.trim(),
-    cover: document.getElementById('cover').value.trim(),
-    progress: Number(document.getElementById('progress').value) || 0,
-  });
-  hint.textContent = r.ok ? '✅ Сақталды' : ('Қате: ' + r.error);
-});
-
-async function approveUser(telegramId) {
-  const r = await adminPost('/api/admin/status', { telegramId, status: 'approved' });
-  if (r.ok) { const d = await adminGet(); ALL_USERS = d.users || []; renderUchastniki(); }
-  else alert('Қате: ' + (r.error || ''));
-}
-
-// Сохранить общую цель (мақсат)
+/* ---------- Қадам: цель + шаги ---------- */
+function fmt(n){ return (Number(n) || 0).toLocaleString('ru-RU'); }
 document.getElementById('saveGoal').addEventListener('click', async () => {
   const hint = document.getElementById('goalHint');
   const goal = Number(document.getElementById('goalInput').value) || 0;
-  if (goal < 1) { hint.textContent = 'Мақсат 1-ден кем болмауы керек'; return; }
+  if (goal < 1){ hint.textContent = 'Мақсат 1-ден кем болмауы керек'; return; }
   hint.textContent = 'Сақталуда…';
   const r = await adminPost('/api/admin/goal', { goal });
-  if (r.ok) {
-    document.getElementById('goalInput').value = r.goal;
-    hint.textContent = `✅ Сақталды: ${fmt(r.goal)} қадам (барлық қатысушыға)`;
-    renderQadamTable();
-  } else {
-    hint.textContent = 'Қате: ' + (r.error || '');
-  }
+  if (r.ok){ document.getElementById('goalInput').value = r.goal; hint.textContent = '✓ Сақталды'; renderSteps(); toast('Мақсат сақталды'); }
+  else hint.textContent = 'Қате: ' + (r.error || '');
 });
-document.getElementById('goalInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('saveGoal').click();
+async function loadSteps(){
+  const meta = document.getElementById('sMeta'); meta.textContent = 'Жүктелуде…';
+  try {
+    const res = await fetch('/api/admin/steps', { headers: { 'X-Admin-Key': ADMIN_KEY } });
+    const r = await res.json();
+    if (!r.ok){ meta.textContent = 'Қате: ' + (r.error || ''); return; }
+    STEPS_ROWS = r.rows || [];
+    meta.textContent = `Бүгін: ${r.today} · мақсат: ${fmt(r.goal)} қадам`;
+    renderSteps();
+  } catch (e){ meta.textContent = 'Қате: ' + e.message; }
+}
+function renderSteps(){
+  const q = document.getElementById('sSearch').value;
+  const rows = STEPS_ROWS.filter((u) => userMatches(u, q));
+  const body = document.getElementById('sBody');
+  if (!rows.length){ body.innerHTML = '<tr><td colspan="6" class="empty">Ешкім табылмады</td></tr>'; return; }
+  const goal = Number(document.getElementById('goalInput').value) || 10000;
+  body.innerHTML = rows.map((u) => {
+    const done = u.today >= goal;
+    return `<tr>
+      <td>${u.name}</td>
+      <td><b style="color:${done ? 'var(--ok)' : 'inherit'}">${fmt(u.today)}</b></td>
+      <td>${fmt(u.week)}</td><td>${fmt(u.month)}</td><td>${fmt(u.total)}</td>
+      <td><button class="iconbtn-s" title="Түзету" onclick="editSteps(${u.telegramId},'${(u.name||'').replace(/'/g,'')}',${u.today})"><svg class="ic"><use href="#i-edit"/></svg></button></td>
+    </tr>`;
+  }).join('');
+}
+function editSteps(telegramId, name, cur){
+  openModal(`Бүгінгі қадам — ${name}`, `
+    <label>Қадам саны (бүгін)</label>
+    <input id="mSteps" class="input" type="number" min="0" value="${cur || 0}" />
+    <button id="mSaveSteps" class="btn btn-full" style="margin-top:14px;">Сақтау</button>`, () => {
+    document.getElementById('mSaveSteps').addEventListener('click', async () => {
+      const steps = Math.max(0, Math.floor(Number(document.getElementById('mSteps').value) || 0));
+      const r = await adminPost('/api/admin/steps/set', { telegramId, steps });
+      if (r.ok){ closeModal(); loadSteps(); toast('Қадам жаңартылды'); } else toast('Қате: ' + (r.error || ''));
+    });
+  });
+}
+document.getElementById('sSearch').addEventListener('input', renderSteps);
+
+/* ---------- Кітап ---------- */
+document.getElementById('bCover').addEventListener('input', (e) => { document.getElementById('coverPreview').src = e.target.value; });
+document.getElementById('saveBook').addEventListener('click', async () => {
+  const hint = document.getElementById('bookHint'); hint.textContent = 'Сақталуда…';
+  const r = await adminPost('/api/admin/book', {
+    title: document.getElementById('bTitle').value.trim(),
+    author: document.getElementById('bAuthor').value.trim(),
+    cover: document.getElementById('bCover').value.trim(),
+    progress: Number(document.getElementById('bProgress').value) || 0,
+  });
+  hint.textContent = r.ok ? '✓ Сақталды' : ('Қате: ' + (r.error || ''));
+  if (r.ok) toast('Кітап сақталды');
 });
 
-// При открытии вкладки Қадам — обновить данные
-document.querySelector('#sideTabs button[data-tab="qadam"]').addEventListener('click', loadQadamAdmin);
+/* ---------- Қаржы: категории + банки ---------- */
+function iconMarkup(id){ return `<svg class="ic"><use href="#${id}"/></svg>`; }
+function bankLogo(b){
+  if (!b.d) return `<span style="color:${b.c}">${b.n === 'Қолма-қол' ? '₸' : '•'}</span>`;
+  return `<img src="https://www.google.com/s2/favicons?domain=${b.d}&sz=128" alt="" loading="eager" onerror="this.style.display='none'"/>`;
+}
+function renderFinConfig(){
+  ['expense','income'].forEach((kind) => {
+    const box = document.getElementById(kind === 'expense' ? 'catExpense' : 'catIncome');
+    const arr = (FIN.cats && FIN.cats[kind]) || [];
+    if (!arr.length){ box.innerHTML = '<div class="empty">Категория жоқ</div>'; return; }
+    box.innerHTML = arr.map((c, i) => `<div class="item">
+      <div class="av" style="background:${c.c}22; color:${c.c}">${iconMarkup(c.i)}</div>
+      <div class="main"><div class="nm">${c.n}</div><div class="meta">${c.i}</div></div>
+      <div class="side">
+        <span class="swatch" style="background:${c.c}"></span>
+        <button class="iconbtn-s" onclick="finEditCat('${kind}',${i})"><svg class="ic"><use href="#i-edit"/></svg></button>
+        <button class="iconbtn-s danger" onclick="finDelCat('${kind}',${i})"><svg class="ic"><use href="#i-trash"/></svg></button>
+      </div></div>`).join('');
+  });
+  const bb = document.getElementById('bankList');
+  const banks = FIN.banks || [];
+  bb.innerHTML = banks.length ? banks.map((b, i) => `<div class="item">
+    <div class="av" style="background:var(--surface)">${bankLogo(b)}</div>
+    <div class="main"><div class="nm">${b.n}</div><div class="meta">${b.d || 'домен жоқ'}</div></div>
+    <div class="side">
+      <span class="swatch" style="background:${b.c}"></span>
+      <button class="iconbtn-s" onclick="finEditBank(${i})"><svg class="ic"><use href="#i-edit"/></svg></button>
+      <button class="iconbtn-s danger" onclick="finDelBank(${i})"><svg class="ic"><use href="#i-trash"/></svg></button>
+    </div></div>`).join('') : '<div class="empty">Банк жоқ</div>';
+}
+async function saveFin(){
+  const r = await adminPost('/api/admin/fin', { cats: FIN.cats, banks: FIN.banks });
+  if (r.ok){ FIN = r.fin; renderFinConfig(); toast('Сақталды'); } else toast('Қате: ' + (r.error || ''));
+}
+function slug(s){ return (s || 'cat').toLowerCase().replace(/[^a-z0-9а-я]+/gi, '').slice(0, 16) || ('c' + Date.now()); }
+
+function catModal(title, data, onSave){
+  const iconsHtml = ICONS.map((id) => `<button type="button" data-ic="${id}" class="${id===data.i?'on':''}">${iconMarkup(id)}</button>`).join('');
+  const colorsHtml = COLORS.map((c) => `<span class="c ${c===data.c?'on':''}" data-c="${c}" style="background:${c}"></span>`).join('');
+  openModal(title, `
+    <label>Атауы</label>
+    <input id="mcName" class="input" value="${data.n || ''}" placeholder="Категория атауы" />
+    <label>Иконка</label>
+    <div class="iconpick" id="mcIcons">${iconsHtml}</div>
+    <label>Түсі</label>
+    <div class="colorpick" id="mcColors">${colorsHtml}</div>
+    <button id="mcSave" class="btn btn-full" style="margin-top:16px;">Сақтау</button>`, () => {
+    let icon = data.i || 'i-dots', color = data.c || COLORS[0];
+    document.querySelectorAll('#mcIcons button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('#mcIcons button').forEach((x) => x.classList.remove('on')); b.classList.add('on'); icon = b.dataset.ic;
+    }));
+    document.querySelectorAll('#mcColors .c').forEach((s) => s.addEventListener('click', () => {
+      document.querySelectorAll('#mcColors .c').forEach((x) => x.classList.remove('on')); s.classList.add('on'); color = s.dataset.c;
+    }));
+    document.getElementById('mcSave').addEventListener('click', () => {
+      const n = document.getElementById('mcName').value.trim(); if (!n){ toast('Атауын жаз'); return; }
+      onSave({ n, i: icon, c: color }); closeModal();
+    });
+  });
+}
+function finAddCat(kind){ catModal('Жаңа категория', { i:'i-dots', c:COLORS[0] }, (c) => { c.k = slug(c.n); FIN.cats[kind].push(c); saveFin(); }); }
+function finEditCat(kind, i){ const cur = FIN.cats[kind][i]; catModal('Категорияны түзету', { ...cur }, (c) => { FIN.cats[kind][i] = { ...cur, ...c }; saveFin(); }); }
+function finDelCat(kind, i){ if (!confirm('Категорияны жоямыз ба?')) return; FIN.cats[kind].splice(i, 1); saveFin(); }
+
+function bankModal(title, data, onSave){
+  const colorsHtml = COLORS.map((c) => `<span class="c ${c===data.c?'on':''}" data-c="${c}" style="background:${c}"></span>`).join('');
+  openModal(title, `
+    <label>Атауы</label>
+    <input id="mbName" class="input" value="${data.n || ''}" placeholder="Мысалы: Kaspi" />
+    <label>Домен (лого үшін)</label>
+    <input id="mbDomain" class="input" value="${data.d || ''}" placeholder="kaspi.kz (бос қалдыруға болады)" />
+    <label>Түсі</label>
+    <div class="colorpick" id="mbColors">${colorsHtml}</div>
+    <button id="mbSave" class="btn btn-full" style="margin-top:16px;">Сақтау</button>`, () => {
+    let color = data.c || COLORS[5];
+    document.querySelectorAll('#mbColors .c').forEach((s) => s.addEventListener('click', () => {
+      document.querySelectorAll('#mbColors .c').forEach((x) => x.classList.remove('on')); s.classList.add('on'); color = s.dataset.c;
+    }));
+    document.getElementById('mbSave').addEventListener('click', () => {
+      const n = document.getElementById('mbName').value.trim(); if (!n){ toast('Атауын жаз'); return; }
+      const d = document.getElementById('mbDomain').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+      onSave({ n, d, c: color }); closeModal();
+    });
+  });
+}
+function finAddBank(){ bankModal('Жаңа банк', { c:COLORS[5] }, (b) => { FIN.banks.push(b); saveFin(); }); }
+function finEditBank(i){ const cur = FIN.banks[i]; bankModal('Банкті түзету', { ...cur }, (b) => { FIN.banks[i] = { ...cur, ...b }; saveFin(); }); }
+function finDelBank(i){ if (!confirm('Банкті жоямыз ба?')) return; FIN.banks.splice(i, 1); saveFin(); }
+
+/* ---------- Модалка ---------- */
+function openModal(title, html, onReady){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `<div class="ov" id="ov"><div class="sheet"><div class="sheet-head"><h3>${title}</h3>
+    <button class="iconbtn-s" id="mClose"><svg class="ic"><use href="#i-x"/></svg></button></div>${html}</div></div>`;
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('ov').addEventListener('click', (e) => { if (e.target.id === 'ov') closeModal(); });
+  if (onReady) onReady();
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; }
 </script>
 </body>
 </html>

@@ -644,7 +644,7 @@ const FIN_DEBT = {
   kredit: { c: '#F59E0B', i: 'i-cash', titleLbl: 'Банк / атауы', dueLbl: 'Келесі төлем күні', dir: false, monthly: true },
   bolip: { c: '#06B6D4', i: 'i-cart', titleLbl: 'Тауар', dueLbl: 'Келесі төлем күні', dir: false, monthly: true },
 };
-const FIN_CATS = {
+let FIN_CATS = {
   expense: [
     { k: 'azyk', n: 'Азық-түлік', i: 'i-cart', c: '#FF6B6B' },
     { k: 'kolik', n: 'Көлік', i: 'i-car', c: '#4D96FF' },
@@ -681,7 +681,7 @@ function fitRingText(el) {
   el.style.fontSize = size + 'px';
 }
 // Банки Казахстана (лого по домену, фолбэк — инициалы)
-const BANKS = [
+let BANKS = [
   { n: 'Қолма-қол', d: '', c: '#16a34a' },
   { n: 'Kaspi', d: 'kaspi.kz', c: '#F14635' },
   { n: 'Halyk', d: 'halykbank.kz', c: '#16A34A' },
@@ -698,6 +698,19 @@ const BANKS = [
   { n: 'VTB', d: 'vtb-bank.kz', c: '#1D4ED8' },
   { n: 'Басқа', d: '', c: '#6B7280' },
 ];
+// Категории и банки Қаржы можно менять из админки — берём их с сервера (fallback — значения выше)
+async function loadFinConfig() {
+  try {
+    const r = await fetch('/api/fin/config', { cache: 'no-store' });
+    const j = await r.json();
+    if (j && j.cats && Array.isArray(j.cats.expense) && Array.isArray(j.cats.income)) FIN_CATS = j.cats;
+    if (j && Array.isArray(j.banks) && j.banks.length) BANKS = j.banks;
+    const scr = document.getElementById('screen-qarjy');
+    if (scr && scr.classList.contains('active') && typeof renderFin === 'function') renderFin();
+  } catch {}
+}
+loadFinConfig();
+
 function finRenderBanks() {
   const box = document.getElementById('finAccount');
   box.innerHTML = BANKS.map((b, i) => {
