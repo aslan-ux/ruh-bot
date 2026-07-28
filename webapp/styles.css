@@ -576,3 +576,27 @@ button:active { transform: scale(.96); }
 .rd-themes { display:flex; gap:8px; }
 .rd-themes button { border:1px solid var(--line); border-radius:10px; padding:9px 14px; cursor:pointer; font-size:13px; font-weight:600; }
 .rd-th.sel { outline:2px solid var(--accent); outline-offset:1px; }
+
+/* ---------- Ерекшелеу мәзірі (Apple Books стилі) ---------- */
+.rd-sel { position:absolute; z-index:20; background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 26px rgba(10,10,30,.22); padding:8px; display:flex; flex-direction:column; gap:6px; max-width:min(94vw,340px); animation:popIn .16s ease; }
+:root[data-theme="dark"] .rd-sel { box-shadow:0 8px 26px rgba(0,0,0,.5); }
+.rd-sel.hidden { display:none; }
+.rd-sel-colors { display:flex; gap:8px; align-items:center; justify-content:center; }
+.rd-sel-c { width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; flex:0 0 auto; transition:transform .12s ease; }
+.rd-sel-c:active { transform:scale(.88); }
+.rd-sel-c.on { border-color:var(--text); }
+.rd-sel-u { background:transparent !important; border:1px solid var(--line); color:var(--text); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
+.rd-sel-u span { text-decoration:underline; text-decoration-thickness:2px; }
+.rd-sel-acts { display:flex; gap:4px; border-top:1px solid var(--line); padding-top:6px; }
+.rd-sel-acts button { flex:1; border:none; background:transparent; color:var(--text); font-size:13px; font-weight:600; padding:8px 6px; border-radius:9px; cursor:pointer; white-space:nowrap; transition:background-color .15s ease; }
+.rd-sel-acts button:active { background:var(--accent-soft); }
+.rd-sel-acts .rd-sel-del { color:#EF4444; }
+
+/* Іздеу панелі */
+.rd-srch-row { display:flex; gap:8px; margin-bottom:12px; }
+.rd-srch-row input { flex:1; background:var(--card); border:1px solid var(--line); border-radius:11px; padding:11px 12px; font-size:15px; color:var(--text); outline:none; }
+.rd-srch-row input:focus { border-color:var(--accent); }
+.rd-srch-row button { border:none; background:var(--accent); color:var(--on-accent); border-radius:11px; padding:0 16px; font-size:14px; font-weight:600; cursor:pointer; }
+.rd-srch-item { padding:11px 6px; border-bottom:1px solid var(--line); font-size:13.5px; color:var(--text); cursor:pointer; line-height:1.5; }
+.rd-srch-item b { color:var(--accent); }
+.rd-srch-item .loc { display:block; font-size:11.5px; color:var(--green-soft); margin-top:3px; }
