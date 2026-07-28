@@ -385,16 +385,16 @@ async function loadBook() {
 
 /* ================= РИДЕР (EPUB/PDF) ================= */
 const RD_CDN = {
-  jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
-  epub: 'https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.93/epub.min.js',
-  pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-  pdfw: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  jszip: ['https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', 'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'],
+  epub: ['https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js', 'https://unpkg.com/epubjs@0.3.93/dist/epub.min.js'],
+  pdf: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'],
+  pdfw: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
 };
 const RD_THEMES = { day:{bg:'#ffffff',fg:'#17171F'}, sepia:{bg:'#F4ECD8',fg:'#5B4636'}, night:{bg:'#15151C',fg:'#E7E7EE'} };
 const RD = { fmt:null, book:null, rend:null, pdf:null, page:1, total:1, locReady:false,
   reading:{ location:'', percent:0, bookmarks:[], highlights:[] }, theme:'day', font:100, saveT:null };
 
-function rdScript(src){ return new Promise((res,rej)=>{ if([...document.scripts].some(s=>s.src===src)) return res(); const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('CDN')); document.head.appendChild(s); }); }
+function rdScript(list){ const urls=Array.isArray(list)?list:[list]; return new Promise((resolve,reject)=>{ let i=0; const tryNext=()=>{ if(i>=urls.length) return reject(new Error('CDN')); const src=urls[i++]; if([...document.scripts].some(s=>s.src===src)) return resolve(); const s=document.createElement('script'); s.src=src; s.onload=()=>resolve(); s.onerror=()=>{ s.remove(); tryNext(); }; document.head.appendChild(s); }; tryNext(); }); }
 function rdMsg(t){ const e=document.getElementById('rdMsg'); e.textContent=t; e.classList.remove('hidden'); }
 function rdMsgHide(){ document.getElementById('rdMsg').classList.add('hidden'); }
 function rdSetProg(p){ document.getElementById('rdFill').style.width=p+'%'; document.getElementById('rdPct').textContent=p+'%'; }
