@@ -612,3 +612,10 @@ button:active { transform: scale(.96); }
 .rd-page ::selection { background:rgba(94,92,230,.28); }
 .rd-hl { border-radius:3px; padding:1px 0; cursor:pointer; }
 .rd-loading { text-align:center; color:var(--green-soft); padding:30px 0; }
+
+/* iOS: мәтінді ерекшелеуге міндетті түрде рұқсат */
+.rd-page, .rd-page * {
+  -webkit-user-select: text !important; user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+.rd-view.epub { touch-action: pan-y; }

@@ -444,7 +444,7 @@ async function rdLoadEpub(buf){
   view.addEventListener('scroll', ()=>rdUpdateProgress(), { passive:true });
   const page=document.getElementById('rdPage');
   page.addEventListener('mouseup', ()=>setTimeout(rdOnSelect,10));
-  page.addEventListener('touchend', ()=>setTimeout(rdOnSelect,60));
+  page.addEventListener('touchend', ()=>setTimeout(rdOnSelect,120));
   page.addEventListener('click', (e)=>{
     const sp=e.target&&e.target.closest?e.target.closest('.rd-hl'):null; if(!sp) return;
     const i=(RD.reading.highlights||[]).findIndex(h=>String(h.id)===String(sp.dataset.hid));
@@ -789,6 +789,18 @@ document.querySelectorAll('#rdSel .rd-sel-acts button').forEach(b=>b.addEventLis
   else if(a==='remove') rdSelRemove();
   else if(a==='search'){ const q=(RD.sel&&RD.sel.text)||''; rdClearSelection(); rdSelHide(); rdOpenSearch(q.slice(0,60)); rdPanel('rdSearch'); }
 }));
+// iOS: ұзақ басу арқылы ерекшелеу touchend бермейді — selectionchange бойынша ұстаймыз
+let rdSelT=null;
+document.addEventListener('selectionchange', ()=>{
+  const rd=document.getElementById('reader');
+  if(!rd||rd.classList.contains('hidden')) return;
+  clearTimeout(rdSelT);
+  rdSelT=setTimeout(()=>{
+    const s=window.getSelection();
+    if(!s||s.isCollapsed||!String(s).trim()){ if(!RD.sel||RD.sel.existing<0) rdSelHide(); return; }
+    rdOnSelect();
+  }, 350);
+});
 // Клик по пустому месту — закрыть меню выделения
 document.getElementById('rdView')?.addEventListener('click', (e)=>{ if(!document.getElementById('rdSel').contains(e.target)) rdSelHide(); });
 // Свайп по контейнеру ридера (для PDF и как запасной для EPUB)
