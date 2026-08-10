@@ -260,30 +260,22 @@
       <!-- Кітап -->
       <section id="tab-kitap" class="tab hidden">
         <div class="card">
-          <h2><svg class="ic"><use href="#i-book"/></svg>Осы айдың кітабы</h2>
-          <div class="row" style="align-items:center; gap:14px;">
-            <img id="coverPreview" alt="" style="width:66px; height:88px; border-radius:12px; object-fit:cover; border:1px solid var(--line); background:var(--surface);" />
-            <div class="grow">
-              <label>Мұқаба (фото URL)</label>
-              <input id="bCover" class="input" placeholder="https://…/book.jpg" />
-            </div>
-          </div>
-          <label>Атауы</label>
-          <input id="bTitle" class="input" placeholder="Кітап атауы" />
-          <label>Авторы</label>
-          <input id="bAuthor" class="input" placeholder="Автор" />
-          <label>Прогресс (%)</label>
-          <input id="bProgress" class="input" type="number" min="0" max="100" placeholder="0" />
-          <button id="saveBook" class="btn btn-full" style="margin-top:14px;">Сақтау</button>
-          <div class="hint" id="bookHint"></div>
+          <h2><svg class="ic"><use href="#i-book"/></svg>Кітапхана (<span id="bCount">0</span>)</h2>
+          <p class="sub">«Көрсету» деп белгіленген кітап мини-аппта барлық қатысушыға көрінеді. Тек өз құқығың бар кітаптарды жүкте.</p>
+          <div id="bookList" class="list"></div>
         </div>
         <div class="card">
-          <h2><svg class="ic"><use href="#i-book"/></svg>Оқуға арналған файл</h2>
-          <p class="sub">EPUB немесе PDF жүкте — қатысушылар мини-аппта осы кітапты оқи алады. EPUB толық мүмкіндік береді (қаріп, тема, белгілер, ерекшелеу). Тек өз құқығың бар кітаптарды жүкте.</p>
-          <div class="hint" id="fileStatus" style="margin-bottom:10px;"></div>
+          <h2><svg class="ic"><use href="#i-plus"/></svg>Жаңа кітап қосу</h2>
+          <label>Файл (EPUB немесе PDF)</label>
           <input id="bookFile" type="file" accept=".epub,.pdf,application/epub+zip,application/pdf" class="input" />
-          <button id="uploadBook" class="btn btn-full" style="margin-top:12px;"><svg class="ic"><use href="#i-book"/></svg>Файлды жүктеу</button>
-          <div class="hint" id="uploadHint"></div>
+          <label>Атауы</label>
+          <input id="nTitle" class="input" placeholder="Кітап атауы (бос қалдырсаң — файл аты)" />
+          <label>Авторы</label>
+          <input id="nAuthor" class="input" placeholder="Автор" />
+          <label>Мұқаба (фото URL)</label>
+          <input id="nCover" class="input" placeholder="https://…/book.jpg" />
+          <button id="uploadBook" class="btn btn-full" style="margin-top:14px;"><svg class="ic"><use href="#i-book"/></svg>Жүктеу және қосу</button>
+          <div class="hint" id="uploadHint">EPUB толық мүмкіндік береді: қаріп, тема, бетбелгі, ерекшелеу.</div>
         </div>
       </section>
 
@@ -416,24 +408,111 @@ document.querySelectorAll('#nav button').forEach((b) => {
 });
 
 /* ---------- Данные ---------- */
+let BOOKS = [];
+let ACTIVE_BOOK_ID = null;
 function applyData(data){
   ALL_USERS = data.users || [];
-  const b = data.book || {};
-  document.getElementById('bTitle').value = b.title || '';
-  document.getElementById('bAuthor').value = b.author || '';
-  document.getElementById('bCover').value = b.cover || '';
-  document.getElementById('bProgress').value = b.progress || 0;
-  document.getElementById('coverPreview').src = b.cover || '';
   document.getElementById('goalInput').value = data.goal || 10000;
-  const fst = document.getElementById('fileStatus');
-  if (fst) fst.innerHTML = b.fileId
-    ? ('Ағымдағы файл: <b>' + (b.fileName ? decodeURIComponent(b.fileName) : 'book') + '</b> · ' + String(b.format || '').toUpperCase())
-    : 'Файл әлі жүктелмеген.';
-  LAST_BOOK = b;
+  BOOKS = data.books || [];
+  ACTIVE_BOOK_ID = data.activeBookId || null;
   FIN = data.fin && data.fin.cats ? data.fin : FIN;
-  renderParticipants(); renderFinConfig(); loadSteps();
+  renderParticipants(); renderBooks(); renderFinConfig(); loadSteps();
 }
-let LAST_BOOK = {};
+
+/* ---------- Кітапхана ---------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderBooks(){
+  const box = document.getElementById('bookList');
+  document.getElementById('bCount').textContent = BOOKS.length;
+  if (!BOOKS.length){ box.innerHTML = '<div class="empty">Кітап жоқ. Төменнен қос.</div>'; return; }
+  box.innerHTML = BOOKS.map((b) => {
+    const active = b.id === ACTIVE_BOOK_ID;
+    const cover = b.cover
+      ? '<img src="'+esc(b.cover)+'" alt="" onerror="this.style.display=\'none\'"/>'
+      : '<svg class="ic"><use href="#i-book"/></svg>';
+    const fmt = b.format ? '<span class="badge b-warn">'+esc(String(b.format).toUpperCase())+'</span>' : '<span class="badge b-danger">файл жоқ</span>';
+    return `<div class="item">
+      <div class="av" style="width:44px;height:58px;border-radius:8px;">${cover}</div>
+      <div class="main">
+        <div class="nm">${esc(b.title)} ${active?'<span class="badge b-ok">Көрсетілуде</span>':''}</div>
+        <div class="meta">${esc(b.author)||'—'} · ${fmt}</div>
+        ${active?'':'<button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="makeActive(\''+b.id+'\')">Осыны көрсету</button>'}
+      </div>
+      <div class="side">
+        <button class="iconbtn-s" title="Түзету" onclick="editBook('${b.id}')"><svg class="ic"><use href="#i-edit"/></svg></button>
+        <button class="iconbtn-s danger" title="Жою" onclick="delBook('${b.id}')"><svg class="ic"><use href="#i-trash"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function makeActive(id){
+  const r = await adminPost('/api/admin/book/active', { id });
+  if (r.ok){ BOOKS = r.books; ACTIVE_BOOK_ID = r.activeId; renderBooks(); toast('Кітап ауыстырылды'); }
+  else toast('Қате: ' + (r.error || ''));
+}
+async function delBook(id){
+  const b = BOOKS.find((x)=>x.id===id);
+  if (!confirm('«' + (b?b.title:'Кітап') + '» жойылсын ба? Файлы да өшеді.')) return;
+  const r = await adminPost('/api/admin/book/delete', { id });
+  if (r.ok){ BOOKS = r.books; ACTIVE_BOOK_ID = r.activeId; renderBooks(); toast('Жойылды'); }
+  else toast('Қате: ' + (r.error || ''));
+}
+function editBook(id){
+  const b = BOOKS.find((x)=>x.id===id); if (!b) return;
+  openModal('Кітапты түзету', `
+    <label>Атауы</label><input id="ebTitle" class="input" value="${esc(b.title)}" />
+    <label>Авторы</label><input id="ebAuthor" class="input" value="${esc(b.author)}" />
+    <label>Мұқаба (фото URL)</label><input id="ebCover" class="input" value="${esc(b.cover)}" />
+    <label>Файлды ауыстыру (міндетті емес)</label>
+    <input id="ebFile" type="file" accept=".epub,.pdf" class="input" />
+    <button id="ebSave" class="btn btn-full" style="margin-top:16px;">Сақтау</button>
+    <div class="hint" id="ebHint"></div>`, () => {
+    document.getElementById('ebSave').addEventListener('click', async () => {
+      const hint = document.getElementById('ebHint');
+      hint.textContent = 'Сақталуда…';
+      const r = await adminPost('/api/admin/book/update', {
+        id,
+        title: document.getElementById('ebTitle').value.trim(),
+        author: document.getElementById('ebAuthor').value.trim(),
+        cover: document.getElementById('ebCover').value.trim(),
+      });
+      if (!r.ok){ hint.textContent = 'Қате: ' + (r.error || ''); return; }
+      const f = document.getElementById('ebFile').files[0];
+      if (f){ await uploadFile(f, { replaceId:id, hintEl:hint }); }
+      const d = await adminGet(); if (d.ok) applyData(d);
+      closeModal(); toast('Сақталды');
+    });
+  });
+}
+function uploadFile(f, opts){
+  return new Promise((resolve) => {
+    const o = opts || {};
+    const hint = o.hintEl || document.getElementById('uploadHint');
+    const fmt = /\.pdf$/i.test(f.name) ? 'pdf' : (/\.epub$/i.test(f.name) ? 'epub' : '');
+    if (!fmt){ hint.textContent = 'Тек EPUB немесе PDF файл'; return resolve(null); }
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/admin/book/upload');
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.setRequestHeader('X-Admin-Key', ADMIN_KEY);
+    xhr.setRequestHeader('X-File-Name', encodeURIComponent(f.name));
+    xhr.setRequestHeader('X-File-Format', fmt);
+    if (o.replaceId) xhr.setRequestHeader('X-Book-Id', o.replaceId);
+    if (o.title) xhr.setRequestHeader('X-Book-Title', encodeURIComponent(o.title));
+    if (o.author) xhr.setRequestHeader('X-Book-Author', encodeURIComponent(o.author));
+    if (o.cover) xhr.setRequestHeader('X-Book-Cover', encodeURIComponent(o.cover));
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) hint.textContent = 'Жүктелуде… ' + Math.round(e.loaded / e.total * 100) + '%'; };
+    xhr.onload = () => {
+      try {
+        const r = JSON.parse(xhr.responseText);
+        if (r.ok){ hint.textContent = '✓ Жүктелді'; resolve(r); }
+        else { hint.textContent = 'Қате: ' + (r.error || xhr.status); resolve(null); }
+      } catch { hint.textContent = 'Қате: ' + xhr.status; resolve(null); }
+    };
+    xhr.onerror = () => { hint.textContent = 'Желі қатесі'; resolve(null); };
+    hint.textContent = 'Жүктелуде…';
+    f.arrayBuffer().then((buf) => xhr.send(buf));
+  });
+}
 
 /* ---------- Қатысушылар ---------- */
 function statusBadge(s){
@@ -530,46 +609,23 @@ function editSteps(telegramId, name, cur){
 }
 document.getElementById('sSearch').addEventListener('input', renderSteps);
 
-/* ---------- Кітап ---------- */
-document.getElementById('bCover').addEventListener('input', (e) => { document.getElementById('coverPreview').src = e.target.value; });
-document.getElementById('saveBook').addEventListener('click', async () => {
-  const hint = document.getElementById('bookHint'); hint.textContent = 'Сақталуда…';
-  const r = await adminPost('/api/admin/book', {
-    title: document.getElementById('bTitle').value.trim(),
-    author: document.getElementById('bAuthor').value.trim(),
-    cover: document.getElementById('bCover').value.trim(),
-    progress: Number(document.getElementById('bProgress').value) || 0,
-  });
-  hint.textContent = r.ok ? '✓ Сақталды' : ('Қате: ' + (r.error || ''));
-  if (r.ok) toast('Кітап сақталды');
-});
-
-document.getElementById('uploadBook').addEventListener('click', () => {
+/* ---------- Кітап: жаңасын қосу ---------- */
+document.getElementById('uploadBook').addEventListener('click', async () => {
   const f = document.getElementById('bookFile').files[0];
   const hint = document.getElementById('uploadHint');
   if (!f) { hint.textContent = 'Алдымен файл таңда'; return; }
-  const fmt = /\.pdf$/i.test(f.name) ? 'pdf' : (/\.epub$/i.test(f.name) ? 'epub' : '');
-  if (!fmt) { hint.textContent = 'Тек EPUB немесе PDF файл'; return; }
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/admin/book/upload');
-  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-  xhr.setRequestHeader('X-Admin-Key', ADMIN_KEY);
-  xhr.setRequestHeader('X-File-Name', encodeURIComponent(f.name));
-  xhr.setRequestHeader('X-File-Format', fmt);
-  xhr.upload.onprogress = (e) => { if (e.lengthComputable) hint.textContent = 'Жүктелуде… ' + Math.round(e.loaded / e.total * 100) + '%'; };
-  xhr.onload = () => {
-    try {
-      const r = JSON.parse(xhr.responseText);
-      if (r.ok) {
-        hint.textContent = '✓ Жүктелді'; toast('Кітап файлы жүктелді');
-        document.getElementById('bookFile').value = '';
-        applyData({ users: ALL_USERS, book: r.book, goal: Number(document.getElementById('goalInput').value) || 10000, fin: FIN });
-      } else hint.textContent = 'Қате: ' + (r.error || xhr.status);
-    } catch { hint.textContent = 'Қате: ' + xhr.status; }
-  };
-  xhr.onerror = () => { hint.textContent = 'Желі қатесі'; };
-  hint.textContent = 'Жүктелуде…';
-  f.arrayBuffer().then((buf) => xhr.send(buf));
+  const r = await uploadFile(f, {
+    title: document.getElementById('nTitle').value.trim(),
+    author: document.getElementById('nAuthor').value.trim(),
+    cover: document.getElementById('nCover').value.trim(),
+  });
+  if (!r) return;
+  BOOKS = r.books || BOOKS; ACTIVE_BOOK_ID = r.activeId || ACTIVE_BOOK_ID;
+  document.getElementById('bookFile').value = '';
+  document.getElementById('nTitle').value = '';
+  document.getElementById('nAuthor').value = '';
+  document.getElementById('nCover').value = '';
+  renderBooks(); toast('Кітап қосылды');
 });
 
 /* ---------- Қаржы: категории + банки ---------- */
