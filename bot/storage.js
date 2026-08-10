@@ -321,24 +321,102 @@ export async function setGoal(goal) {
   return g;
 }
 
-// ---------- Книга ----------
-export async function getBook() {
+// ---------- Кітапхана (бірнеше кітап + көрсетілетінін таңдау) ----------
+const BOOKSLIB_FILE = path.join(DATA_DIR, 'bookslib.json');
+
+async function readLibRaw() {
+  if (useMongo) {
+    const m = await col.meta.findOne({ _id: 'booksLib' });
+    return m && m.value ? m.value : null;
+  }
+  return readJson(BOOKSLIB_FILE, null);
+}
+async function writeLib(lib) {
+  if (useMongo) {
+    await col.meta.updateOne({ _id: 'booksLib' }, { $set: { value: lib } }, { upsert: true });
+    return lib;
+  }
+  writeJson(BOOKSLIB_FILE, lib);
+  return lib;
+}
+// Ескі бір кітапты жаңа тізімге көшіру (бір рет)
+async function readOldSingleBook() {
   if (useMongo) {
     const m = await col.meta.findOne({ _id: 'book' });
-    return m ? m.book : DEFAULT_BOOK;
+    return m ? m.book : null;
   }
-  return readJson(BOOK_FILE, DEFAULT_BOOK);
+  return readJson(BOOK_FILE, null);
 }
-
-export async function setBook(book) {
-  const current = await getBook();
-  const next = { ...current, ...book, id: current.id || 'default' };
-  if (useMongo) {
-    await col.meta.updateOne({ _id: 'book' }, { $set: { book: next } }, { upsert: true });
+export async function getLib() {
+  const lib = await readLibRaw();
+  if (lib && Array.isArray(lib.list)) return lib;
+  const old = await readOldSingleBook();
+  if (old && (old.fileId || (old.title && old.title !== DEFAULT_BOOK.title))) {
+    const b = { ...old, id: 'b' + Date.now().toString(36), createdAt: new Date().toISOString() };
+    const next = { list: [b], activeId: b.id };
+    await writeLib(next);
     return next;
   }
-  writeJson(BOOK_FILE, next);
-  return next;
+  return { list: [], activeId: null };
+}
+export async function listBooks() {
+  const lib = await getLib();
+  return { books: lib.list, activeId: lib.activeId };
+}
+export async function addBook(book) {
+  const lib = await getLib();
+  const b = {
+    id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    title: book.title || 'Атауы жоқ',
+    author: book.author || '',
+    cover: book.cover || '',
+    progress: 0,
+    fileId: book.fileId || '',
+    format: book.format || '',
+    fileName: book.fileName || '',
+    createdAt: new Date().toISOString(),
+  };
+  lib.list.push(b);
+  if (!lib.activeId) lib.activeId = b.id;
+  await writeLib(lib);
+  return b;
+}
+export async function updateBook(id, patch) {
+  const lib = await getLib();
+  const i = lib.list.findIndex((x) => x.id === id);
+  if (i < 0) return null;
+  lib.list[i] = { ...lib.list[i], ...patch, id };
+  await writeLib(lib);
+  return lib.list[i];
+}
+export async function deleteBook(id) {
+  const lib = await getLib();
+  const i = lib.list.findIndex((x) => x.id === id);
+  if (i < 0) return null;
+  const [removed] = lib.list.splice(i, 1);
+  if (lib.activeId === id) lib.activeId = lib.list.length ? lib.list[0].id : null;
+  await writeLib(lib);
+  return removed;
+}
+export async function setActiveBook(id) {
+  const lib = await getLib();
+  if (!lib.list.some((x) => x.id === id)) return null;
+  lib.activeId = id;
+  await writeLib(lib);
+  return id;
+}
+
+// Мини-апп үшін: ағымдағы (көрсетілетін) кітап
+export async function getBook() {
+  const lib = await getLib();
+  const b = lib.list.find((x) => x.id === lib.activeId);
+  return b || DEFAULT_BOOK;
+}
+// Ескі API-мен үйлесімділік: белсенді кітапты өзгерту
+export async function setBook(book) {
+  const lib = await getLib();
+  if (!lib.activeId || !lib.list.length) return addBook(book);
+  return updateBook(lib.activeId, book);
 }
 
 // ---------- Удаление участника ----------
@@ -375,10 +453,6 @@ export async function setFinConfig(cfg) {
 const BOOKS_DIR = path.join(DATA_DIR, 'books');
 export async function saveBookFile(buffer, fileName, format) {
   if (useMongo) {
-    try {
-      const olds = await bucket.find({}).toArray();
-      for (const f of olds) { try { await bucket.delete(f._id); } catch {} }
-    } catch {}
     const id = await new Promise((resolve, reject) => {
       const up = bucket.openUploadStream(fileName || 'book', { metadata: { format } });
       up.on('error', reject);
@@ -388,7 +462,6 @@ export async function saveBookFile(buffer, fileName, format) {
     return String(id);
   }
   if (!fs.existsSync(BOOKS_DIR)) fs.mkdirSync(BOOKS_DIR, { recursive: true });
-  try { for (const f of fs.readdirSync(BOOKS_DIR)) fs.unlinkSync(path.join(BOOKS_DIR, f)); } catch {}
   const id = Date.now().toString();
   fs.writeFileSync(path.join(BOOKS_DIR, id), buffer);
   return id;
@@ -396,6 +469,11 @@ export async function saveBookFile(buffer, fileName, format) {
 export function getBookFileStream(fileId) {
   if (useMongo) return bucket.openDownloadStream(new OID(fileId));
   return fs.createReadStream(path.join(BOOKS_DIR, String(fileId)));
+}
+export async function deleteBookFile(fileId) {
+  if (!fileId) return false;
+  if (useMongo) { try { await bucket.delete(new OID(fileId)); return true; } catch { return false; } }
+  try { fs.unlinkSync(path.join(BOOKS_DIR, String(fileId))); return true; } catch { return false; }
 }
 
 // ---------- Прогресс чтения (по пользователю и книге) ----------

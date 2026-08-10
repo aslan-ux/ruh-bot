@@ -43,8 +43,14 @@ import {
   setFinConfig,
   saveBookFile,
   getBookFileStream,
+  deleteBookFile,
   getReading,
   saveReading,
+  listBooks,
+  addBook,
+  updateBook,
+  deleteBook,
+  setActiveBook,
 } from './storage.js';
 
 // ---------- Қаржы: дефолтные категории и банки (управляются из админки) ----------
@@ -611,7 +617,51 @@ app.post('/api/friends/remove', async (req, res) => {
 // ---------- Админка ----------
 app.get('/api/admin/data', async (req, res) => {
   if (!requireAdmin(req, res)) return;
-  res.json({ ok: true, book: await getBook(), users: await getUsers(), goal: await getGoal(), fin: mergeFinConfig(await getFinConfig()) });
+  const lib = await listBooks();
+  res.json({ ok: true, book: await getBook(), books: lib.books, activeBookId: lib.activeId, users: await getUsers(), goal: await getGoal(), fin: mergeFinConfig(await getFinConfig()) });
+});
+
+// Кітапхана: тізім
+app.get('/api/admin/books', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const lib = await listBooks();
+  res.json({ ok: true, books: lib.books, activeId: lib.activeId });
+});
+
+// Кітапты өзгерту (атауы, авторы, мұқабасы)
+app.post('/api/admin/book/update', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { id, title, author, cover } = req.body || {};
+  if (!id) return res.status(400).json({ ok: false, error: 'id жоқ' });
+  const patch = {};
+  if (title != null) patch.title = String(title).slice(0, 200);
+  if (author != null) patch.author = String(author).slice(0, 200);
+  if (cover != null) patch.cover = String(cover).slice(0, 600);
+  const b = await updateBook(id, patch);
+  if (!b) return res.status(404).json({ ok: false, error: 'Кітап табылмады' });
+  res.json({ ok: true, book: b });
+});
+
+// Кітапты жою (файлымен бірге)
+app.post('/api/admin/book/delete', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { id } = req.body || {};
+  if (!id) return res.status(400).json({ ok: false, error: 'id жоқ' });
+  const removed = await deleteBook(id);
+  if (!removed) return res.status(404).json({ ok: false, error: 'Кітап табылмады' });
+  if (removed.fileId) { try { await deleteBookFile(removed.fileId); } catch {} }
+  const lib = await listBooks();
+  res.json({ ok: true, books: lib.books, activeId: lib.activeId });
+});
+
+// Қатысушыларға көрсетілетін кітапты таңдау
+app.post('/api/admin/book/active', async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { id } = req.body || {};
+  const ok = await setActiveBook(id);
+  if (!ok) return res.status(404).json({ ok: false, error: 'Кітап табылмады' });
+  const lib = await listBooks();
+  res.json({ ok: true, books: lib.books, activeId: lib.activeId });
 });
 
 // Изменить общую цель шагов (мақсат) — применится ко всем участникам
@@ -742,8 +792,25 @@ app.post('/api/admin/book/upload', express.raw({ type: '*/*', limit: '35mb' }), 
   if (!['epub', 'pdf'].includes(format)) format = /\.pdf$/i.test(fileName) ? 'pdf' : 'epub';
   try {
     const fileId = await saveBookFile(buf, fileName, format);
-    const book = await setBook({ fileId, format, fileName });
-    res.json({ ok: true, book });
+    const dec = (v) => { try { return decodeURIComponent(v || ''); } catch { return v || ''; } };
+    const replaceId = req.get('X-Book-Id') || '';
+    let book;
+    if (replaceId) {
+      // бар кітаптың файлын ауыстыру
+      const lib = await listBooks();
+      const old = lib.books.find((b) => b.id === replaceId);
+      book = await updateBook(replaceId, { fileId, format, fileName });
+      if (old && old.fileId && old.fileId !== fileId) { try { await deleteBookFile(old.fileId); } catch {} }
+    } else {
+      book = await addBook({
+        fileId, format, fileName,
+        title: dec(req.get('X-Book-Title')) || fileName.replace(/\.(epub|pdf)$/i, ''),
+        author: dec(req.get('X-Book-Author')),
+        cover: dec(req.get('X-Book-Cover')),
+      });
+    }
+    const lib2 = await listBooks();
+    res.json({ ok: true, book, books: lib2.books, activeId: lib2.activeId });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
