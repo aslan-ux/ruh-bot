@@ -577,21 +577,6 @@ button:active { transform: scale(.96); }
 .rd-themes button { border:1px solid var(--line); border-radius:10px; padding:9px 14px; cursor:pointer; font-size:13px; font-weight:600; }
 .rd-th.sel { outline:2px solid var(--accent); outline-offset:1px; }
 
-/* ---------- Ерекшелеу мәзірі (Apple Books стилі) ---------- */
-.rd-sel { position:absolute; z-index:20; background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 26px rgba(10,10,30,.22); padding:8px; display:flex; flex-direction:column; gap:6px; max-width:min(94vw,340px); animation:popIn .16s ease; }
-:root[data-theme="dark"] .rd-sel { box-shadow:0 8px 26px rgba(0,0,0,.5); }
-.rd-sel.hidden { display:none; }
-.rd-sel-colors { display:flex; gap:8px; align-items:center; justify-content:center; }
-.rd-sel-c { width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; flex:0 0 auto; transition:transform .12s ease; }
-.rd-sel-c:active { transform:scale(.88); }
-.rd-sel-c.on { border-color:var(--text); }
-.rd-sel-u { background:transparent !important; border:1px solid var(--line); color:var(--text); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
-.rd-sel-u span { text-decoration:underline; text-decoration-thickness:2px; }
-.rd-sel-acts { display:flex; gap:4px; border-top:1px solid var(--line); padding-top:6px; }
-.rd-sel-acts button { flex:1; border:none; background:transparent; color:var(--text); font-size:13px; font-weight:600; padding:8px 6px; border-radius:9px; cursor:pointer; white-space:nowrap; transition:background-color .15s ease; }
-.rd-sel-acts button:active { background:var(--accent-soft); }
-.rd-sel-acts .rd-sel-del { color:#EF4444; }
-
 /* Іздеу панелі */
 .rd-srch-row { display:flex; gap:8px; margin-bottom:12px; }
 .rd-srch-row input { flex:1; background:var(--card); border:1px solid var(--line); border-radius:11px; padding:11px 12px; font-size:15px; color:var(--text); outline:none; }
@@ -619,3 +604,47 @@ button:active { transform: scale(.96); }
   -webkit-touch-callout: default !important;
 }
 .rd-view.epub { touch-action: pan-y; }
+
+/* ---------- Ерекшелеу мәзірі (Apple Books стилі) ---------- */
+.rd-sel {
+  position:absolute; z-index:20; width:min(88vw, 300px);
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 12px 34px rgba(10,10,30,.20), 0 2px 8px rgba(10,10,30,.10);
+  overflow:hidden; animation:popIn .16s ease;
+}
+:root[data-theme="dark"] .rd-sel { box-shadow:0 12px 34px rgba(0,0,0,.6); }
+.rd-sel.hidden { display:none; }
+.rd-sel-colors { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:14px 16px 12px; }
+.rd-sel-c {
+  width:28px; height:28px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0;
+  flex:0 0 auto; transition:transform .12s ease, box-shadow .15s ease;
+}
+.rd-sel-c:active { transform:scale(.86); }
+.rd-sel-c.on { box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--text); }
+.rd-sel-u {
+  background:transparent !important; border:none; color:var(--text);
+  display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600;
+}
+.rd-sel-u span { text-decoration:underline; text-decoration-thickness:2.5px; text-underline-offset:2px; }
+.rd-sel-list { display:flex; flex-direction:column; border-top:1px solid var(--line); }
+.rd-sel-list button {
+  display:flex; align-items:center; gap:12px; width:100%; border:none; background:transparent;
+  color:var(--text); font-size:15px; font-weight:500; text-align:left;
+  padding:13px 16px; cursor:pointer; transition:background-color .15s ease;
+}
+.rd-sel-list button + button { border-top:1px solid var(--line); }
+.rd-sel-list button:active { background:var(--accent-soft); }
+.rd-sel-list .ic-svg { width:19px; height:19px; flex:0 0 auto; color:var(--green-soft); }
+.rd-sel-list .rd-sel-del { color:#EF4444; }
+.rd-sel-list .rd-sel-del .ic-svg { color:#EF4444; }
+
+/* ---------- Беттеп оқу (тік айналдыру жоқ) ---------- */
+.rd-view.epub { overflow:hidden; position:relative; touch-action:manipulation; }
+.rd-pager { position:absolute; inset:0; overflow:hidden; }
+.rd-page {
+  height:100%; box-sizing:border-box; padding:22px 20px 26px;
+  column-fill:auto; -webkit-column-fill:auto;
+  will-change:transform; transition:transform .28s cubic-bezier(.22,1,.36,1);
+}
+.rd-page img { max-height:78%; object-fit:contain; }
+.rd-tmp { background:rgba(94,92,230,.28) !important; border-radius:3px; }

@@ -24,6 +24,9 @@
     <symbol id="i-list" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></g></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5h12a1 1 0 0 1 1 1V20l-7-4.2L5 20V5.5a1 1 0 0 1 1-1Z"/></g></symbol>
     <symbol id="i-aa" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l3.2-9 3.2 9M3.9 14.5h4.6M14 17l3-8.5 3 8.5M14.7 14.7h4.6"/></g></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></g></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.4"/><path d="M15 6.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></g></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-3.8-3.8"/></g></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.6"/><path d="M11 18h2"/></g></symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.3l2.8 1.7"/></g></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.1-5.2"/><path d="M20 4.5V9h-4.5"/></g></symbol>
@@ -188,11 +191,11 @@
         <button type="button" class="rd-sel-c" data-color="#C79BF2" style="background:#C79BF2" aria-label="Күлгін"></button>
         <button type="button" class="rd-sel-c rd-sel-u" data-underline="1" aria-label="Асты сызық"><span>A</span></button>
       </div>
-      <div class="rd-sel-acts">
-        <button type="button" data-act="copy">Көшіру</button>
-        <button type="button" data-act="note">Жазба</button>
-        <button type="button" data-act="search">Іздеу</button>
-        <button type="button" data-act="remove" class="rd-sel-del">Жою</button>
+      <div class="rd-sel-list">
+        <button type="button" data-act="note"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-note"/></svg><span>Жазба қосу</span></button>
+        <button type="button" data-act="copy"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-copy"/></svg><span>Көшіру</span></button>
+        <button type="button" data-act="search"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>Іздеу</span></button>
+        <button type="button" data-act="remove" class="rd-sel-del"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"/></svg><span>Жою</span></button>
       </div>
     </div>
     <div id="rdAa" class="rd-panel rd-aa hidden">
