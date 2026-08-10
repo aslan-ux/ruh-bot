@@ -595,6 +595,7 @@ function rdOnSelect(){
 }
 function rdSelShow(rect, existing){
   const el=document.getElementById('rdSel');
+  RD.shownAt=Date.now();
   el.classList.remove('hidden');
   el.querySelector('.rd-sel-del').style.display = existing ? '' : 'none';
   const cur=(existing && RD.sel && RD.reading.highlights[RD.sel.existing]) ? RD.reading.highlights[RD.sel.existing] : null;
@@ -855,7 +856,12 @@ document.addEventListener('selectionchange', ()=>{
   clearTimeout(rdSelT);
   rdSelT=setTimeout(()=>{
     const s=window.getSelection();
-    if(!s||s.isCollapsed||!String(s).trim()){ if(!RD.sel||RD.sel.existing<0) rdSelHide(); return; }
+    if(!s||s.isCollapsed||!String(s).trim()){
+      // өз мәзірімізді жаңа ғана аштық — жабуға болмайды
+      if(RD.shownAt && Date.now()-RD.shownAt < 2000) return;
+      if(!document.getElementById('rdSel').classList.contains('hidden')) return;
+      return;
+    }
     rdOnSelect();
   }, 350);
 });
