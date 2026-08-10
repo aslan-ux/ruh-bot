@@ -174,8 +174,14 @@
     <div id="rdMsg" class="rd-msg hidden"></div>
     <div class="rd-bottom">
       <button type="button" class="rd-nav" id="rdPrev"><svg class="ic-svg" viewBox="0 0 24 24" style="transform:rotate(90deg)"><use href="#i-chevron"/></svg></button>
-      <div class="rd-track"><div class="rd-fill" id="rdFill"></div></div>
-      <span class="rd-pct" id="rdPct">0%</span>
+      <div class="rd-meta">
+        <div class="rd-track"><div class="rd-fill" id="rdFill"></div></div>
+        <div class="rd-info">
+          <span id="rdPages">1 / 1</span>
+          <span id="rdLeft"></span>
+          <span class="rd-pct" id="rdPct">0%</span>
+        </div>
+      </div>
       <button type="button" class="rd-nav" id="rdNext"><svg class="ic-svg" viewBox="0 0 24 24" style="transform:rotate(-90deg)"><use href="#i-chevron"/></svg></button>
     </div>
     <div id="rdToc" class="rd-panel hidden"></div>
@@ -209,6 +215,14 @@
           <button type="button" class="rd-th" data-th="day" style="background:#fff;color:#111">Күн</button>
           <button type="button" class="rd-th" data-th="sepia" style="background:#f4ecd8;color:#5b4636">Сепия</button>
           <button type="button" class="rd-th" data-th="night" style="background:#15151c;color:#e7e7ee">Түн</button>
+        </div>
+      </div>
+      <div class="rd-aa-row">
+        <span>Бет аудару</span>
+        <div class="rd-anims">
+          <button type="button" class="rd-an" data-an="slide">Сырғу</button>
+          <button type="button" class="rd-an" data-an="curl">Бүктелу</button>
+          <button type="button" class="rd-an" data-an="fade">Еру</button>
         </div>
       </div>
     </div>

@@ -648,3 +648,41 @@ button:active { transform: scale(.96); }
 }
 .rd-page img { max-height:78%; object-fit:contain; }
 .rd-tmp { background:rgba(94,92,230,.28) !important; border-radius:3px; }
+
+/* ---------- Бет аудару анимациялары ---------- */
+.rd-pager { perspective:1600px; }
+.rd-sheen {
+  position:absolute; inset:0; pointer-events:none; opacity:0; z-index:3;
+  background:linear-gradient(100deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.10) 48%, rgba(0,0,0,.03) 56%, rgba(0,0,0,0) 70%);
+}
+:root[data-theme="dark"] .rd-sheen { background:linear-gradient(100deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.07) 48%, rgba(255,255,255,0) 70%); }
+.rd-pager.turn-next .rd-sheen { animation:sheenNext .5s cubic-bezier(.3,.9,.3,1); }
+.rd-pager.turn-prev .rd-sheen { animation:sheenPrev .5s cubic-bezier(.3,.9,.3,1); }
+@keyframes sheenNext { 0%{opacity:0; transform:translateX(-70%)} 25%{opacity:1} 100%{opacity:0; transform:translateX(110%)} }
+@keyframes sheenPrev { 0%{opacity:0; transform:translateX(110%)} 25%{opacity:1} 100%{opacity:0; transform:translateX(-70%)} }
+.rd-page.curl-next { animation:curlNext .46s cubic-bezier(.22,1,.36,1); }
+.rd-page.curl-prev { animation:curlPrev .46s cubic-bezier(.22,1,.36,1); }
+@keyframes curlNext {
+  0% { transform:var(--rd-x) rotateY(0deg) scale(1); }
+  45% { transform:var(--rd-mid) rotateY(-11deg) scale(.965); }
+  100% { transform:var(--rd-x) rotateY(0deg) scale(1); }
+}
+@keyframes curlPrev {
+  0% { transform:var(--rd-x) rotateY(0deg) scale(1); }
+  45% { transform:var(--rd-mid) rotateY(11deg) scale(.965); }
+  100% { transform:var(--rd-x) rotateY(0deg) scale(1); }
+}
+.rd-anims { display:flex; gap:8px; }
+.rd-anims button { border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:10px; padding:9px 13px; font-size:13px; font-weight:600; cursor:pointer; transition:background-color .2s, color .2s, border-color .2s; }
+.rd-anims button.sel { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+
+/* ---------- Астыңғы панель: бет саны + қалған уақыт ---------- */
+.rd-meta { flex:1; min-width:0; }
+.rd-info { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; font-size:11.5px; color:var(--green-soft); }
+.rd-info span { white-space:nowrap; }
+.rd-bottom .rd-pct { min-width:auto; }
+
+/* ---------- Оқуға берілу режимі (панельдер жасырылады) ---------- */
+.reader .rd-top, .reader .rd-bottom { transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .25s ease; }
+.reader.immersive .rd-top { transform:translateY(-100%); opacity:0; pointer-events:none; }
+.reader.immersive .rd-bottom { transform:translateY(100%); opacity:0; pointer-events:none; }
