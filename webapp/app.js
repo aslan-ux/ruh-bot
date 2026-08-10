@@ -392,7 +392,7 @@ const RD_CDN = {
 };
 const RD_THEMES = { day:{bg:'#ffffff',fg:'#17171F'}, sepia:{bg:'#F4ECD8',fg:'#5B4636'}, night:{bg:'#15151C',fg:'#E7E7EE'} };
 const RD = { fmt:null, book:null, pdf:null, page:1, total:1, ch:0, chapters:[], pg:0, pages:1, step:0,
-  reading:{ location:'', offset:0, percent:0, bookmarks:[], highlights:[] }, theme:'day', font:100, saveT:null, sel:null };
+  reading:{ location:'', offset:0, percent:0, bookmarks:[], highlights:[] }, theme:'day', font:100, anim:'slide', chWords:0, saveT:null, sel:null };
 
 function rdScript(list){ const urls=Array.isArray(list)?list:[list]; return new Promise((resolve,reject)=>{ let i=0; const tryNext=()=>{ if(i>=urls.length) return reject(new Error('CDN')); const src=urls[i++]; if([...document.scripts].some(s=>s.src===src)) return resolve(); const s=document.createElement('script'); s.src=src; s.onload=()=>resolve(); s.onerror=()=>{ s.remove(); tryNext(); }; document.head.appendChild(s); }; tryNext(); }); }
 function rdMsg(t){ const e=document.getElementById('rdMsg'); e.textContent=t; e.classList.remove('hidden'); }
@@ -517,14 +517,15 @@ function rdGoPage(i, anim, dir){
   if(anim===false){
     page.style.transition='none';
     page.style.transform='translateX(' + x + 'px)';
-    requestAnimationFrame(()=>{ page.style.transition=''; });
+    setTimeout(()=>{ page.style.transition=''; }, 20);
   } else if(RD.anim==='fade'){
     page.style.transition='opacity .15s ease';
     page.style.opacity='0';
-    setTimeout(()=>{
+    clearTimeout(RD.fadeT1); clearTimeout(RD.fadeT2);
+    RD.fadeT1=setTimeout(()=>{
       page.style.transition='none';
       page.style.transform='translateX(' + x + 'px)';
-      requestAnimationFrame(()=>{ page.style.transition='opacity .24s ease'; page.style.opacity='1'; });
+      RD.fadeT2=setTimeout(()=>{ page.style.transition='opacity .24s ease'; page.style.opacity='1'; }, 20);
     }, 150);
   } else if(RD.anim==='curl'){
     const d = dir || (i>prev ? 'next' : 'prev');
