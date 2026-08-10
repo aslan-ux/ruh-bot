@@ -511,7 +511,7 @@ function rdGoPage(i, anim, dir){
   const prev=RD.pg;
   i=Math.min(RD.pages-1, Math.max(0, i)); RD.pg=i;
   const x=-i*RD.step;
-  page.classList.remove('curl-next','curl-prev');
+  page.classList.remove('curl-next','curl-prev','fade-in');
   if(pager) pager.classList.remove('turn-next','turn-prev');
   page.style.opacity='';
   if(anim===false){
@@ -519,14 +519,11 @@ function rdGoPage(i, anim, dir){
     page.style.transform='translateX(' + x + 'px)';
     setTimeout(()=>{ page.style.transition=''; }, 20);
   } else if(RD.anim==='fade'){
-    page.style.transition='opacity .15s ease';
-    page.style.opacity='0';
-    clearTimeout(RD.fadeT1); clearTimeout(RD.fadeT2);
-    RD.fadeT1=setTimeout(()=>{
-      page.style.transition='none';
-      page.style.transform='translateX(' + x + 'px)';
-      RD.fadeT2=setTimeout(()=>{ page.style.transition='opacity .24s ease'; page.style.opacity='1'; }, 20);
-    }, 150);
+    page.style.transition='none';
+    page.style.transform='translateX(' + x + 'px)';
+    page.classList.remove('fade-in');
+    void page.offsetWidth;
+    page.classList.add('fade-in');
   } else if(RD.anim==='curl'){
     const d = dir || (i>prev ? 'next' : 'prev');
     const mid = x + (d==='next' ? RD.step*0.06 : -RD.step*0.06);

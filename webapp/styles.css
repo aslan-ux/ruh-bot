@@ -686,3 +686,5 @@ button:active { transform: scale(.96); }
 .reader .rd-top, .reader .rd-bottom { transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .25s ease; }
 .reader.immersive .rd-top { transform:translateY(-100%); opacity:0; pointer-events:none; }
 .reader.immersive .rd-bottom { transform:translateY(100%); opacity:0; pointer-events:none; }
+.rd-page.fade-in { animation:rdFade .3s ease; }
+@keyframes rdFade { from { opacity:.12; } to { opacity:1; } }
