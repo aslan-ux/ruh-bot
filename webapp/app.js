@@ -544,14 +544,7 @@ function rdToggleImmersive(force){
   rd.classList.toggle('immersive', on);
   rdApplyInsets();
   rdHaptic('light');
-  clearTimeout(RD.immT);
-  RD.immT=setTimeout(()=>{
-    if(RD.fmt==='epub'){
-      const before=RD.pages ? (RD.pg+1)/RD.pages : 0;
-      rdLayout();
-      rdGoPage(Math.max(0, Math.round(before*RD.pages)-1), false);
-    }
-  }, 330);
+  // Панельдер мәтіннің үстінен шығады — қайта беттеудің қажеті жоқ (мәтін орнында тұрады)
 }
 function rdHaptic(kind){
   try { if(tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred) tg.HapticFeedback.impactOccurred(kind||'light'); } catch {}
@@ -901,9 +894,15 @@ function rdPrev(){
   else if(RD.ch > 0){ rdHaptic('medium'); rdRenderChapter(RD.ch-1, 'last'); }
   else rdGoPage(RD.pg);
 }
+const RD_CHROME = { day:'rgba(255,255,255,.88)', sepia:'rgba(244,236,216,.90)', night:'rgba(21,21,28,.86)' };
 function rdApplyTheme(){
   const v=document.getElementById('rdView'); const t=RD_THEMES[RD.theme]||RD_THEMES.day;
   v.style.background=t.bg; v.style.color=t.fg;
+  const rd=document.getElementById('reader');
+  if(rd){
+    rd.style.setProperty('--rd-chrome-bg', RD_CHROME[RD.theme]||RD_CHROME.day);
+    rd.style.setProperty('--rd-chrome-fg', t.fg);
+  }
   document.querySelectorAll('.rd-th').forEach(b=>b.classList.toggle('sel', b.dataset.th===RD.theme));
   if(RD.fmt==='pdf') v.classList.toggle('night', RD.theme==='night');
 }

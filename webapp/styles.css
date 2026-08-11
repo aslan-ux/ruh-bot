@@ -682,20 +682,26 @@ button:active { transform: scale(.96); }
 .rd-info span { white-space:nowrap; }
 .rd-bottom .rd-pct { min-width:auto; }
 
-/* ---------- Толық экранмен оқу (панельдер жиналады) ---------- */
+/* ---------- Толық экранмен оқу: панельдер мәтіннің ҮСТІНЕН шығады ---------- */
+.reader .rd-view { position:absolute; inset:0; }
 .reader .rd-top, .reader .rd-bottom {
-  overflow:hidden; max-height:160px; flex:0 0 auto;
-  transition:max-height .3s cubic-bezier(.22,1,.36,1), opacity .22s ease, padding .3s ease, border-color .3s ease;
+  position:absolute; left:0; right:0; z-index:12;
+  background:var(--rd-chrome-bg, var(--bg));
+  color:var(--rd-chrome-fg, var(--text));
+  -webkit-backdrop-filter:blur(22px) saturate(1.4);
+  backdrop-filter:blur(22px) saturate(1.4);
+  transition:transform .34s cubic-bezier(.22,1,.36,1), opacity .24s ease;
 }
-.reader.immersive .rd-top, .reader.immersive .rd-bottom {
-  max-height:0; opacity:0; padding-top:0; padding-bottom:0;
-  border-color:transparent; pointer-events:none;
-}
+.reader .rd-top { top:0; }
+.reader .rd-bottom { bottom:0; }
+.reader.immersive .rd-top { transform:translateY(-102%); opacity:0; pointer-events:none; }
+.reader.immersive .rd-bottom { transform:translateY(102%); opacity:0; pointer-events:none; }
+.reader .rd-ic, .reader .rd-title, .reader .rd-pct, .reader .rd-info { color:inherit; }
 .rd-page.fade-in { animation:rdFade .3s ease; }
 @keyframes rdFade { from { opacity:.12; } to { opacity:1; } }
 
 /* Қауіпсіз аймақ: мәтін де, панельдер де Telegram тақырыбының астына кірмейді */
-.reader.immersive .rd-page {
+.reader .rd-page {
   padding-top: calc(22px + var(--rd-top-inset, 46px));
   padding-bottom: calc(26px + var(--rd-bot-inset, 0px));
 }
