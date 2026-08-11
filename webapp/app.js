@@ -412,6 +412,17 @@ async function openReader(){
   try { tg.expand && tg.expand(); } catch {}
   try { tg.requestFullscreen && tg.requestFullscreen(); } catch {}
   try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch {}
+  rdApplyInsets();
+  try {
+    if(tg && tg.onEvent && !window.__rdInsetEv){
+      window.__rdInsetEv=1;
+      const upd=()=>{ rdApplyInsets(); if(RD.fmt==='epub'){ rdLayout(); rdGoPage(RD.pg, false); } };
+      tg.onEvent('safeAreaChanged', upd);
+      tg.onEvent('contentSafeAreaChanged', upd);
+      tg.onEvent('fullscreenChanged', upd);
+      tg.onEvent('viewportChanged', upd);
+    }
+  } catch {}
   rdPanelClose(); rdMsg('Жүктелуде…');
   try {
     RD.theme=localStorage.getItem('spirit-rd-theme')||'day';
@@ -512,11 +523,26 @@ function rdLayout(){
   RD.pages=Math.max(1, Math.round(page.scrollWidth / W));
   return RD.pages;
 }
+// Telegram тақырыбы мен статус-бар астына мәтін кірмеуі үшін шегініс
+function rdApplyInsets(){
+  const rd=document.getElementById('reader'); if(!rd) return;
+  let top=0, bot=0;
+  try {
+    const s=(tg && tg.safeAreaInset) || {};
+    const c=(tg && tg.contentSafeAreaInset) || {};
+    top=(Number(s.top)||0)+(Number(c.top)||0);
+    bot=(Number(s.bottom)||0)+(Number(c.bottom)||0);
+  } catch {}
+  if(!top) top=46;            // ескі Telegram нұсқалары үшін
+  rd.style.setProperty('--rd-top-inset', (top+8)+'px');
+  rd.style.setProperty('--rd-bot-inset', (bot+4)+'px');
+}
 // Толық экран: панельдерді жасыру/көрсету + беттерді қайта есептеу
 function rdToggleImmersive(force){
   const rd=document.getElementById('reader');
   const on = (force===undefined) ? !rd.classList.contains('immersive') : !!force;
   rd.classList.toggle('immersive', on);
+  rdApplyInsets();
   rdHaptic('light');
   clearTimeout(RD.immT);
   RD.immT=setTimeout(()=>{

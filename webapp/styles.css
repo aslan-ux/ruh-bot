@@ -693,3 +693,9 @@ button:active { transform: scale(.96); }
 }
 .rd-page.fade-in { animation:rdFade .3s ease; }
 @keyframes rdFade { from { opacity:.12; } to { opacity:1; } }
+
+/* Толық экранда мәтін Telegram тақырыбының астына кірмеуі үшін қауіпсіз аймақ */
+.reader.immersive .rd-page {
+  padding-top: calc(22px + env(safe-area-inset-top, 0px) + var(--rd-top-inset, 46px));
+  padding-bottom: calc(26px + env(safe-area-inset-bottom, 0px) + var(--rd-bot-inset, 0px));
+}
