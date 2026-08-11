@@ -405,8 +405,13 @@ function rdToggle(id, fill){ const open=!document.getElementById(id).classList.c
 
 async function openReader(){
   if(!RD_BOOK || !RD_BOOK.fileId) return;
-  document.getElementById('reader').classList.remove('hidden');
+  const rd=document.getElementById('reader');
+  rd.classList.remove('hidden');
+  rd.classList.add('immersive');           // бірден толық экран
   document.getElementById('rdTitle').textContent = RD_BOOK.title || 'Кітап';
+  try { tg.expand && tg.expand(); } catch {}
+  try { tg.requestFullscreen && tg.requestFullscreen(); } catch {}
+  try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch {}
   rdPanelClose(); rdMsg('Жүктелуде…');
   try {
     RD.theme=localStorage.getItem('spirit-rd-theme')||'day';
@@ -425,7 +430,12 @@ async function openReader(){
 }
 function closeReader(){
   rdSave(true);
-  document.getElementById('reader').classList.add('hidden'); rdPanelClose();
+  const rd=document.getElementById('reader');
+  rd.classList.add('hidden');
+  rd.classList.remove('immersive');
+  try { tg.exitFullscreen && tg.exitFullscreen(); } catch {}
+  try { tg.enableVerticalSwipes && tg.enableVerticalSwipes(); } catch {}
+  rdPanelClose();
   try { if(RD.book && RD.book.destroy) RD.book.destroy(); } catch {}
   RD.book=null; RD.pdf=null; RD.chapters=[]; RD.ch=0;
   document.getElementById('rdView').innerHTML=''; document.getElementById('rdView').className='rd-view';
@@ -455,7 +465,7 @@ async function rdLoadEpub(buf){
     const r=view.getBoundingClientRect(); const x=e.clientX-r.left;
     if(x < r.width*0.34) rdPrev();
     else if(x > r.width*0.66) rdNext();
-    else document.getElementById('reader').classList.toggle('immersive');
+    else rdToggleImmersive();
   });
   if(!window.__rdResize){
     window.__rdResize=1;
@@ -501,6 +511,21 @@ function rdLayout(){
   RD.step=W;
   RD.pages=Math.max(1, Math.round(page.scrollWidth / W));
   return RD.pages;
+}
+// Толық экран: панельдерді жасыру/көрсету + беттерді қайта есептеу
+function rdToggleImmersive(force){
+  const rd=document.getElementById('reader');
+  const on = (force===undefined) ? !rd.classList.contains('immersive') : !!force;
+  rd.classList.toggle('immersive', on);
+  rdHaptic('light');
+  clearTimeout(RD.immT);
+  RD.immT=setTimeout(()=>{
+    if(RD.fmt==='epub'){
+      const before=RD.pages ? (RD.pg+1)/RD.pages : 0;
+      rdLayout();
+      rdGoPage(Math.max(0, Math.round(before*RD.pages)-1), false);
+    }
+  }, 330);
 }
 function rdHaptic(kind){
   try { if(tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred) tg.HapticFeedback.impactOccurred(kind||'light'); } catch {}

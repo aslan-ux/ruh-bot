@@ -682,9 +682,14 @@ button:active { transform: scale(.96); }
 .rd-info span { white-space:nowrap; }
 .rd-bottom .rd-pct { min-width:auto; }
 
-/* ---------- Оқуға берілу режимі (панельдер жасырылады) ---------- */
-.reader .rd-top, .reader .rd-bottom { transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .25s ease; }
-.reader.immersive .rd-top { transform:translateY(-100%); opacity:0; pointer-events:none; }
-.reader.immersive .rd-bottom { transform:translateY(100%); opacity:0; pointer-events:none; }
+/* ---------- Толық экранмен оқу (панельдер жиналады) ---------- */
+.reader .rd-top, .reader .rd-bottom {
+  overflow:hidden; max-height:160px; flex:0 0 auto;
+  transition:max-height .3s cubic-bezier(.22,1,.36,1), opacity .22s ease, padding .3s ease, border-color .3s ease;
+}
+.reader.immersive .rd-top, .reader.immersive .rd-bottom {
+  max-height:0; opacity:0; padding-top:0; padding-bottom:0;
+  border-color:transparent; pointer-events:none;
+}
 .rd-page.fade-in { animation:rdFade .3s ease; }
 @keyframes rdFade { from { opacity:.12; } to { opacity:1; } }
