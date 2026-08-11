@@ -694,8 +694,11 @@ button:active { transform: scale(.96); }
 .rd-page.fade-in { animation:rdFade .3s ease; }
 @keyframes rdFade { from { opacity:.12; } to { opacity:1; } }
 
-/* Толық экранда мәтін Telegram тақырыбының астына кірмеуі үшін қауіпсіз аймақ */
+/* Қауіпсіз аймақ: мәтін де, панельдер де Telegram тақырыбының астына кірмейді */
 .reader.immersive .rd-page {
-  padding-top: calc(22px + env(safe-area-inset-top, 0px) + var(--rd-top-inset, 46px));
-  padding-bottom: calc(26px + env(safe-area-inset-bottom, 0px) + var(--rd-bot-inset, 0px));
+  padding-top: calc(22px + var(--rd-top-inset, 46px));
+  padding-bottom: calc(26px + var(--rd-bot-inset, 0px));
 }
+.reader .rd-top { padding-top: calc(11px + var(--rd-top-inset, 46px)); }
+.reader .rd-bottom { padding-bottom: calc(10px + var(--rd-bot-inset, 0px)); }
+.reader .rd-panel { top: calc(61px + var(--rd-top-inset, 46px)); }
