@@ -1893,16 +1893,20 @@ async function loadRoom(){
     const list = r.readers || [];
     cnt.textContent = list.length ? (list.length + ' адам қазір оқып отыр') : 'Әзірге ешкім оқымай тұр';
     const mine = list.some(x=>x.me);
+    const SPC=['#4E6E77','#7A5B6E','#8A6B3D','#5F6B4A','#4F5D80','#8A5A4A'];
     let html = list.map((x,i)=>{
       const seed=String(x.telegramId||i).split('').reduce((s,c)=>s+c.charCodeAt(0),0);
-      const hue=(seed*47)%360;
-      return '<div class="spine'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.06)+'s;--h:'+hue+'">'+
-        '<div class="sp-body"><span class="sp-fill" style="height:'+Math.max(8,Math.min(100,x.percent))+'%"></span>'+
-        '<span class="sp-in">'+roomEsc(x.initial)+'</span><span class="sp-live"></span></div>'+
-        '<div class="sp-nm">'+roomEsc(x.me?'Сен':x.name)+'</div>'+
+      const c = x.me ? 'var(--accent)' : SPC[seed%SPC.length];
+      const h = 80 + (seed%3)*9;
+      const nm = x.me ? 'Сен' : x.name;
+      return '<div class="spine'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.05)+'s">'+
+        '<div class="sp-body" style="--c:'+c+';height:'+h+'px">'+
+        '<span class="sp-fill" style="height:'+Math.max(6,Math.min(100,x.percent))+'%"></span>'+
+        '<span class="sp-name">'+roomEsc(nm)+'</span></div>'+
+        '<span class="sp-live"></span>'+
         '<div class="sp-pg">'+x.percent+'% · '+x.page+'</div></div>';
     }).join('');
-    if(!mine) html += '<div class="spine empty" id="seatFree"><div class="sp-body"><span class="sp-in">+</span></div><div class="sp-nm">Сенің орның</div><div class="sp-pg">бос</div></div>';
+    if(!mine) html += '<div class="spine empty" id="seatFree"><div class="sp-body" style="height:80px"><span class="sp-name">Сенің орның</span></div><div class="sp-pg">бос</div></div>';
     seats.innerHTML = html || '<div class="room-empty">Бірінші болып отыр — оқуды баста</div>';
     const free=document.getElementById('seatFree');
     if(free) free.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
@@ -1992,7 +1996,7 @@ const RQ=[
 function roomQuote(){
   const b=document.getElementById('roomSit'); if(!b) return;
   const q=RQ[Math.floor(Math.random()*RQ.length)];
-  b.innerHTML='<span class="cta-q">«'+q.t+'»</span><span class="cta-a">'+q.a+' · оқуды баста</span>';
+  b.innerHTML='<span class="cta-q">«'+q.t+'»</span><span class="cta-a">'+q.a+'</span><span class="cta-go">Оқуды бастау</span>';
 }
 function roomStart(){
   roomQuote();

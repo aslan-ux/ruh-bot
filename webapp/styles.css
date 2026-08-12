@@ -874,3 +874,43 @@ button:active { transform: scale(.96); }
 .room-cta { flex-direction:column; gap:3px; padding:15px 16px; text-align:center; }
 .cta-q { font-size:15.5px; font-weight:700; line-height:1.35; }
 .cta-a { font-size:11.5px; font-weight:600; opacity:.72; }
+
+
+/* ---------- Сөре: тазартылған минимал нұсқа ---------- */
+.room-scene {
+  background:var(--card) !important;
+  border:1px solid var(--line);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:20px 14px 16px;
+  min-height:0;
+}
+.room-glow { display:none !important; }
+.room-seats { align-items:flex-end; justify-content:center; gap:18px 12px; padding-bottom:16px; }
+.room-seats::after { content:''; position:absolute; left:2%; right:2%; bottom:8px; height:1px; background:var(--line); }
+.spine { width:auto; gap:8px; animation:spineIn .42s cubic-bezier(.22,1,.36,1) backwards; }
+@keyframes spineIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+.sp-body {
+  position:relative; width:40px; border-radius:4px 4px 2px 2px; overflow:hidden;
+  background:color-mix(in srgb, var(--c) 22%, transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
+  display:flex; align-items:center; justify-content:center;
+}
+.sp-fill { position:absolute; left:0; right:0; bottom:0; background:var(--c); transition:height .7s cubic-bezier(.22,1,.36,1); }
+.sp-name {
+  position:relative; z-index:2; writing-mode:vertical-rl; transform:rotate(180deg);
+  font-size:11px; font-weight:600; letter-spacing:.2px; color:var(--text);
+  max-height:88%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; mix-blend-mode:luminosity;
+}
+.spine.me .sp-name { color:var(--on-accent); }
+.sp-live { width:5px; height:5px; border-radius:50%; background:#34C759; margin-top:-2px; }
+.sp-pg { font-size:10.5px; color:var(--green-soft); }
+.spine.empty .sp-body { background:transparent; box-shadow:inset 0 0 0 1px var(--line); border:1px dashed var(--line); }
+.spine.empty .sp-name { color:var(--placeholder); font-weight:500; }
+
+/* CTA: цитата, автор, действие — тремя строками */
+.room-cta { background:var(--accent) !important; color:var(--on-accent) !important; box-shadow:var(--shadow-accent);
+  gap:2px; padding:16px 18px; border-radius:18px; }
+.cta-q { font-size:15px; font-weight:600; line-height:1.35; }
+.cta-a { font-size:11.5px; font-weight:500; opacity:.75; }
+.cta-go { font-size:13px; font-weight:700; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.22); width:100%; }
