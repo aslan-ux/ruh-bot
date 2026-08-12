@@ -509,6 +509,10 @@ async function rdLoadEpub(buf){
   const page=document.getElementById('rdPage');
   page.addEventListener('mouseup', ()=>setTimeout(rdOnSelect,10));
   page.addEventListener('touchend', ()=>setTimeout(rdOnSelect,120));
+  page.addEventListener('touchstart',(e)=>{
+    if(e.target && e.target.closest && e.target.closest('.rd-h, .rd-sel, .rd-hl')) return;
+    if(RD.sel){ page.classList.remove('rd-locked'); const v0=document.getElementById('rdView'); if(v0) v0.classList.remove('rd-locked'); }
+  }, { passive:true, capture:true });
   page.addEventListener('click', (e)=>{
     const sp=e.target&&e.target.closest?e.target.closest('.rd-hl'):null; if(!sp) return;
     const i=(RD.reading.highlights||[]).findIndex(h=>String(h.id)===String(sp.dataset.hid));
@@ -538,11 +542,18 @@ async function rdFixImages(root){
 function rdLayout(){
   const view=document.getElementById('rdView'), page=document.getElementById('rdPage');
   if(!view||!page) return 1;
-  const W=Math.max(240, view.clientWidth), pad=20;
-  const col=Math.max(180, W-pad*2), gap=pad*2;
+  const W=Math.max(240, view.clientWidth);
+  page.style.maxWidth='none';
   page.style.width=W+'px';
+  const cs=getComputedStyle(page);
+  const padL=parseFloat(cs.paddingLeft)||20, padR=parseFloat(cs.paddingRight)||20;
+  const gap=(padL+padR)||40;                 // қадам дәл W болуы үшін
+  const inner=Math.max(160, W-padL-padR);
+  const cols=inner>=620?2:1;                 // көлденең — кітап жайылмасы
+  const col=Math.max(160, Math.floor((inner-gap*(cols-1))/cols));
   page.style.columnWidth=col+'px'; page.style.webkitColumnWidth=col+'px';
   page.style.columnGap=gap+'px'; page.style.webkitColumnGap=gap+'px';
+  RD.cols=cols;
   RD.step=W;
   RD.pages=Math.max(1, Math.round(page.scrollWidth / W));
   return RD.pages;
@@ -557,7 +568,7 @@ function rdApplyInsets(){
     top=(Number(s.top)||0)+(Number(c.top)||0);
     bot=(Number(s.bottom)||0)+(Number(c.bottom)||0);
   } catch {}
-  if(!top) top=46;            // ескі Telegram нұсқалары үшін
+  if(!top) top=(window.innerWidth>window.innerHeight?18:46);            // ескі Telegram нұсқалары үшін
   rd.style.setProperty('--rd-top-inset', (top+8)+'px');
   rd.style.setProperty('--rd-bot-inset', (bot+4)+'px');
 }
@@ -770,7 +781,7 @@ function rdOnSelect(){
   // өз белгімізді саламыз да, жүйелік мәзір шықпас үшін таңдауды алып тастаймыз
   if(found<0){ try{ rdMarkTemp(range.cloneRange()); }catch{} }
   try{ rdHandles(range.cloneRange()); }catch{}
-  try{ window.getSelection().removeAllRanges(); }catch{}
+  rdLock(true);
   rdSelShow(rect, found>=0);
 }
 function rdSelShow(rect, existing){
@@ -789,7 +800,22 @@ function rdSelShow(rect, existing){
   }
   el.style.left=Math.round(left)+'px'; el.style.top=Math.round(Math.max(66,top))+'px';
 }
-function rdSelHide(){ rdClearTemp(); rdHandlesClear(); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
+// Жүйелік таңдау маркерлері көрінбеуі үшін бетті "құлыптаймыз"
+function rdLock(on){
+  const page=document.getElementById('rdPage'), view=document.getElementById('rdView');
+  if(page) page.classList.toggle('rd-locked', !!on);
+  if(view) view.classList.toggle('rd-locked', !!on);
+  if(RD.lockT){ clearInterval(RD.lockT); RD.lockT=null; }
+  if(!on) return;
+  let n=0;
+  const wipe=()=>{
+    try{ const s=window.getSelection(); if(s && !s.isCollapsed) s.removeAllRanges(); }catch(e){}
+    if(++n>16){ clearInterval(RD.lockT); RD.lockT=null; }
+  };
+  wipe();
+  RD.lockT=setInterval(wipe, 40);
+}
+function rdSelHide(){ rdClearTemp(); rdHandlesClear(); rdLock(false); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
 function rdCaretRect(range, atEnd){
   try {
     const n = atEnd ? range.endContainer : range.startContainer;

@@ -1053,3 +1053,33 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
   -webkit-text-size-adjust:100% !important;
   text-size-adjust:100% !important;
 }
+
+/* Жүйелік таңдау маркерлері шықпасын — тек өз маркерлеріміз */
+.rd-locked, .rd-locked * {
+  -webkit-user-select:none !important; user-select:none !important; -webkit-touch-callout:none !important;
+}
+
+/* ---------- Көлденең режим ---------- */
+@media (orientation: landscape) {
+  .screen { max-width:860px; margin:0 auto;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
+  .tabbar {
+    padding-left: calc(8px + env(safe-area-inset-left, 0px));
+    padding-right: calc(8px + env(safe-area-inset-right, 0px)); }
+  .fin-sheet { max-width:720px; margin:0 auto; }
+  .reader .rd-top { padding-left: calc(12px + env(safe-area-inset-left,0px)); padding-right: calc(12px + env(safe-area-inset-right,0px)); }
+  .reader .rd-bottom { padding-left: calc(14px + env(safe-area-inset-left,0px)); padding-right: calc(14px + env(safe-area-inset-right,0px)); }
+  .rd-page { padding-left: calc(20px + env(safe-area-inset-left,0px)); padding-right: calc(20px + env(safe-area-inset-right,0px)); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  body { padding-bottom:76px; }
+  .screen { padding-top:12px; padding-bottom:12px; }
+  .tabbar { padding-top:6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .tab .lbl { font-size:9px; }
+  .tab.center .ic { width:46px; height:46px; margin:-23px auto 0; border-width:3px; }
+  h1 { font-size:18px; }
+  .reader .rd-top { padding-top: calc(6px + var(--rd-top-inset, 18px)); padding-bottom:6px; }
+  .reader .rd-bottom { padding-top:6px; padding-bottom: calc(6px + var(--rd-bot-inset, 0px)); }
+  .reader .rd-page { padding-top:14px; padding-bottom:16px; }
+}
