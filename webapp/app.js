@@ -1893,11 +1893,11 @@ async function loadRoom(){
     const list = r.readers || [];
     cnt.textContent = list.length ? (list.length + ' адам қазір оқып отыр') : 'Әзірге ешкім оқымай тұр';
     const mine = list.some(x=>x.me);
-    const SPC=['#4E6E77','#7A5B6E','#8A6B3D','#5F6B4A','#4F5D80','#8A5A4A'];
+    const SPC=['#7C8A6B','#9CA98A','#5C6B57','#B9A57A','#46524A','#C9A76B'];
     let html = list.map((x,i)=>{
       const seed=String(x.telegramId||i).split('').reduce((s,c)=>s+c.charCodeAt(0),0);
       const c = x.me ? 'var(--accent)' : SPC[seed%SPC.length];
-      const h = 80 + (seed%3)*9;
+      const h = 72 + (seed%5)*11;
       const nm = x.me ? 'Сен' : x.name;
       return '<div class="spine'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.05)+'s">'+
         '<div class="sp-body" style="--c:'+c+';height:'+h+'px">'+
