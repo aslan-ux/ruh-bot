@@ -707,10 +707,6 @@ button:active { transform: scale(.96); }
 
 /* Қауіпсіз аймақ: мәтін де, панельдер де Telegram тақырыбының астына кірмейді */
 .reader .rd-page { padding-top:22px; padding-bottom:26px; }
-.reader.immersive .rd-page {
-  padding-top: calc(22px + var(--rd-top-inset, 46px));
-  padding-bottom: calc(26px + var(--rd-bot-inset, 0px));
-}
 .reader .rd-top { padding-top: calc(11px + var(--rd-top-inset, 46px)); }
 .reader .rd-bottom { padding-bottom: calc(10px + var(--rd-bot-inset, 0px)); }
 .reader .rd-panel { top: calc(61px + var(--rd-top-inset, 46px)); }

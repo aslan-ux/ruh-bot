@@ -542,9 +542,9 @@ function rdApplyInsets(){
 function rdChromeSpace(){
   const rd=document.getElementById('reader'); if(!rd) return;
   const top=document.querySelector('.rd-top'), bot=document.querySelector('.rd-bottom');
-  const imm=rd.classList.contains('immersive');
-  const th = (!imm && top) ? Math.round(top.getBoundingClientRect().height) : 0;
-  const bh = (!imm && bot) ? Math.round(bot.getBoundingClientRect().height) : 0;
+  // Орын ӘРҚАШАН резервте тұрады — сондықтан мәтін ешқашан қайта беттелмейді
+  const th = top ? Math.round(top.getBoundingClientRect().height) : 0;
+  const bh = bot ? Math.round(bot.getBoundingClientRect().height) : 0;
   rd.style.setProperty('--rd-ch-top', th+'px');
   rd.style.setProperty('--rd-ch-bot', bh+'px');
 }
@@ -556,13 +556,7 @@ function rdToggleImmersive(force){
   rdApplyInsets();
   rdChromeSpace();
   rdHaptic('light');
-  clearTimeout(RD.immT);
-  RD.immT=setTimeout(()=>{
-    if(RD.fmt!=='epub') return;
-    const frac = RD.pages ? RD.pg/RD.pages : 0;
-    rdLayout();
-    rdGoPage(Math.min(RD.pages-1, Math.round(frac*RD.pages)), false);
-  }, 380);
+  // Оқу аймағы өзгермейді → мәтін сол бетте қалады
   // Панельдер мәтіннің үстінен шығады — қайта беттеудің қажеті жоқ (мәтін орнында тұрады)
 }
 function rdHaptic(kind){
