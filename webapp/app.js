@@ -374,6 +374,7 @@ async function loadBook() {
     document.getElementById('bookTitle').textContent = b.title || '—';
     document.getElementById('bookAuthor').textContent = b.author || '';
     const pct = b.fileId ? Math.round(r.myProgress || 0) : Math.round(b.progress || 0);
+    try { ROOM.myPercent = pct; } catch {}
     document.getElementById('bookProgress').textContent = pct + '%';
     const cover = document.getElementById('bookCover');
     if (b.cover) cover.innerHTML = `<img src="${b.cover}" alt="" />`;
@@ -660,6 +661,17 @@ async function rdRenderChapter(i, offset){
     }
   }catch{ html='<p>Бөлімді ашу мүмкін болмады</p>'; }
   page.innerHTML=html||'<p>Бос бөлім</p>';
+  try {
+    const view0=document.getElementById('rdView');
+    const maxH=Math.max(160, (view0?view0.clientHeight:520) - 120);
+    page.style.setProperty('--rd-imgmax', maxH+'px');
+    page.querySelectorAll('img,svg,picture,table').forEach((im)=>{
+      im.style.maxHeight=maxH+'px'; im.style.height='auto'; im.style.maxWidth='100%';
+      im.removeAttribute('height'); im.removeAttribute('width');
+      const p=im.parentElement;
+      if(p && p!==page){ p.style.breakInside='avoid'; p.style.webkitColumnBreakInside='avoid'; }
+    });
+  } catch {}
   RD.chWords=((page.textContent||'').trim().match(/\S+/g)||[]).length;
   rdPaintHighlights();
   rdLayout();
@@ -759,7 +771,17 @@ function rdSelShow(rect, existing){
   el.style.left=Math.round(left)+'px'; el.style.top=Math.round(Math.max(66,top))+'px';
 }
 function rdSelHide(){ rdClearTemp(); rdHandlesClear(); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
-function rdHandlesClear(){ document.querySelectorAll('.rd-h').forEach(e=>e.remove()); }
+function rdHandlesClear(){ document.querySelectorAll('.rd-h').forEach(e=>e.remove()); RD.handles=null; }
+function rdHandlesPos(range){
+  const view=document.getElementById('rdView');
+  if(!view||!range||!RD.handles) return;
+  const rects=range.getClientRects(); if(!rects.length) return;
+  const vb=view.getBoundingClientRect();
+  const f=rects[0], l=rects[rects.length-1];
+  const { hs, he } = RD.handles;
+  hs.style.left=(f.left-vb.left)+'px'; hs.style.top=(f.top-vb.top)+'px'; hs.style.height=Math.max(14,f.height)+'px';
+  he.style.left=(l.right-vb.left)+'px'; he.style.top=(l.top-vb.top)+'px'; he.style.height=Math.max(14,l.height)+'px';
+}
 function rdHandles(range){
   rdHandlesClear();
   const view=document.getElementById('rdView'); if(!view||!range) return;
@@ -774,6 +796,7 @@ function rdHandles(range){
   };
   const hs=mk('start', first.left, first.top, first.height);
   const he=mk('end', last.right, last.top, last.height);
+  RD.handles={ hs, he };
   const page=document.getElementById('rdPage');
   const drag=(el,which)=>{
     el.addEventListener('touchstart',(e)=>{ e.preventDefault(); e.stopPropagation(); },{passive:false});
@@ -794,7 +817,7 @@ function rdHandles(range){
       if(r2){
         RD.sel.text=r2.toString().trim();
         rdMarkTemp(r2.cloneRange());
-        rdHandles(r2.cloneRange());
+        rdHandlesPos(r2);
         try{ const rr=r2.getBoundingClientRect(); rdSelShow({left:rr.left, top:rr.top, bottom:rr.bottom, width:rr.width}, RD.sel.existing>=0); }catch{}
       }
     },{passive:false});
@@ -1933,20 +1956,23 @@ async function loadRoom(){
     if(!r.ok) return;
     const seats = document.getElementById('roomSeats');
     const cnt = document.getElementById('roomCount');
-    const list = r.readers || [];
+    let list = r.readers || [];
     cnt.textContent = list.length ? (list.length + ' адам қазір оқып отыр') : 'Әзірге ешкім оқымай тұр';
     const mine = list.some(x=>x.me);
     const lanes=[];
     const place=(p)=>{ for(let L=0;L<3;L++){ if(!lanes[L]) lanes[L]=[]; if(lanes[L].every(v=>Math.abs(v-p)>13)){ lanes[L].push(p); return L; } } return 0; };
+    if(!list.some(x=>x.me) && ROOM.myPercent>0){
+      list=list.concat([{ telegramId:'me', name:'Сен', initial:'С', percent:ROOM.myPercent, page:ROOM.myPage||1, me:true, idle:true }]);
+    }
     const sorted=[...list].sort((a,b)=>a.percent-b.percent);
     const maxP = sorted.length ? Math.max(...sorted.map(x=>x.percent)) : 0;
     const marks = sorted.map((x)=>{
       const p=Math.max(0,Math.min(100,x.percent));
       const lane=place(p);
-      return '<div class="mk'+(x.me?' me':'')+'" style="left:'+p+'%;--lane:'+lane+'" data-nm="'+roomEsc(x.me?'Сен':x.name)+'" data-pg="'+p+'% · '+x.page+'-бет">'+
+      return '<div class="mk'+(x.me?' me':'')+(x.idle?' idle':'')+'" style="left:'+p+'%;--lane:'+lane+'" data-nm="'+roomEsc(x.me?'Сен':x.name)+'" data-pg="'+p+'% · '+x.page+'-бет">'+
         '<span class="mk-stem"></span>'+
         '<span class="mk-dot">'+roomEsc(x.initial)+'</span>'+
-        '<span class="mk-lbl">'+roomEsc(x.me?'Сен':x.name)+'</span></div>';
+        '<span class="mk-lbl">'+(x.me?('Сен · '+p+'%'):roomEsc(x.name))+'</span></div>';
     }).join('');
     const html =
       '<div class="track">'+

@@ -1031,3 +1031,12 @@ button:active { transform: scale(.96); }
     radial-gradient(95% 70% at 88% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
     var(--card) !important;
 }
+
+
+/* Сурет: биіктік пикселмен шектеледі */
+.rd-page img, .rd-page svg, .rd-page picture, .rd-page table {
+  max-height:var(--rd-imgmax, 380px) !important;
+}
+/* Өз белгім белсенді емес кезде де көрінеді */
+.mk.idle .mk-dot { opacity:.85; box-shadow:0 0 0 2px var(--accent-soft), 0 3px 10px rgba(0,0,0,.18); }
+.mk.me .mk-lbl { color:var(--accent); font-weight:700; }
