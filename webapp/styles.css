@@ -640,7 +640,12 @@ button:active { transform: scale(.96); }
 
 /* ---------- Беттеп оқу (тік айналдыру жоқ) ---------- */
 .rd-view.epub { overflow:hidden; position:relative; touch-action:manipulation; }
-.rd-pager { position:absolute; inset:0; overflow:hidden; }
+.rd-pager {
+  position:absolute; left:0; right:0;
+  top:var(--rd-ch-top, 0px); bottom:var(--rd-ch-bot, 0px);
+  overflow:hidden;
+  transition:top .36s cubic-bezier(.22,1,.36,1), bottom .36s cubic-bezier(.22,1,.36,1);
+}
 .rd-page {
   height:100%; box-sizing:border-box; padding:22px 20px 26px;
   column-fill:auto; -webkit-column-fill:auto;
@@ -701,7 +706,8 @@ button:active { transform: scale(.96); }
 @keyframes rdFade { from { opacity:.12; } to { opacity:1; } }
 
 /* Қауіпсіз аймақ: мәтін де, панельдер де Telegram тақырыбының астына кірмейді */
-.reader .rd-page {
+.reader .rd-page { padding-top:22px; padding-bottom:26px; }
+.reader.immersive .rd-page {
   padding-top: calc(22px + var(--rd-top-inset, 46px));
   padding-bottom: calc(26px + var(--rd-bot-inset, 0px));
 }
