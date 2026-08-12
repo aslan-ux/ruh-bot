@@ -999,3 +999,35 @@ button:active { transform: scale(.96); }
 /* Дәйексөз: жалғыз сөз жаңа жолға түспесін */
 .cta-q { text-wrap:balance; -webkit-hyphens:none; hyphens:none; }
 .cta-q.long { font-size:13.5px; line-height:1.4; }
+
+
+/* ---------- Ерекшелеу тұтқалары ---------- */
+.rd-h { position:absolute; width:2px; background:var(--accent); z-index:26; touch-action:none; border-radius:2px; }
+.rd-h::before { content:''; position:absolute; left:-18px; right:-18px; top:-22px; bottom:-22px; }
+.rd-h::after { content:''; position:absolute; left:50%; width:13px; height:13px; border-radius:50%;
+  background:var(--accent); transform:translateX(-50%); box-shadow:0 0 0 2.5px var(--rd-chrome-bg, #fff), 0 2px 6px rgba(0,0,0,.35); }
+.rd-h.start::after { top:-12px; }
+.rd-h.end::after { bottom:-12px; }
+
+/* ---------- Кітаптағы суреттер бетке бөлінбесін ---------- */
+.rd-page img, .rd-page svg, .rd-page figure, .rd-page table, .rd-page picture {
+  break-inside:avoid !important; -webkit-column-break-inside:avoid !important; page-break-inside:avoid !important;
+  max-width:100% !important; max-height:78% !important; height:auto !important;
+  object-fit:contain; display:block; margin:14px auto;
+}
+.rd-page p:has(img), .rd-page div:has(> img) { break-inside:avoid; -webkit-column-break-inside:avoid; }
+
+/* ---------- Оқу залы: жұмсақ iOS-тәрізді фон ---------- */
+.room-scene {
+  background:
+    radial-gradient(115% 75% at 12% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 58%),
+    radial-gradient(95% 70% at 88% 100%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 60%),
+    var(--card) !important;
+  border:1px solid var(--line) !important;
+}
+:root[data-theme="dark"] .room-scene {
+  background:
+    radial-gradient(115% 75% at 12% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 58%),
+    radial-gradient(95% 70% at 88% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    var(--card) !important;
+}

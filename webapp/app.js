@@ -738,6 +738,7 @@ function rdOnSelect(){
   let rect=null; try{ const r=range.getBoundingClientRect(); rect={ left:r.left, top:r.top, bottom:r.bottom, width:r.width }; }catch{}
   // өз белгімізді саламыз да, жүйелік мәзір шықпас үшін таңдауды алып тастаймыз
   if(found<0){ try{ rdMarkTemp(range.cloneRange()); }catch{} }
+  try{ rdHandles(range.cloneRange()); }catch{}
   try{ window.getSelection().removeAllRanges(); }catch{}
   rdSelShow(rect, found>=0);
 }
@@ -757,7 +758,49 @@ function rdSelShow(rect, existing){
   }
   el.style.left=Math.round(left)+'px'; el.style.top=Math.round(Math.max(66,top))+'px';
 }
-function rdSelHide(){ rdClearTemp(); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
+function rdSelHide(){ rdClearTemp(); rdHandlesClear(); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
+function rdHandlesClear(){ document.querySelectorAll('.rd-h').forEach(e=>e.remove()); }
+function rdHandles(range){
+  rdHandlesClear();
+  const view=document.getElementById('rdView'); if(!view||!range) return;
+  const rects=range.getClientRects(); if(!rects.length) return;
+  const vb=view.getBoundingClientRect();
+  const first=rects[0], last=rects[rects.length-1];
+  const mk=(cls,x,y,h)=>{
+    const el=document.createElement('div');
+    el.className='rd-h '+cls;
+    el.style.left=(x-vb.left)+'px'; el.style.top=(y-vb.top)+'px'; el.style.height=Math.max(14,h)+'px';
+    view.appendChild(el); return el;
+  };
+  const hs=mk('start', first.left, first.top, first.height);
+  const he=mk('end', last.right, last.top, last.height);
+  const page=document.getElementById('rdPage');
+  const drag=(el,which)=>{
+    el.addEventListener('touchstart',(e)=>{ e.preventDefault(); e.stopPropagation(); },{passive:false});
+    el.addEventListener('touchmove',(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const t=e.touches[0]; if(!t||!RD.sel) return;
+      let cr=null;
+      try { cr = document.caretRangeFromPoint ? document.caretRangeFromPoint(t.clientX, t.clientY-6) : null; } catch {}
+      if(!cr || !page.contains(cr.startContainer)) return;
+      const off=rdOffsetOf(page, cr.startContainer, cr.startOffset);
+      if(off<0) return;
+      let s=RD.sel.start, e2=RD.sel.end;
+      if(which==='start') s=Math.min(off, e2-1); else e2=Math.max(off, s+1);
+      if(e2<=s) return;
+      RD.sel.start=s; RD.sel.end=e2;
+      rdClearTemp();
+      const r2=rdRangeFrom(page, s, e2);
+      if(r2){
+        RD.sel.text=r2.toString().trim();
+        rdMarkTemp(r2.cloneRange());
+        rdHandles(r2.cloneRange());
+        try{ const rr=r2.getBoundingClientRect(); rdSelShow({left:rr.left, top:rr.top, bottom:rr.bottom, width:rr.width}, RD.sel.existing>=0); }catch{}
+      }
+    },{passive:false});
+  };
+  drag(hs,'start'); drag(he,'end');
+}
 // Уақытша белгі: жүйелік мәзір шықпауы үшін өз бояуымызбен көрсетеміз
 function rdMarkTemp(range){
   try { rdWrapRange(range, { id:'__tmp', color:'rgba(94,92,230,.28)' }); } catch {}
