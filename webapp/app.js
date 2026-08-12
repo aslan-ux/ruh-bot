@@ -908,6 +908,11 @@ function rdPrev(){
   else rdGoPage(RD.pg);
 }
 const RD_CHROME = { day:'rgba(255,255,255,.88)', sepia:'rgba(244,236,216,.90)', night:'rgba(21,21,28,.86)' };
+const RD_UI = {
+  day:   { btn:'rgba(23,23,31,.055)',   line:'rgba(23,23,31,.13)',    mut:'rgba(23,23,31,.55)' },
+  sepia: { btn:'rgba(91,70,54,.09)',    line:'rgba(91,70,54,.20)',    mut:'rgba(91,70,54,.62)' },
+  night: { btn:'rgba(231,231,238,.10)', line:'rgba(231,231,238,.17)', mut:'rgba(231,231,238,.58)' },
+};
 function rdApplyTheme(){
   const v=document.getElementById('rdView'); const t=RD_THEMES[RD.theme]||RD_THEMES.day;
   v.style.background=t.bg; v.style.color=t.fg;
@@ -915,6 +920,10 @@ function rdApplyTheme(){
   if(rd){
     rd.style.setProperty('--rd-chrome-bg', RD_CHROME[RD.theme]||RD_CHROME.day);
     rd.style.setProperty('--rd-chrome-fg', t.fg);
+    const ui=RD_UI[RD.theme]||RD_UI.day;
+    rd.style.setProperty('--rd-btn-bg', ui.btn);
+    rd.style.setProperty('--rd-btn-line', ui.line);
+    rd.style.setProperty('--rd-btn-mut', ui.mut);
   }
   document.querySelectorAll('.rd-th').forEach(b=>b.classList.toggle('sel', b.dataset.th===RD.theme));
   if(RD.fmt==='pdf') v.classList.toggle('night', RD.theme==='night');

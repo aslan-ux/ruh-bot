@@ -726,3 +726,34 @@ button:active { transform: scale(.96); }
 .reader:not(.immersive) .rd-bottom .rd-meta { animation:rdChromeUp .42s cubic-bezier(.22,1,.36,1) backwards; }
 .reader:not(.immersive) .rd-bottom .rd-meta { animation-delay:.06s; }
 .reader:not(.immersive) .rd-bottom .rd-nav:last-child { animation-delay:.1s; }
+
+
+/* ---------- Панель элементтері оқу темасына бейімделеді ---------- */
+.reader .rd-top { border-bottom:1px solid var(--rd-btn-line, var(--line)); }
+.reader .rd-bottom { border-top:1px solid var(--rd-btn-line, var(--line)); }
+.reader .rd-ic {
+  background:var(--rd-btn-bg, var(--card));
+  color:var(--rd-chrome-fg, var(--text));
+  border:1px solid var(--rd-btn-line, var(--line));
+}
+.reader .rd-title { color:var(--rd-chrome-fg, var(--text)); }
+.reader .rd-nav {
+  background:var(--rd-btn-bg, var(--accent-soft));
+  color:var(--rd-chrome-fg, var(--accent));
+}
+.reader .rd-track { background:var(--rd-btn-line, var(--ring-track)); }
+.reader .rd-info, .reader .rd-pct, .reader .rd-info span { color:var(--rd-btn-mut, var(--green-soft)); }
+.reader .rd-panel {
+  background:var(--rd-chrome-bg, var(--bg));
+  -webkit-backdrop-filter:blur(22px) saturate(1.4);
+  backdrop-filter:blur(22px) saturate(1.4);
+  color:var(--rd-chrome-fg, var(--text));
+}
+.reader .rd-panel-title, .reader .rd-empty, .reader .rd-note-del { color:var(--rd-btn-mut, var(--green-soft)); }
+.reader .rd-toc-item, .reader .rd-note-item, .reader .rd-srch-item { border-bottom:1px solid var(--rd-btn-line, var(--line)); color:inherit; }
+.reader .rd-note-item .txt { color:inherit; }
+.reader .rd-aa-row { color:var(--rd-chrome-fg, var(--text)); }
+.reader .rd-aa-font button { background:var(--rd-btn-bg, var(--card)); color:var(--rd-chrome-fg, var(--text)); border:1px solid var(--rd-btn-line, var(--line)); }
+.reader .rd-anims button { background:var(--rd-btn-bg, var(--card)); color:var(--rd-chrome-fg, var(--text)); border:1px solid var(--rd-btn-line, var(--line)); }
+.reader .rd-anims button.sel { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.reader .rd-srch-row input { background:var(--rd-btn-bg, var(--card)); color:var(--rd-chrome-fg, var(--text)); border:1px solid var(--rd-btn-line, var(--line)); }
