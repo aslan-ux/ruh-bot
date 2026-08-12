@@ -485,7 +485,26 @@ async function rdLoadEpub(buf){
   });
   if(!window.__rdResize){
     window.__rdResize=1;
-    window.addEventListener('resize', ()=>{ if(RD.fmt==='epub'){ rdLayout(); rdGoPage(RD.pg, false); } });
+    const relayout=()=>{
+      rdApplyInsets(); rdChromeSpace();
+      if(RD.fmt==='epub'){
+        const frac = RD.pages ? RD.pg/RD.pages : 0;
+        rdLayout();
+        rdGoPage(Math.min(RD.pages-1, Math.round(frac*RD.pages)), false);
+        try {
+          const pg=document.getElementById('rdPage');
+          const v0=document.getElementById('rdView');
+          const mx=Math.max(160,(v0?v0.clientHeight:520)-120);
+          pg.style.setProperty('--rd-imgmax', mx+'px');
+          pg.querySelectorAll('img,svg,picture,table').forEach(im=>{ im.style.maxHeight=mx+'px'; });
+        } catch {}
+      } else if(RD.fmt==='pdf'){ rdRenderPdf(RD.page); }
+      rdSelHide();
+    };
+    const kick=()=>{ relayout(); setTimeout(relayout,250); setTimeout(relayout,700); };
+    window.addEventListener('resize', kick);
+    window.addEventListener('orientationchange', kick);
+    try { if(window.visualViewport) window.visualViewport.addEventListener('resize', kick); } catch {}
   }
   const page=document.getElementById('rdPage');
   page.addEventListener('mouseup', ()=>setTimeout(rdOnSelect,10));
@@ -773,23 +792,35 @@ function rdSelShow(rect, existing){
 function rdSelHide(){ rdClearTemp(); rdHandlesClear(); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
 function rdCaretRect(range, atEnd){
   try {
-    const r=range.cloneRange(); r.collapse(!atEnd);
-    const b=r.getBoundingClientRect();
-    if(b && b.height>0) return { left:b.left, right:b.left, top:b.top, height:b.height };
-  } catch {}
-  try {
     const n = atEnd ? range.endContainer : range.startContainer;
     const o = atEnd ? range.endOffset : range.startOffset;
-    if(n && n.nodeType===3){
-      const r2=document.createRange();
-      if(atEnd && o>0){ r2.setStart(n,o-1); r2.setEnd(n,o); const b=r2.getBoundingClientRect(); return { left:b.right, right:b.right, top:b.top, height:b.height }; }
-      if(!atEnd && o < n.nodeValue.length){ r2.setStart(n,o); r2.setEnd(n,o+1); const b=r2.getBoundingClientRect(); return { left:b.left, right:b.left, top:b.top, height:b.height }; }
+    if (n && n.nodeType === 3) {
+      const r2 = document.createRange();
+      if (atEnd && o > 0) {
+        r2.setStart(n, o - 1); r2.setEnd(n, o);
+        const bb = r2.getBoundingClientRect();
+        if (bb && bb.height > 0) return { left: bb.right, right: bb.right, top: bb.top, height: bb.height };
+      }
+      if (!atEnd && o < n.nodeValue.length) {
+        r2.setStart(n, o); r2.setEnd(n, o + 1);
+        const bb = r2.getBoundingClientRect();
+        if (bb && bb.height > 0) return { left: bb.left, right: bb.left, top: bb.top, height: bb.height };
+      }
     }
-  } catch {}
-  const rs=range.getClientRects();
-  if(!rs.length) return null;
-  const b = atEnd ? rs[rs.length-1] : rs[0];
-  return { left: atEnd?b.right:b.left, right: atEnd?b.right:b.left, top:b.top, height:b.height };
+  } catch (e) {}
+  try {
+    const rs = Array.prototype.slice.call(range.getClientRects()).filter(function (r) { return r.height > 0 && r.width > 0; });
+    if (rs.length) {
+      const bb = atEnd ? rs[rs.length - 1] : rs[0];
+      return { left: atEnd ? bb.right : bb.left, right: atEnd ? bb.right : bb.left, top: bb.top, height: bb.height };
+    }
+  } catch (e) {}
+  try {
+    const r = range.cloneRange(); r.collapse(!atEnd);
+    const bb = r.getBoundingClientRect();
+    if (bb && bb.height > 0) return { left: bb.left, right: bb.left, top: bb.top, height: bb.height };
+  } catch (e) {}
+  return null;
 }
 function rdHandlesClear(){ document.querySelectorAll('.rd-h').forEach(e=>e.remove()); RD.handles=null; }
 function rdHandlesPos(range){
