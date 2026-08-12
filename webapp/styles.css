@@ -708,3 +708,19 @@ button:active { transform: scale(.96); }
 .reader .rd-top { padding-top: calc(11px + var(--rd-top-inset, 46px)); }
 .reader .rd-bottom { padding-bottom: calc(10px + var(--rd-bot-inset, 0px)); }
 .reader .rd-panel { top: calc(61px + var(--rd-top-inset, 46px)); }
+
+/* Панельдер шыққанда ішіндегі элементтер кезекпен көтеріледі */
+@keyframes rdChromeIn { from { opacity:0; transform:translateY(-8px) scale(.94); } to { opacity:1; transform:none; } }
+@keyframes rdChromeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.reader:not(.immersive) .rd-top .rd-ic,
+.reader:not(.immersive) .rd-top .rd-title { animation:rdChromeIn .4s cubic-bezier(.22,1,.36,1) backwards; }
+.reader:not(.immersive) .rd-top .rd-title { animation-delay:.04s; }
+.reader:not(.immersive) .rd-top .rd-ic:nth-of-type(1) { animation-delay:.02s; }
+.reader:not(.immersive) .rd-top .rd-ic:nth-of-type(2) { animation-delay:.07s; }
+.reader:not(.immersive) .rd-top .rd-ic:nth-of-type(3) { animation-delay:.11s; }
+.reader:not(.immersive) .rd-top .rd-ic:nth-of-type(4) { animation-delay:.15s; }
+.reader:not(.immersive) .rd-top .rd-ic:nth-of-type(5) { animation-delay:.19s; }
+.reader:not(.immersive) .rd-bottom .rd-nav,
+.reader:not(.immersive) .rd-bottom .rd-meta { animation:rdChromeUp .42s cubic-bezier(.22,1,.36,1) backwards; }
+.reader:not(.immersive) .rd-bottom .rd-meta { animation-delay:.06s; }
+.reader:not(.immersive) .rd-bottom .rd-nav:last-child { animation-delay:.1s; }
