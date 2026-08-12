@@ -853,6 +853,13 @@ function rdHandles(range){
     el.addEventListener('touchstart',(e)=>{
       e.preventDefault(); e.stopPropagation();
       RD.dragH=true; el.classList.add('grab');
+      const t0=e.touches[0];
+      let anchor=null;
+      try{ const pg0=document.getElementById('rdPage');
+        const r0=(pg0&&RD.sel)?rdRangeFrom(pg0, RD.sel.start, RD.sel.end):null;
+        if(r0) anchor=rdCaretRect(r0, which==='end');
+      }catch(err){}
+      RD.dragOff=(t0&&anchor)?{ x:anchor.left-t0.clientX, y:(anchor.top+anchor.height/2)-t0.clientY }:{ x:0, y:(which==='end'?-20:20) };
       document.getElementById('rdSel').classList.add('hidden');
       rdHaptic('light');
     },{passive:false});
@@ -870,8 +877,17 @@ function rdHandles(range){
     el.addEventListener('touchmove',(e)=>{
       e.preventDefault(); e.stopPropagation();
       const t=e.touches[0]; if(!t||!RD.sel) return;
+      const dof=RD.dragOff||{x:0,y:-6};
+      const vw=document.getElementById('rdView');
+      const vb2=(vw||page).getBoundingClientRect();
+      let px=t.clientX+dof.x, py=t.clientY+dof.y;
+      px=Math.min(Math.max(px, vb2.left+6), vb2.right-6);
+      py=Math.min(Math.max(py, vb2.top+6), vb2.bottom-6);
       let cr=null;
-      try { cr = document.caretRangeFromPoint ? document.caretRangeFromPoint(t.clientX, t.clientY-6) : null; } catch {}
+      try { cr = document.caretRangeFromPoint ? document.caretRangeFromPoint(px, py) : null; } catch {}
+      if(!cr || !page.contains(cr.startContainer)){
+        try { cr = document.caretRangeFromPoint ? document.caretRangeFromPoint(Math.min(Math.max(px, vb2.left+16), vb2.right-16), py) : null; } catch {}
+      }
       if(!cr || !page.contains(cr.startContainer)) return;
       const off=rdOffsetOf(page, cr.startContainer, cr.startOffset);
       if(off<0) return;

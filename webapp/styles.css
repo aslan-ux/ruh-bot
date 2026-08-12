@@ -44,7 +44,7 @@
   --tint: var(--surface);
 }
 
-html { color-scheme: light dark; }
+html { color-scheme: light dark; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -1047,3 +1047,9 @@ button:active { transform: scale(.96); }
 .rd-h::after { transition:transform .15s ease, box-shadow .15s ease; }
 .rd-h.grab::after { transform:translateX(-50%) scale(1.35); box-shadow:0 0 0 3px var(--rd-chrome-bg, #fff), 0 3px 10px rgba(0,0,0,.4); }
 .rd-h::before { left:-22px; right:-22px; top:-26px; bottom:-26px; }
+
+/* rdNoInflate: iOS-те экран бұрылғанда мәтін өздігінен ұлғаймайды */
+html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
+  -webkit-text-size-adjust:100% !important;
+  text-size-adjust:100% !important;
+}
