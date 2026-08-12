@@ -1040,3 +1040,10 @@ button:active { transform: scale(.96); }
 /* Өз белгім белсенді емес кезде де көрінеді */
 .mk.idle .mk-dot { opacity:.85; box-shadow:0 0 0 2px var(--accent-soft), 0 3px 10px rgba(0,0,0,.18); }
 .mk.me .mk-lbl { color:var(--accent); font-weight:700; }
+
+
+/* Тұтқа: ұстағанда үлкейеді, сүйреу кезінде тегіс */
+.rd-h { transition:none; }
+.rd-h::after { transition:transform .15s ease, box-shadow .15s ease; }
+.rd-h.grab::after { transform:translateX(-50%) scale(1.35); box-shadow:0 0 0 3px var(--rd-chrome-bg, #fff), 0 3px 10px rgba(0,0,0,.4); }
+.rd-h::before { left:-22px; right:-22px; top:-26px; bottom:-26px; }

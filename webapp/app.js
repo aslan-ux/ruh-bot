@@ -771,23 +771,43 @@ function rdSelShow(rect, existing){
   el.style.left=Math.round(left)+'px'; el.style.top=Math.round(Math.max(66,top))+'px';
 }
 function rdSelHide(){ rdClearTemp(); rdHandlesClear(); document.getElementById('rdSel').classList.add('hidden'); RD.sel=null; }
+function rdCaretRect(range, atEnd){
+  try {
+    const r=range.cloneRange(); r.collapse(!atEnd);
+    const b=r.getBoundingClientRect();
+    if(b && b.height>0) return { left:b.left, right:b.left, top:b.top, height:b.height };
+  } catch {}
+  try {
+    const n = atEnd ? range.endContainer : range.startContainer;
+    const o = atEnd ? range.endOffset : range.startOffset;
+    if(n && n.nodeType===3){
+      const r2=document.createRange();
+      if(atEnd && o>0){ r2.setStart(n,o-1); r2.setEnd(n,o); const b=r2.getBoundingClientRect(); return { left:b.right, right:b.right, top:b.top, height:b.height }; }
+      if(!atEnd && o < n.nodeValue.length){ r2.setStart(n,o); r2.setEnd(n,o+1); const b=r2.getBoundingClientRect(); return { left:b.left, right:b.left, top:b.top, height:b.height }; }
+    }
+  } catch {}
+  const rs=range.getClientRects();
+  if(!rs.length) return null;
+  const b = atEnd ? rs[rs.length-1] : rs[0];
+  return { left: atEnd?b.right:b.left, right: atEnd?b.right:b.left, top:b.top, height:b.height };
+}
 function rdHandlesClear(){ document.querySelectorAll('.rd-h').forEach(e=>e.remove()); RD.handles=null; }
 function rdHandlesPos(range){
   const view=document.getElementById('rdView');
   if(!view||!range||!RD.handles) return;
-  const rects=range.getClientRects(); if(!rects.length) return;
+  const f=rdCaretRect(range,false), l=rdCaretRect(range,true);
+  if(!f||!l) return;
   const vb=view.getBoundingClientRect();
-  const f=rects[0], l=rects[rects.length-1];
   const { hs, he } = RD.handles;
   hs.style.left=(f.left-vb.left)+'px'; hs.style.top=(f.top-vb.top)+'px'; hs.style.height=Math.max(14,f.height)+'px';
-  he.style.left=(l.right-vb.left)+'px'; he.style.top=(l.top-vb.top)+'px'; he.style.height=Math.max(14,l.height)+'px';
+  he.style.left=(l.left-vb.left)+'px'; he.style.top=(l.top-vb.top)+'px'; he.style.height=Math.max(14,l.height)+'px';
 }
 function rdHandles(range){
   rdHandlesClear();
   const view=document.getElementById('rdView'); if(!view||!range) return;
-  const rects=range.getClientRects(); if(!rects.length) return;
   const vb=view.getBoundingClientRect();
-  const first=rects[0], last=rects[rects.length-1];
+  const first=rdCaretRect(range,false), last=rdCaretRect(range,true);
+  if(!first||!last) return;
   const mk=(cls,x,y,h)=>{
     const el=document.createElement('div');
     el.className='rd-h '+cls;
@@ -795,11 +815,27 @@ function rdHandles(range){
     view.appendChild(el); return el;
   };
   const hs=mk('start', first.left, first.top, first.height);
-  const he=mk('end', last.right, last.top, last.height);
+  const he=mk('end', last.left, last.top, last.height);
   RD.handles={ hs, he };
   const page=document.getElementById('rdPage');
   const drag=(el,which)=>{
-    el.addEventListener('touchstart',(e)=>{ e.preventDefault(); e.stopPropagation(); },{passive:false});
+    el.addEventListener('touchstart',(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      RD.dragH=true; el.classList.add('grab');
+      document.getElementById('rdSel').classList.add('hidden');
+      rdHaptic('light');
+    },{passive:false});
+    const endDrag=(e)=>{
+      if(!RD.dragH) return;
+      RD.dragH=false; el.classList.remove('grab');
+      const page2=document.getElementById('rdPage');
+      const r3=RD.sel ? rdRangeFrom(page2, RD.sel.start, RD.sel.end) : null;
+      let rect=null; try{ if(r3){ const rr=r3.getBoundingClientRect(); rect={left:rr.left, top:rr.top, bottom:rr.bottom, width:rr.width}; } }catch{}
+      rdSelShow(rect, RD.sel && RD.sel.existing>=0);
+      rdHaptic('light');
+    };
+    el.addEventListener('touchend', endDrag, {passive:true});
+    el.addEventListener('touchcancel', endDrag, {passive:true});
     el.addEventListener('touchmove',(e)=>{
       e.preventDefault(); e.stopPropagation();
       const t=e.touches[0]; if(!t||!RD.sel) return;
@@ -818,7 +854,6 @@ function rdHandles(range){
         RD.sel.text=r2.toString().trim();
         rdMarkTemp(r2.cloneRange());
         rdHandlesPos(r2);
-        try{ const rr=r2.getBoundingClientRect(); rdSelShow({left:rr.left, top:rr.top, bottom:rr.bottom, width:rr.width}, RD.sel.existing>=0); }catch{}
       }
     },{passive:false});
   };
