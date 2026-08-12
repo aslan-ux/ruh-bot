@@ -1893,24 +1893,26 @@ async function loadRoom(){
     const list = r.readers || [];
     cnt.textContent = list.length ? (list.length + ' адам қазір оқып отыр') : 'Әзірге ешкім оқымай тұр';
     const mine = list.some(x=>x.me);
-    const SPC=['#7C8A6B','#9CA98A','#5C6B57','#B9A57A','#46524A','#C9A76B'];
-    let html = list.map((x,i)=>{
-      const seed=String(x.telegramId||i).split('').reduce((s,c)=>s+c.charCodeAt(0),0);
-      const c = x.me ? 'var(--accent)' : SPC[seed%SPC.length];
-      const h = 96 + (seed%5)*12;
-      const nm = x.me ? 'Сен' : x.name;
-      return '<div class="spine'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.05)+'s">'+
-        '<div class="sp-body" style="--c:'+c+';height:'+h+'px">'+
-        '<span class="sp-band top"></span><span class="sp-band bot"></span>'+
-        '<span class="sp-name">'+roomEsc(nm)+'</span>'+
-        '<span class="sp-pages"><i style="height:'+Math.max(4,Math.min(100,x.percent))+'%"></i></span>'+
-        '</div><span class="sp-live"></span>'+
-        '<div class="sp-pg">'+x.percent+'% · '+x.page+'</div></div>';
+    const lanes=[];
+    const place=(p)=>{ for(let L=0;L<3;L++){ if(!lanes[L]) lanes[L]=[]; if(lanes[L].every(v=>Math.abs(v-p)>13)){ lanes[L].push(p); return L; } } return 0; };
+    const sorted=[...list].sort((a,b)=>a.percent-b.percent);
+    const maxP = sorted.length ? Math.max(...sorted.map(x=>x.percent)) : 0;
+    const marks = sorted.map((x)=>{
+      const p=Math.max(0,Math.min(100,x.percent));
+      const lane=place(p);
+      return '<div class="mk'+(x.me?' me':'')+'" style="left:'+p+'%;--lane:'+lane+'" data-nm="'+roomEsc(x.me?'Сен':x.name)+'" data-pg="'+p+'% · '+x.page+'-бет">'+
+        '<span class="mk-stem"></span>'+
+        '<span class="mk-dot">'+roomEsc(x.initial)+'</span>'+
+        '<span class="mk-lbl">'+roomEsc(x.me?'Сен':x.name)+'</span></div>';
     }).join('');
-    if(!mine) html += '<div class="spine empty" id="seatFree"><div class="sp-body" style="height:104px"><span class="sp-name">Сенің орның</span></div><div class="sp-pg">бос</div></div>';
-    seats.innerHTML = html || '<div class="room-empty">Бірінші болып отыр — оқуды баста</div>';
-    const free=document.getElementById('seatFree');
-    if(free) free.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
+    const html =
+      '<div class="track">'+
+        '<div class="track-line"><i style="width:'+maxP+'%"></i></div>'+
+        '<span class="track-cap start">0</span><span class="track-cap end">100%</span>'+
+        marks+
+      '</div>';
+    seats.innerHTML = html;
+    seats.querySelectorAll('.mk').forEach(el=>el.addEventListener('click', ()=>{ el.classList.toggle('open'); }));
   }catch{}
 }
 
@@ -1999,7 +2001,8 @@ const RQ=RQ_AUTHOR.concat(RQ_PROVERB.map((t)=>({ t, a:'Қазақ мақалы' 
 function roomQuote(){
   const b=document.getElementById('roomSit'); if(!b) return;
   const q=RQ[Math.floor(Math.random()*RQ.length)];
-  b.innerHTML='<span class="cta-q">«'+q.t+'»</span><span class="cta-a">'+q.a+'</span><span class="cta-go">Оқуды бастау</span>';
+  const long=(q.t||'').length>34;
+  b.innerHTML='<span class="cta-q'+(long?' long':'')+'">«'+q.t+'»</span><span class="cta-a">'+q.a+'</span><span class="cta-go">Оқуды бастау</span>';
 }
 function roomStart(){
   roomQuote();

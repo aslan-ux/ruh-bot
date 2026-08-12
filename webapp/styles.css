@@ -966,3 +966,36 @@ button:active { transform: scale(.96); }
 .sp-name { max-height:66%; font-size:10.5px; letter-spacing:.3px; padding-right:5px; }
 .sp-fill { display:none; }
 .spine.empty .sp-body { background:transparent; box-shadow:inset 0 0 0 1px rgba(201,167,107,.35); }
+
+
+/* ---------- ОҚУ СЫЗЫҒЫ (жаңа концепт) ---------- */
+.room-scene { background:var(--card) !important; border:1px solid var(--line) !important; padding:26px 18px 20px; min-height:0; }
+.room-glow { display:none !important; }
+.room-seats { display:block; padding:0; }
+.room-seats::after { display:none; }
+.track { position:relative; height:118px; }
+.track-line { position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); height:6px; border-radius:99px;
+  background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); overflow:hidden; }
+.track-line i { display:block; height:100%; border-radius:99px;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 35%, transparent), var(--accent));
+  transition:width .8s cubic-bezier(.22,1,.36,1); }
+.track-cap { position:absolute; top:calc(50% + 16px); font-size:10.5px; color:var(--green-soft); }
+.track-cap.start { left:0; } .track-cap.end { right:0; }
+.mk { position:absolute; top:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center;
+  animation:mkIn .5s cubic-bezier(.22,1,.36,1) backwards; }
+@keyframes mkIn { from{opacity:0; transform:translate(-50%,-50%) scale(.6)} to{opacity:1} }
+.mk[style*="--lane:1"] { margin-top:-38px; } .mk[style*="--lane:2"] { margin-top:-76px; }
+.mk-stem { position:absolute; top:50%; left:50%; width:1px; background:var(--line); transform:translateX(-50%); height:0; }
+.mk[style*="--lane:1"] .mk-stem { height:38px; } .mk[style*="--lane:2"] .mk-stem { height:76px; }
+.mk-dot { position:relative; z-index:2; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; color:var(--text); background:var(--card);
+  box-shadow:0 0 0 2px var(--line), 0 3px 10px rgba(0,0,0,.18); }
+.mk.me .mk-dot { color:var(--on-accent); background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft), 0 4px 14px rgba(94,92,230,.35); }
+.mk-lbl { position:absolute; top:34px; font-size:10.5px; font-weight:600; color:var(--green-soft); white-space:nowrap;
+  opacity:0; transform:translateY(-4px); transition:opacity .2s, transform .2s; pointer-events:none; }
+.mk.me .mk-lbl, .mk.open .mk-lbl { opacity:1; transform:none; }
+.mk.open .mk-dot { box-shadow:0 0 0 3px var(--accent-soft), 0 4px 14px rgba(0,0,0,.2); }
+
+/* Дәйексөз: жалғыз сөз жаңа жолға түспесін */
+.cta-q { text-wrap:balance; -webkit-hyphens:none; hyphens:none; }
+.cta-q.long { font-size:13.5px; line-height:1.4; }
