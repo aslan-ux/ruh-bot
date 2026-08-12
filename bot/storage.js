@@ -16,7 +16,7 @@ const DEFAULT_BOOK = {
 let useMongo = !!MONGODB_URI;
 let bucket = null; // GridFS — файлы книг
 let OID = null;    // ObjectId
-const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null, friends: null, reading: null };
+const col = { users: null, meta: null, steps: null, fintx: null, findebt: null, finasset: null, friends: null, reading: null, quotes: null, comments: null, readdays: null };
 
 // ---------- Инициализация ----------
 export async function initStorage() {
@@ -42,6 +42,12 @@ export async function initStorage() {
       await col.friends.createIndex({ b: 1 });
       col.reading = db.collection('reading');
       await col.reading.createIndex({ telegramId: 1, bookId: 1 }, { unique: true });
+      col.quotes = db.collection('quotes');
+      await col.quotes.createIndex({ bookId: 1, createdAt: -1 });
+      col.comments = db.collection('comments');
+      await col.comments.createIndex({ bookId: 1, ch: 1, createdAt: -1 });
+      col.readdays = db.collection('readdays');
+      await col.readdays.createIndex({ telegramId: 1, date: 1 }, { unique: true });
       bucket = new GridFSBucket(db, { bucketName: 'books' });
       OID = ObjectId;
       console.log('Хранилище: MongoDB (постоянное)');
@@ -482,6 +488,97 @@ export async function getReading(telegramId, bookId) {
   if (useMongo) return col.reading.findOne({ telegramId, bookId }, { projection: { _id: 0 } });
   return (readJson(READING_FILE, [])).find((r) => r.telegramId === telegramId && r.bookId === bookId) || null;
 }
+// Барлық қатысушының оқу прогресі (рейтинг үшін)
+export async function getAllReading(bookId) {
+  if (useMongo) return col.reading.find({ bookId }, { projection: { _id: 0 } }).toArray();
+  return (readJson(READING_FILE, [])).filter((r) => r.bookId === bookId);
+}
+
+// ---------- Дәйексөздер ----------
+const QUOTES_FILE = path.join(DATA_DIR, 'quotes.json');
+export async function addQuote(q) {
+  const doc = { ...q, id: 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), likes: [], createdAt: new Date().toISOString() };
+  if (useMongo) { await col.quotes.insertOne({ ...doc }); return doc; }
+  const arr = readJson(QUOTES_FILE, []); arr.push(doc); writeJson(QUOTES_FILE, arr); return doc;
+}
+export async function listQuotes(bookId) {
+  if (useMongo) return col.quotes.find({ bookId }, { projection: { _id: 0 } }).sort({ createdAt: -1 }).limit(300).toArray();
+  return (readJson(QUOTES_FILE, [])).filter((q) => q.bookId === bookId).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+export async function likeQuote(id, telegramId) {
+  if (useMongo) {
+    const q = await col.quotes.findOne({ id });
+    if (!q) return null;
+    const has = (q.likes || []).includes(telegramId);
+    await col.quotes.updateOne({ id }, has ? { $pull: { likes: telegramId } } : { $addToSet: { likes: telegramId } });
+    return { id, liked: !has };
+  }
+  const arr = readJson(QUOTES_FILE, []); const i = arr.findIndex((q) => q.id === id);
+  if (i < 0) return null;
+  arr[i].likes = arr[i].likes || [];
+  const has = arr[i].likes.includes(telegramId);
+  arr[i].likes = has ? arr[i].likes.filter((x) => x !== telegramId) : arr[i].likes.concat(telegramId);
+  writeJson(QUOTES_FILE, arr);
+  return { id, liked: !has };
+}
+export async function deleteQuote(id, telegramId) {
+  if (useMongo) {
+    const f = telegramId ? { id, telegramId } : { id };
+    const r = await col.quotes.deleteOne(f);
+    return r.deletedCount > 0;
+  }
+  const arr = readJson(QUOTES_FILE, []);
+  const next = arr.filter((q) => !(q.id === id && (!telegramId || q.telegramId === telegramId)));
+  writeJson(QUOTES_FILE, next);
+  return next.length !== arr.length;
+}
+
+// ---------- Талқылау ----------
+const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
+export async function addComment(c) {
+  const doc = { ...c, id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), createdAt: new Date().toISOString() };
+  if (useMongo) { await col.comments.insertOne({ ...doc }); return doc; }
+  const arr = readJson(COMMENTS_FILE, []); arr.push(doc); writeJson(COMMENTS_FILE, arr); return doc;
+}
+export async function listComments(bookId, ch) {
+  const f = (ch === null || ch === undefined) ? { bookId } : { bookId, ch: Number(ch) };
+  if (useMongo) return col.comments.find(f, { projection: { _id: 0 } }).sort({ createdAt: -1 }).limit(300).toArray();
+  return (readJson(COMMENTS_FILE, []))
+    .filter((c) => c.bookId === bookId && (f.ch === undefined || Number(c.ch) === f.ch))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+export async function deleteComment(id, telegramId) {
+  if (useMongo) {
+    const f = telegramId ? { id, telegramId } : { id };
+    const r = await col.comments.deleteOne(f);
+    return r.deletedCount > 0;
+  }
+  const arr = readJson(COMMENTS_FILE, []);
+  const next = arr.filter((c) => !(c.id === id && (!telegramId || c.telegramId === telegramId)));
+  writeJson(COMMENTS_FILE, next);
+  return next.length !== arr.length;
+}
+
+// ---------- Оқу статистикасы ----------
+const READDAYS_FILE = path.join(DATA_DIR, 'readdays.json');
+export async function bumpRead(telegramId, date, seconds, pages) {
+  const inc = { seconds: Math.max(0, Math.min(600, Number(seconds) || 0)), pages: Math.max(0, Math.min(50, Number(pages) || 0)) };
+  if (useMongo) {
+    await col.readdays.updateOne({ telegramId, date }, { $inc: { seconds: inc.seconds, pages: inc.pages }, $set: { updatedAt: new Date().toISOString() } }, { upsert: true });
+    return col.readdays.findOne({ telegramId, date }, { projection: { _id: 0 } });
+  }
+  const arr = readJson(READDAYS_FILE, []);
+  let d = arr.find((x) => x.telegramId === telegramId && x.date === date);
+  if (!d) { d = { telegramId, date, seconds: 0, pages: 0 }; arr.push(d); }
+  d.seconds += inc.seconds; d.pages += inc.pages; d.updatedAt = new Date().toISOString();
+  writeJson(READDAYS_FILE, arr);
+  return d;
+}
+export async function getReadDays(telegramId) {
+  if (useMongo) return col.readdays.find({ telegramId }, { projection: { _id: 0 } }).sort({ date: -1 }).limit(120).toArray();
+  return (readJson(READDAYS_FILE, [])).filter((x) => x.telegramId === telegramId).sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
 export async function saveReading(telegramId, bookId, patch) {
   const set = { ...patch, telegramId, bookId, updatedAt: new Date().toISOString() };
   if (useMongo) {

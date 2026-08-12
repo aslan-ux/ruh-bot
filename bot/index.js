@@ -46,6 +46,16 @@ import {
   deleteBookFile,
   getReading,
   saveReading,
+  getAllReading,
+  addQuote,
+  listQuotes,
+  likeQuote,
+  deleteQuote,
+  addComment,
+  listComments,
+  deleteComment,
+  bumpRead,
+  getReadDays,
   listBooks,
   addBook,
   updateBook,
@@ -746,6 +756,116 @@ app.post('/api/admin/status', async (req, res) => {
     } catch {}
   }
   res.json({ ok: true, user });
+});
+
+// ---------- Кітап әлеуметтік блогы ----------
+async function bookIdNow() { const b = await getBook(); return (b && b.fileId) ? b.fileId : 'none'; }
+function shortName(u) {
+  if (!u) return 'Қатысушы';
+  const ln = (u.lastName || '').trim(), fn = (u.firstName || '').trim();
+  return (fn + (ln ? ' ' + ln.slice(0, 1) + '.' : '')).trim() || 'Қатысушы';
+}
+
+app.post('/api/book/quote/add', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const text = String(req.body?.text || '').trim().slice(0, 600);
+  if (!text) return res.status(400).json({ ok: false, error: 'Мәтін бос' });
+  const user = await getUser(tgUser.id);
+  const q = await addQuote({ bookId: await bookIdNow(), telegramId: tgUser.id, name: shortName(user), text,
+    ch: Number(req.body?.ch) || 0, color: String(req.body?.color || '#F6C945').slice(0, 24) });
+  res.json({ ok: true, quote: q });
+});
+app.post('/api/book/quote/list', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const rows = await listQuotes(await bookIdNow());
+  res.json({ ok: true, quotes: rows.map((q) => ({ id: q.id, name: q.name, text: q.text, ch: q.ch, color: q.color,
+    createdAt: q.createdAt, likes: (q.likes || []).length, liked: (q.likes || []).includes(tgUser.id), mine: q.telegramId === tgUser.id })) });
+});
+app.post('/api/book/quote/like', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const r = await likeQuote(String(req.body?.id || ''), tgUser.id);
+  if (!r) return res.status(404).json({ ok: false, error: 'Табылмады' });
+  res.json({ ok: true, ...r });
+});
+app.post('/api/book/quote/delete', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  res.json({ ok: await deleteQuote(String(req.body?.id || ''), tgUser.id) });
+});
+
+app.post('/api/book/comment/add', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const text = String(req.body?.text || '').trim().slice(0, 1000);
+  if (!text) return res.status(400).json({ ok: false, error: 'Мәтін бос' });
+  const user = await getUser(tgUser.id);
+  const c = await addComment({ bookId: await bookIdNow(), telegramId: tgUser.id, name: shortName(user), text, ch: Number(req.body?.ch) || 0 });
+  res.json({ ok: true, comment: c });
+});
+app.post('/api/book/comment/list', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const ch = (req.body?.ch === null || req.body?.ch === undefined) ? null : Number(req.body.ch);
+  const rows = await listComments(await bookIdNow(), ch);
+  res.json({ ok: true, comments: rows.map((c) => ({ id: c.id, name: c.name, text: c.text, ch: c.ch, createdAt: c.createdAt, mine: c.telegramId === tgUser.id })) });
+});
+app.post('/api/book/comment/delete', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  res.json({ ok: await deleteComment(String(req.body?.id || ''), tgUser.id) });
+});
+
+app.post('/api/book/stats/ping', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const d = await bumpRead(tgUser.id, kzDate(0), Number(req.body?.seconds) || 0, Number(req.body?.pages) || 0);
+  res.json({ ok: true, day: d });
+});
+
+const DAY_MIN_SEC = 300, DAY_MIN_PAGES = 2;
+app.post('/api/book/stats/me', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const days = await getReadDays(tgUser.id);
+  const map = {}; days.forEach((d) => { map[d.date] = d; });
+  const good = (d) => !!d && (d.seconds || 0) >= DAY_MIN_SEC && (d.pages || 0) >= DAY_MIN_PAGES;
+  let streak = 0;
+  for (let i = 0; i < 400; i++) {
+    const dt = kzDate(i);
+    if (good(map[dt])) streak++;
+    else if (i === 0) continue;
+    else break;
+  }
+  const week = [];
+  for (let i = 6; i >= 0; i--) {
+    const dt = kzDate(i), d = map[dt] || { seconds: 0, pages: 0 };
+    week.push({ date: dt, minutes: Math.round((d.seconds || 0) / 60), pages: d.pages || 0, done: good(d) });
+  }
+  res.json({ ok: true, streak, week,
+    totalMin: week.reduce((s, x) => s + x.minutes, 0),
+    totalPages: week.reduce((s, x) => s + x.pages, 0),
+    rule: { minutes: DAY_MIN_SEC / 60, pages: DAY_MIN_PAGES } });
+});
+
+app.post('/api/book/room', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const book = await getBook();
+  const bookId = (book && book.fileId) ? book.fileId : 'none';
+  const [rows, users] = await Promise.all([getAllReading(bookId), getUsers()]);
+  const byId = {}; users.forEach((u) => { byId[u.telegramId] = u; });
+  const now = Date.now(), LIVE = 3 * 60 * 1000;
+  const readers = rows
+    .filter((r) => byId[r.telegramId] && r.updatedAt && (now - new Date(r.updatedAt).getTime()) < LIVE)
+    .map((r) => { const nm = shortName(byId[r.telegramId]);
+      return { telegramId: r.telegramId, name: nm, initial: (nm[0] || '?').toUpperCase(),
+        percent: Math.round(r.percent || 0), page: (Number(r.offset) || 0) + 1, ch: (Number(r.location) || 0) + 1, me: r.telegramId === tgUser.id }; })
+    .sort((a, b) => b.percent - a.percent);
+  res.json({ ok: true, readers, count: readers.length, book: { title: book?.title || '', author: book?.author || '', cover: book?.cover || '' } });
+});
+
+app.post('/api/book/board', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  const bookId = await bookIdNow();
+  const [rows, users] = await Promise.all([getAllReading(bookId), getUsers()]);
+  const byId = {}; users.forEach((u) => { byId[u.telegramId] = u; });
+  const board = rows.filter((r) => byId[r.telegramId])
+    .map((r) => ({ telegramId: r.telegramId, name: shortName(byId[r.telegramId]), percent: Math.round(r.percent || 0), me: r.telegramId === tgUser.id }))
+    .sort((a, b) => b.percent - a.percent);
+  res.json({ ok: true, board });
 });
 
 // Публичный конфиг Қаржы (категории + банки) — мини-апп берёт отсюда
