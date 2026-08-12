@@ -771,14 +771,15 @@ app.post('/api/book/quote/add', async (req, res) => {
   const text = String(req.body?.text || '').trim().slice(0, 600);
   if (!text) return res.status(400).json({ ok: false, error: 'Мәтін бос' });
   const user = await getUser(tgUser.id);
-  const q = await addQuote({ bookId: await bookIdNow(), telegramId: tgUser.id, name: shortName(user), text,
-    ch: Number(req.body?.ch) || 0, color: String(req.body?.color || '#F6C945').slice(0, 24) });
+  const bk = await getBook();
+  const q = await addQuote({ bookId: (bk && bk.fileId) ? bk.fileId : 'none', book: (bk && bk.title) || '', telegramId: tgUser.id,
+    name: shortName(user), text, ch: Number(req.body?.ch) || 0, color: String(req.body?.color || '#F6C945').slice(0, 24) });
   res.json({ ok: true, quote: q });
 });
 app.post('/api/book/quote/list', async (req, res) => {
   const tgUser = requireTelegram(req, res); if (!tgUser) return;
   const rows = await listQuotes(await bookIdNow());
-  res.json({ ok: true, quotes: rows.map((q) => ({ id: q.id, name: q.name, text: q.text, ch: q.ch, color: q.color,
+  res.json({ ok: true, quotes: rows.map((q) => ({ id: q.id, name: q.name, book: q.book || '', text: q.text, ch: q.ch, color: q.color,
     createdAt: q.createdAt, likes: (q.likes || []).length, liked: (q.likes || []).includes(tgUser.id), mine: q.telegramId === tgUser.id })) });
 });
 app.post('/api/book/quote/like', async (req, res) => {
