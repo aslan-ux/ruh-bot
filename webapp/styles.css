@@ -841,3 +841,36 @@ button:active { transform: scale(.96); }
 .rp-add input:focus { border-color:var(--accent); }
 .rp-add button { border:none; background:var(--accent); color:var(--on-accent); border-radius:12px; padding:0 16px; font-size:14px; font-weight:600; cursor:pointer; }
 .rp-empty { text-align:center; color:var(--green-soft); font-size:13.5px; padding:20px 0; }
+
+
+/* ---------- Сөре: оқырман = кітап тұрқы ---------- */
+.room-seats { align-items:flex-end; gap:14px 8px; padding-bottom:14px; position:relative; }
+.room-seats::after { content:''; position:absolute; left:6%; right:6%; bottom:6px; height:3px; border-radius:3px;
+  background:linear-gradient(90deg, transparent, rgba(255,205,130,.55), transparent); }
+.spine { width:52px; display:flex; flex-direction:column; align-items:center; gap:6px;
+  animation:spineIn .45s cubic-bezier(.22,1,.36,1) backwards; }
+@keyframes spineIn { from{opacity:0; transform:translateY(14px) rotate(-4deg)} to{opacity:1; transform:none} }
+.sp-body { position:relative; width:34px; height:86px; border-radius:5px 5px 3px 3px; overflow:hidden;
+  background:linear-gradient(180deg, hsl(var(--h,35) 45% 30%), hsl(var(--h,35) 42% 22%));
+  box-shadow:inset -3px 0 6px rgba(0,0,0,.35), inset 2px 0 3px rgba(255,255,255,.10), 0 5px 12px rgba(0,0,0,.32);
+  display:flex; align-items:flex-end; justify-content:center; }
+.sp-fill { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(180deg, rgba(255,214,140,.95), rgba(244,178,74,.85));
+  transition:height .6s cubic-bezier(.22,1,.36,1); }
+.sp-in { position:relative; z-index:2; font-size:13px; font-weight:800; color:#2A1E12; margin-bottom:8px;
+  text-shadow:0 1px 0 rgba(255,255,255,.28); }
+.sp-live { position:absolute; top:6px; left:50%; transform:translateX(-50%); width:6px; height:6px; border-radius:50%;
+  background:#7BE49A; box-shadow:0 0 8px rgba(123,228,154,.9); animation:livePulse 2s infinite; z-index:2; }
+.spine.me .sp-body { box-shadow:inset -3px 0 6px rgba(0,0,0,.3), 0 0 0 2px rgba(255,206,120,.75), 0 6px 16px rgba(0,0,0,.35); }
+.spine.empty .sp-body { background:transparent; border:1.5px dashed rgba(240,226,204,.42); box-shadow:none; align-items:center; }
+.spine.empty .sp-in { color:rgba(240,226,204,.72); margin:0; font-weight:600; font-size:16px; }
+:root:not([data-theme="dark"]) .spine.empty .sp-body { border-color:rgba(74,56,42,.32); }
+:root:not([data-theme="dark"]) .spine.empty .sp-in { color:rgba(74,56,42,.6); }
+.sp-nm { font-size:11px; font-weight:600; color:#F0E2CC; max-width:56px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-pg { font-size:10px; color:rgba(240,226,204,.62); }
+:root:not([data-theme="dark"]) .sp-nm { color:#4A382A; }
+:root:not([data-theme="dark"]) .sp-pg { color:rgba(74,56,42,.62); }
+
+/* CTA — дана сөз */
+.room-cta { flex-direction:column; gap:3px; padding:15px 16px; text-align:center; }
+.cta-q { font-size:15.5px; font-weight:700; line-height:1.35; }
+.cta-a { font-size:11.5px; font-weight:600; opacity:.72; }

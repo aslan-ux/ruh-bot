@@ -1893,13 +1893,16 @@ async function loadRoom(){
     const list = r.readers || [];
     cnt.textContent = list.length ? (list.length + ' адам қазір оқып отыр') : 'Әзірге ешкім оқымай тұр';
     const mine = list.some(x=>x.me);
-    let html = list.map((x,i)=>(
-      '<div class="seat'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.05)+'s">'+
-      '<div class="seat-av">'+roomEsc(x.initial)+'<span class="dot"></span></div>'+
-      '<div class="seat-nm">'+roomEsc(x.me?'Сен':x.name)+'</div>'+
-      '<div class="seat-pg">'+x.percent+'% · '+x.page+'-бет</div></div>'
-    )).join('');
-    if(!mine) html += '<div class="seat empty" id="seatFree"><div class="seat-av">+</div><div class="seat-nm">Сенің орның</div><div class="seat-pg">бос</div></div>';
+    let html = list.map((x,i)=>{
+      const seed=String(x.telegramId||i).split('').reduce((s,c)=>s+c.charCodeAt(0),0);
+      const hue=(seed*47)%360;
+      return '<div class="spine'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.06)+'s;--h:'+hue+'">'+
+        '<div class="sp-body"><span class="sp-fill" style="height:'+Math.max(8,Math.min(100,x.percent))+'%"></span>'+
+        '<span class="sp-in">'+roomEsc(x.initial)+'</span><span class="sp-live"></span></div>'+
+        '<div class="sp-nm">'+roomEsc(x.me?'Сен':x.name)+'</div>'+
+        '<div class="sp-pg">'+x.percent+'% · '+x.page+'</div></div>';
+    }).join('');
+    if(!mine) html += '<div class="spine empty" id="seatFree"><div class="sp-body"><span class="sp-in">+</span></div><div class="sp-nm">Сенің орның</div><div class="sp-pg">бос</div></div>';
     seats.innerHTML = html || '<div class="room-empty">Бірінші болып отыр — оқуды баста</div>';
     const free=document.getElementById('seatFree');
     if(free) free.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
@@ -1981,7 +1984,18 @@ document.querySelectorAll('#roomSeg button').forEach(b=>b.addEventListener('clic
 document.getElementById('roomRefresh')?.addEventListener('click', ()=>{ loadRoom(); loadRoomStats(); roomRender(); });
 document.getElementById('roomSit')?.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
 
+const RQ=[
+  { t:'Кел, балалар, оқылық!', a:'Ыбырай Алтынсарин' },
+  { t:'Ғылым таппай мақтанба', a:'Абай Құнанбайұлы' },
+  { t:'Білімдіден шыққан сөз, талаптыға болсын кез', a:'Абай Құнанбайұлы' },
+];
+function roomQuote(){
+  const b=document.getElementById('roomSit'); if(!b) return;
+  const q=RQ[Math.floor(Math.random()*RQ.length)];
+  b.innerHTML='<span class="cta-q">«'+q.t+'»</span><span class="cta-a">'+q.a+' · оқуды баста</span>';
+}
 function roomStart(){
+  roomQuote();
   loadRoom(); loadRoomStats(); roomRender();
   clearInterval(ROOM.timer);
   ROOM.timer=setInterval(()=>{ const s=document.getElementById('screen-home'); if(s&&s.classList.contains('active')) loadRoom(); }, 20000);
