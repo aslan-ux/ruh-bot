@@ -159,6 +159,37 @@
         <button type="button" id="readBookBtn" class="read-btn"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-book"/></svg>Оқу</button>
       </div>
     </div>
+
+    <!-- ОҚУ ЗАЛЫ -->
+    <section class="room">
+      <div class="room-head">
+        <div>
+          <div class="room-title">Оқу залы</div>
+          <div class="room-sub"><span class="live-dot"></span><span id="roomCount">Ешкім оқымай тұр</span></div>
+        </div>
+        <button type="button" id="roomRefresh" class="room-ic" aria-label="Жаңарту"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-refresh"/></svg></button>
+      </div>
+
+      <div class="room-scene" id="roomScene">
+        <div class="room-glow"></div>
+        <div class="room-seats" id="roomSeats"></div>
+      </div>
+
+      <div class="room-stats">
+        <div class="rs"><div class="rs-v" id="stWeek">0</div><div class="rs-l">Бұл апта, мин</div></div>
+        <div class="rs"><div class="rs-v" id="stPages">0</div><div class="rs-l">Бет</div></div>
+        <div class="rs"><div class="rs-v" id="stStreak">0</div><div class="rs-l">Күн қатар</div></div>
+      </div>
+
+      <button type="button" id="roomSit" class="room-cta"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-book"/></svg>Орныңа отыр — оқуды баста</button>
+
+      <div class="room-seg" id="roomSeg">
+        <button type="button" class="on" data-rs="board">Рейтинг</button>
+        <button type="button" data-rs="quotes">Дәйексөздер</button>
+        <button type="button" data-rs="talk">Талқылау</button>
+      </div>
+      <div class="room-pane" id="roomPane"></div>
+    </section>
   </section>
 
   <!-- ЭКРАН: Оқу (ридер) -->
@@ -200,6 +231,7 @@
       <div class="rd-sel-list">
         <button type="button" data-act="note"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-note"/></svg><span>Жазба қосу</span></button>
         <button type="button" data-act="copy"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-copy"/></svg><span>Көшіру</span></button>
+        <button type="button" data-act="share"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-people"/></svg><span>Бөлісу</span></button>
         <button type="button" data-act="search"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>Іздеу</span></button>
         <button type="button" data-act="remove" class="rd-sel-del"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"/></svg><span>Жою</span></button>
       </div>

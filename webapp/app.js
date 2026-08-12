@@ -259,7 +259,7 @@ function show(screen) {
   });
   document.getElementById('tabbar').style.display =
     (screen === 'register' || screen === 'pending') ? 'none' : 'flex';
-  if (screen === 'home') loadBook();
+  if (screen === 'home') { loadBook(); try { roomStart(); } catch {} }
   if (screen === 'qadam') loadQadam();
   if (screen === 'qarjy') loadFin();
   if (screen === 'profile') loadFriends();
@@ -414,6 +414,7 @@ async function openReader(){
   try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch {}
   rdApplyInsets();
   rdChromeSpace();
+  try { RPING.active=true; RPING.last=Date.now(); RPING.pages=0; } catch {}
   try {
     if(tg && tg.onEvent && !window.__rdInsetEv){
       window.__rdInsetEv=1;
@@ -447,6 +448,8 @@ function closeReader(){
   rd.classList.remove('immersive');
   try { tg.exitFullscreen && tg.exitFullscreen(); } catch {}
   try { tg.enableVerticalSwipes && tg.enableVerticalSwipes(); } catch {}
+  try { rdPingTick(); RPING.active=false; } catch {}
+  try { loadRoom(); loadRoomStats(); } catch {}
   rdPanelClose();
   try { if(RD.book && RD.book.destroy) RD.book.destroy(); } catch {}
   RD.book=null; RD.pdf=null; RD.chapters=[]; RD.ch=0;
@@ -595,7 +598,7 @@ function rdGoPage(i, anim, dir){
     page.style.transition='transform .3s cubic-bezier(.22,1,.36,1)';
     page.style.transform='translateX(' + x + 'px)';
   }
-  if(i!==prev) rdHaptic('light');
+  if(i!==prev){ rdHaptic('light'); try{ RPING.pages++; }catch{} }
   rdUpdateProgress();
 }
 // Саусақпен сүйреу: бет саусақтың артынан жүреді
@@ -1017,6 +1020,14 @@ document.querySelectorAll('#rdSel .rd-sel-list button').forEach(b=>b.addEventLis
   else if(a==='note') rdSelNote();
   else if(a==='remove') rdSelRemove();
   else if(a==='search'){ const q=(RD.sel&&RD.sel.text)||''; rdClearSelection(); rdSelHide(); rdOpenSearch(q.slice(0,60)); rdPanel('rdSearch'); }
+  else if(a==='share'){
+    const s=RD.sel; if(!s||!s.text) return;
+    const color=(s.existing>=0 && RD.reading.highlights[s.existing]) ? RD.reading.highlights[s.existing].color : '#F6C945';
+    api('/api/book/quote/add', { text:s.text, ch:(RD.ch||0)+1, color })
+      .then((r)=>{ rdToast(r&&r.ok ? 'Оқу залына жіберілді' : 'Қате'); })
+      .catch(()=>rdToast('Қате'));
+    rdClearSelection(); rdSelHide();
+  }
 }));
 // iOS: ұзақ басу арқылы ерекшелеу touchend бермейді — selectionchange бойынша ұстаймыз
 let rdSelT=null;
@@ -1867,3 +1878,125 @@ async function init() {
   }
 }
 init();
+
+
+/* ================= ОҚУ ЗАЛЫ (басты бет) ================= */
+const ROOM = { tab:'board', timer:null, quotes:[], board:[], comments:[] };
+function roomEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function loadRoom(){
+  try{
+    const r = await api('/api/book/room', {});
+    if(!r.ok) return;
+    const seats = document.getElementById('roomSeats');
+    const cnt = document.getElementById('roomCount');
+    const list = r.readers || [];
+    cnt.textContent = list.length ? (list.length + ' адам қазір оқып отыр') : 'Әзірге ешкім оқымай тұр';
+    const mine = list.some(x=>x.me);
+    let html = list.map((x,i)=>(
+      '<div class="seat'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.05)+'s">'+
+      '<div class="seat-av">'+roomEsc(x.initial)+'<span class="dot"></span></div>'+
+      '<div class="seat-nm">'+roomEsc(x.me?'Сен':x.name)+'</div>'+
+      '<div class="seat-pg">'+x.percent+'% · '+x.page+'-бет</div></div>'
+    )).join('');
+    if(!mine) html += '<div class="seat empty" id="seatFree"><div class="seat-av">+</div><div class="seat-nm">Сенің орның</div><div class="seat-pg">бос</div></div>';
+    seats.innerHTML = html || '<div class="room-empty">Бірінші болып отыр — оқуды баста</div>';
+    const free=document.getElementById('seatFree');
+    if(free) free.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
+  }catch{}
+}
+
+async function loadRoomStats(){
+  try{
+    const r = await api('/api/book/stats/me', {});
+    if(!r.ok) return;
+    document.getElementById('stWeek').textContent = r.totalMin || 0;
+    document.getElementById('stPages').textContent = r.totalPages || 0;
+    document.getElementById('stStreak').textContent = r.streak || 0;
+  }catch{}
+}
+
+async function roomRender(){
+  const pane = document.getElementById('roomPane');
+  if(!pane) return;
+  if(ROOM.tab==='board'){
+    pane.innerHTML = '<div class="rp-empty">Жүктелуде…</div>';
+    const r = await api('/api/book/board', {});
+    const b = (r && r.board) || [];
+    pane.innerHTML = b.length ? b.map((x,i)=>(
+      '<div class="rp-row'+(x.me?' me':'')+'"><div class="rp-rank">'+(i+1)+'</div>'+
+      '<div class="rp-main"><div class="rp-nm">'+roomEsc(x.me?'Сен':x.name)+'</div>'+
+      '<div class="rp-bar"><i style="width:'+Math.min(100,x.percent)+'%"></i></div></div>'+
+      '<div class="rp-pct">'+x.percent+'%</div></div>'
+    )).join('') : '<div class="rp-empty">Әзірге оқыған ешкім жоқ</div>';
+  }
+  else if(ROOM.tab==='quotes'){
+    pane.innerHTML = '<div class="rp-empty">Жүктелуде…</div>';
+    const r = await api('/api/book/quote/list', {});
+    ROOM.quotes = (r && r.quotes) || [];
+    pane.innerHTML = ROOM.quotes.length ? ROOM.quotes.map((q)=>(
+      '<div class="rp-q"><div class="q-txt" style="border-color:'+roomEsc(q.color||'#F6C945')+'">'+roomEsc(q.text)+'</div>'+
+      '<div class="q-foot"><span>'+roomEsc(q.name)+' · '+q.ch+'-бөлім</span>'+
+      '<span><button class="rp-like'+(q.liked?' on':'')+'" data-like="'+q.id+'">'+
+      '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-heart"/></svg>'+q.likes+'</button>'+
+      (q.mine?'<button class="rp-like" data-delq="'+q.id+'">жою</button>':'')+'</span></div></div>'
+    )).join('') : '<div class="rp-empty">Кітаптан мәтінді ерекшелеп, «Бөлісу» бас — осы жерде шығады</div>';
+    pane.querySelectorAll('[data-like]').forEach(el=>el.addEventListener('click', async ()=>{
+      const r2 = await api('/api/book/quote/like', { id: el.dataset.like });
+      if(r2 && r2.ok) roomRender();
+    }));
+    pane.querySelectorAll('[data-delq]').forEach(el=>el.addEventListener('click', async ()=>{
+      if(!confirm('Дәйексөзді жоямыз ба?')) return;
+      await api('/api/book/quote/delete', { id: el.dataset.delq }); roomRender();
+    }));
+  }
+  else {
+    const r = await api('/api/book/comment/list', {});
+    const cs = (r && r.comments) || [];
+    const body = cs.length ? cs.map((c)=>(
+      '<div class="rp-q"><div style="font-size:14px;line-height:1.5">'+roomEsc(c.text)+'</div>'+
+      '<div class="q-foot"><span>'+roomEsc(c.name)+' · '+c.ch+'-бөлім</span>'+
+      (c.mine?'<button class="rp-like" data-delc="'+c.id+'">жою</button>':'')+'</div></div>'
+    )).join('') : '<div class="rp-empty">Әзірге пікір жоқ — бірінші болып жаз</div>';
+    pane.innerHTML = '<div class="rp-add"><input id="rcInput" placeholder="Пікіріңді жаз…" maxlength="500"/><button id="rcSend">Жіберу</button></div>'+body;
+    const send=async ()=>{
+      const inp=document.getElementById('rcInput'); const t=(inp.value||'').trim();
+      if(!t) return;
+      inp.value='';
+      await api('/api/book/comment/add', { text:t, ch:(typeof RD!=='undefined' && RD.ch!=null ? RD.ch+1 : 0) });
+      roomRender();
+    };
+    document.getElementById('rcSend').addEventListener('click', send);
+    document.getElementById('rcInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') send(); });
+    pane.querySelectorAll('[data-delc]').forEach(el=>el.addEventListener('click', async ()=>{
+      await api('/api/book/comment/delete', { id: el.dataset.delc }); roomRender();
+    }));
+  }
+}
+
+document.querySelectorAll('#roomSeg button').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('#roomSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); ROOM.tab=b.dataset.rs; roomRender();
+}));
+document.getElementById('roomRefresh')?.addEventListener('click', ()=>{ loadRoom(); loadRoomStats(); roomRender(); });
+document.getElementById('roomSit')?.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
+
+function roomStart(){
+  loadRoom(); loadRoomStats(); roomRender();
+  clearInterval(ROOM.timer);
+  ROOM.timer=setInterval(()=>{ const s=document.getElementById('screen-home'); if(s&&s.classList.contains('active')) loadRoom(); }, 20000);
+}
+
+/* ---- Оқу «тірі сигналы»: шынымен оқығанда ғана ---- */
+const RPING = { last:0, pages:0, active:false };
+function rdPingTick(){
+  if(!RPING.active) return;
+  const now=Date.now();
+  if(now-RPING.last < 30000) return;
+  const secs=Math.min(120, Math.round((now-RPING.last)/1000));
+  RPING.last=now;
+  const pages=RPING.pages; RPING.pages=0;
+  if(secs<5) return;
+  api('/api/book/stats/ping', { seconds:secs, pages }).catch(()=>{});
+}
+setInterval(rdPingTick, 15000);
