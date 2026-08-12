@@ -448,7 +448,7 @@ function closeReader(){
   rd.classList.remove('immersive');
   try { tg.exitFullscreen && tg.exitFullscreen(); } catch {}
   try { tg.enableVerticalSwipes && tg.enableVerticalSwipes(); } catch {}
-  try { rdPingTick(); RPING.active=false; } catch {}
+  try { rdPingTick(true); RPING.active=false; } catch {}
   try { loadRoom(); loadRoomStats(); } catch {}
   rdPanelClose();
   try { if(RD.book && RD.book.destroy) RD.book.destroy(); } catch {}
@@ -901,7 +901,7 @@ async function rdRenderPdf(n){
 function rdNext(){
   if(RD.fmt==='pdf') return rdRenderPdf(RD.page+1);
   if(RD.pg < RD.pages-1) rdGoPage(RD.pg+1, true, 'next');
-  else if(RD.ch < RD.total-1){ rdHaptic('medium'); rdRenderChapter(RD.ch+1, 0); }
+  else if(RD.ch < RD.total-1){ rdHaptic('medium'); try{ RPING.pages++; }catch{} rdRenderChapter(RD.ch+1, 0); }
   else rdGoPage(RD.pg);
 }
 function rdPrev(){
@@ -1897,16 +1897,17 @@ async function loadRoom(){
     let html = list.map((x,i)=>{
       const seed=String(x.telegramId||i).split('').reduce((s,c)=>s+c.charCodeAt(0),0);
       const c = x.me ? 'var(--accent)' : SPC[seed%SPC.length];
-      const h = 72 + (seed%5)*11;
+      const h = 96 + (seed%5)*12;
       const nm = x.me ? 'Сен' : x.name;
       return '<div class="spine'+(x.me?' me':'')+'" style="animation-delay:'+(i*0.05)+'s">'+
         '<div class="sp-body" style="--c:'+c+';height:'+h+'px">'+
-        '<span class="sp-fill" style="height:'+Math.max(6,Math.min(100,x.percent))+'%"></span>'+
-        '<span class="sp-name">'+roomEsc(nm)+'</span></div>'+
-        '<span class="sp-live"></span>'+
+        '<span class="sp-band top"></span><span class="sp-band bot"></span>'+
+        '<span class="sp-name">'+roomEsc(nm)+'</span>'+
+        '<span class="sp-pages"><i style="height:'+Math.max(4,Math.min(100,x.percent))+'%"></i></span>'+
+        '</div><span class="sp-live"></span>'+
         '<div class="sp-pg">'+x.percent+'% · '+x.page+'</div></div>';
     }).join('');
-    if(!mine) html += '<div class="spine empty" id="seatFree"><div class="sp-body" style="height:80px"><span class="sp-name">Сенің орның</span></div><div class="sp-pg">бос</div></div>';
+    if(!mine) html += '<div class="spine empty" id="seatFree"><div class="sp-body" style="height:104px"><span class="sp-name">Сенің орның</span></div><div class="sp-pg">бос</div></div>';
     seats.innerHTML = html || '<div class="room-empty">Бірінші болып отыр — оқуды баста</div>';
     const free=document.getElementById('seatFree');
     if(free) free.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
@@ -1943,7 +1944,7 @@ async function roomRender(){
     ROOM.quotes = (r && r.quotes) || [];
     pane.innerHTML = ROOM.quotes.length ? ROOM.quotes.map((q)=>(
       '<div class="rp-q"><div class="q-txt" style="border-color:'+roomEsc(q.color||'#F6C945')+'">'+roomEsc(q.text)+'</div>'+
-      '<div class="q-foot"><span>'+roomEsc(q.name)+' · '+q.ch+'-бөлім</span>'+
+      '<div class="q-foot"><span>'+roomEsc(q.name)+(q.book?(' · '+roomEsc(q.book)):'')+' · '+q.ch+'-бөлім</span>'+
       '<span><button class="rp-like'+(q.liked?' on':'')+'" data-like="'+q.id+'">'+
       '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-heart"/></svg>'+q.likes+'</button>'+
       (q.mine?'<button class="rp-like" data-delq="'+q.id+'">жою</button>':'')+'</span></div></div>'
@@ -1988,11 +1989,13 @@ document.querySelectorAll('#roomSeg button').forEach(b=>b.addEventListener('clic
 document.getElementById('roomRefresh')?.addEventListener('click', ()=>{ loadRoom(); loadRoomStats(); roomRender(); });
 document.getElementById('roomSit')?.addEventListener('click', ()=>{ const b=document.getElementById('readBookBtn'); if(b) b.click(); });
 
-const RQ=[
+const RQ_AUTHOR=[
   { t:'Кел, балалар, оқылық!', a:'Ыбырай Алтынсарин' },
   { t:'Ғылым таппай мақтанба', a:'Абай Құнанбайұлы' },
   { t:'Білімдіден шыққан сөз, талаптыға болсын кез', a:'Абай Құнанбайұлы' },
 ];
+const RQ_PROVERB=["Оқу — білім бұлағы, білім — өмір шырағы","Білекті бірді жығады, білімді мыңды жығады","Оқыған озар, оқымаған тозар","Кітап — білім бұлағы","Білім — таусылмас қазына","Кітапсыз үй — терезесіз үй","Жақсы кітап — жан азығы","Оқу инемен құдық қазғандай","Білімдіге дүние жарық, білімсіздің күні кәріп","Көп оқыған көп біледі","Аз сөйле, көп тыңда","Білгенге маржан, білмеске арзан","Ғылым — теңіз, білім — қайық","Ұстазы жақсының — ұстамы жақсы","Оқусыз білім жоқ, білімсіз күнің жоқ","Кітап — адал дос","Білім — қуат","Оқу — жақсылықтың бастауы","Тіл — ойдың кілті, кітап — білімнің кілті","Еңбек түбі — береке, білім түбі — мереке","Жасында білім алмаған, қартайғанда өкінер","Білім — ақылдың шырағы","Ойлы адам — оқыған адам","Кітап оқысаң — көп білесің","Білім — байлықтың атасы","Оқып жүріп ойлан, ойланып жүріп оқы","Ақыл — тозбайтын киім, білім — таусылмайтын кен","Мың сөзден бір іс артық","Білімге жеткізер — ізденіс","Оқу — өмірлік жол","Кітап — үнсіз ұстаз","Білім қуған — мұратына жеткен","Оқыған адам — озық адам","Ізденген — жетер мұратқа","Оқу — ұзақ жол, шыдамдылық — азық","Білім алу — үлкен еңбек","Тәрбие — тал бесіктен","Ұяда не көрсең, ұшқанда соны ілесің","Досың жақсы болса — жолың жақсы, кітабың жақсы болса — ойың жақсы","Білімсіз бір күн — жоғалған күн","Кітап — ақылдың кені","Оқығанды ойға түй, ойға түйгенді іске асыр","Сабыр түбі — сары алтын","Аз оқып, көп ойлан","Оқуға ерінбе, білімге серік бол"];
+const RQ=RQ_AUTHOR.concat(RQ_PROVERB.map((t)=>({ t, a:'Қазақ мақалы' })));
 function roomQuote(){
   const b=document.getElementById('roomSit'); if(!b) return;
   const q=RQ[Math.floor(Math.random()*RQ.length)];
@@ -2007,10 +2010,10 @@ function roomStart(){
 
 /* ---- Оқу «тірі сигналы»: шынымен оқығанда ғана ---- */
 const RPING = { last:0, pages:0, active:false };
-function rdPingTick(){
+function rdPingTick(force){
   if(!RPING.active) return;
   const now=Date.now();
-  if(now-RPING.last < 30000) return;
+  if(!force && now-RPING.last < 30000) return;
   const secs=Math.min(120, Math.round((now-RPING.last)/1000));
   RPING.last=now;
   const pages=RPING.pages; RPING.pages=0;

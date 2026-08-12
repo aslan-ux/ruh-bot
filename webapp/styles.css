@@ -946,3 +946,23 @@ button:active { transform: scale(.96); }
 .spine.empty .sp-body { background:transparent; box-shadow:inset 0 0 0 1px rgba(201,167,107,.35); border:none; }
 .spine.empty .sp-name { color:rgba(241,235,220,.6); }
 :root:not([data-theme="dark"]) .spine.empty .sp-name { color:rgba(46,52,40,.55); }
+
+
+/* ---------- Кітап тұрқы: нағыз кітап сияқты ---------- */
+.sp-body {
+  width:34px; border-radius:2px 4px 4px 2px; overflow:hidden;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--c) 62%, #000) 0 3px, var(--c) 3px 100%);
+  box-shadow:inset -7px 0 9px -7px rgba(0,0,0,.55), inset 1px 0 0 rgba(255,255,255,.12), 0 5px 12px rgba(0,0,0,.34);
+  display:flex; align-items:center; justify-content:center;
+}
+.sp-pages { position:absolute; right:0; top:4px; bottom:4px; width:6px; border-radius:0 3px 3px 0; overflow:hidden;
+  background:repeating-linear-gradient(180deg, #F4EEE1 0 2px, #DED3BE 2px 3px); box-shadow:inset 1px 0 2px rgba(0,0,0,.28); }
+.sp-pages i { position:absolute; left:0; right:0; bottom:0; display:block;
+  background:linear-gradient(180deg, #E4C583, #C9A24E); transition:height .7s cubic-bezier(.22,1,.36,1); }
+.sp-band { position:absolute; left:3px; right:7px; height:2px; background:rgba(236,219,178,.5); }
+.sp-band.top { top:11px; } .sp-band.bot { bottom:11px; }
+.sp-band::after { content:''; position:absolute; left:0; right:0; height:1px; background:rgba(236,219,178,.28); }
+.sp-band.top::after { top:4px; } .sp-band.bot::after { bottom:4px; }
+.sp-name { max-height:66%; font-size:10.5px; letter-spacing:.3px; padding-right:5px; }
+.sp-fill { display:none; }
+.spine.empty .sp-body { background:transparent; box-shadow:inset 0 0 0 1px rgba(201,167,107,.35); }
