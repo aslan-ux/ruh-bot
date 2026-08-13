@@ -1121,7 +1121,7 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
 .mk2.idle .d { opacity:.5; }
 .mk2:not(.idle):not(.me) .d { animation:mk2Pop .45s cubic-bezier(.22,1,.36,1) backwards, mk2Pulse 2.6s 1s ease-in-out infinite; }
 @keyframes mk2Pulse { 0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.16)} 50%{box-shadow:0 0 0 4px var(--accent-soft), 0 2px 8px rgba(0,0,0,.16)} }
-.mk2 .l { position:absolute; left:50%; transform:translateX(-50%); top:-16px;
+.mk2 .l { position:absolute; left:50%; transform:translateX(-50%); bottom:-15px;
   white-space:nowrap; font-size:10px; font-weight:600; color:var(--placeholder);
   text-shadow:0 1px 2px var(--card); opacity:0; transition:opacity .2s ease; pointer-events:none; }
 .mk2.me .l, .mk2.open .l { opacity:1; }

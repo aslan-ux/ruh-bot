@@ -2266,12 +2266,12 @@ async function loadRoom(){
       }).join('');
     }
     const used=[];
-    const lane=(pct)=>{ let l=0; while(used.some((u)=>Math.abs(u.p-pct)<7 && u.l===l)) l++; used.push({p:pct,l:l}); return l; };
+    const lane=(pct)=>{ let l=0; while(used.some((u)=>Math.abs(u.p-pct)<9 && u.l===l)) l++; used.push({p:pct,l:l}); return l; };
     const sorted=list.slice().sort((a,b)=>(Number(a.percent)||0)-(Number(b.percent)||0));
     marks.innerHTML = sorted.map((x)=>{
       const pct=Math.max(0, Math.min(100, Math.round(Number(x.percent)||0)));
       const p=ptAt(pct), n=normAt(pct), l=lane(pct);
-      const ox=(n.x*l*17).toFixed(1), oy=(n.y*l*17).toFixed(1);
+      const ox=(n.x*l*27).toFixed(1), oy=(n.y*l*27).toFixed(1);
       const lbl = x.me ? ('Сен · '+pct+'%') : (roomEsc(x.name||'')+(x.page?(' · '+x.page+'-бет'):''));
       return '<div class="mk2'+(x.me?' me':'')+(x.idle?' idle':'')+'" style="left:'+(p.x/320*100).toFixed(2)+'%;top:'+(p.y/150*100).toFixed(2)+'%;--ox:'+ox+'px;--oy:'+oy+'px">'
         + '<span class="d">'+roomEsc(x.initial||'•')+'</span>'
