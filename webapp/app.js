@@ -2201,3 +2201,76 @@ function rdPingTick(force){
   api('/api/book/stats/ping', { seconds:secs, pages }).catch(()=>{});
 }
 setInterval(rdPingTick, 15000);
+
+/* ================= Оқу залы: Іле Алатауының шыңына апарар жол ================= */
+const MTN_PEAKS = [
+  { at:20,  name:'Фурманов шыңы',     h:'3053 м' },
+  { at:40,  name:'Күмбел шыңы',       h:'3200 м' },
+  { at:60,  name:'Үлкен Алматы шыңы', h:'3681 м' },
+  { at:80,  name:'Нұрсұлтан шыңы',    h:'4376 м' },
+  { at:100, name:'Талғар шыңы',       h:'4979 м' }
+];
+const MTN_D = 'M12,138C46,132 58,117 84,111C112,105 122,97 146,93C176,88 186,75 212,65C238,55 252,45 278,29';
+function mtnHtml(){
+  return '<div class="mtn">'
+    + '<svg class="mtn-svg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-hidden="true">'
+      + '<path class="mtn-far" d="M0,150L0,96L40,66L74,94L116,54L158,90L198,62L236,92L272,50L306,82L320,68L320,150Z"/>'
+      + '<path class="mtn-near" d="M0,150L0,126L36,104L74,122L116,94L152,120L200,86L244,112L278,26L320,70L320,150Z"/>'
+      + '<path class="mtn-snow" d="M278,26L293,42L272,42Z"/>'
+      + '<path class="mtn-trail" d="' + MTN_D + '"/>'
+      + '<path class="mtn-done" id="mtnDone" d="' + MTN_D + '"/>'
+      + '<g id="mtnMs"></g>'
+    + '</svg>'
+    + '<div class="mtn-top"><div class="n">Талғар шыңы</div><div class="h">4979 м</div></div>'
+    + '<div class="mtn-marks" id="mtnMarks"></div>'
+    + '<div class="mtn-goal" id="mtnGoal"></div>'
+  + '</div>';
+}
+async function loadRoom(){
+  try{
+    const r = await api('/api/book/room', {});
+    const box = document.getElementById('roomSeats');
+    if(!box) return;
+    let list = (r && r.readers) ? r.readers.slice() : [];
+    const live = list.filter((x)=>!x.idle).length;
+    const cnt = document.getElementById('roomCount');
+    if(cnt) cnt.textContent = live ? (live + ' адам жолда') : 'Әзірге жолда ешкім жоқ';
+    const myPct = Math.max(0, Math.min(100, Math.round(Number(ROOM.myPercent)||0)));
+    if(!list.some((x)=>x.me) && (myPct>0 || (Number(ROOM.myPage)||0)>0)){
+      list.push({ me:true, idle:true, percent:myPct, page:ROOM.myPage||0, name:'Сен', initial:'С' });
+    }
+    box.innerHTML = mtnHtml();
+    const trail=box.querySelector('.mtn-trail');
+    const done=box.querySelector('#mtnDone');
+    const msG=box.querySelector('#mtnMs');
+    const marks=box.querySelector('#mtnMarks');
+    if(!trail||!marks) return;
+    const TL=trail.getTotalLength();
+    const at=(pct)=>{ const p=trail.getPointAtLength(TL*Math.max(0,Math.min(100,pct))/100); return { x:p.x/320*100, y:p.y/150*100 }; };
+    if(done){ done.style.strokeDasharray=TL+' '+TL; done.style.strokeDashoffset=String(TL); requestAnimationFrame(()=>{ done.style.strokeDashoffset=String(TL*(1-myPct/100)); }); }
+    if(msG){
+      msG.innerHTML = MTN_PEAKS.map((pk)=>{
+        if(pk.at>=100) return '';
+        const p=trail.getPointAtLength(TL*pk.at/100);
+        return '<circle class="mtn-ms'+(myPct>=pk.at?' on':'')+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.6"/>';
+      }).join('');
+    }
+    const used=[];
+    const lane=(x)=>{ let l=0; while(used.some((u)=>Math.abs(u.x-x)<8 && u.l===l)) l++; used.push({x:x,l:l}); return l; };
+    const sorted=list.slice().sort((a,b)=>(Number(a.percent)||0)-(Number(b.percent)||0));
+    marks.innerHTML = sorted.map((x)=>{
+      const pct=Math.max(0, Math.min(100, Math.round(Number(x.percent)||0)));
+      const p=at(pct); const l=lane(p.x);
+      const lbl = x.me ? ('Сен · '+pct+'%') : (roomEsc(x.name||'')+(x.page?(' · '+x.page+'-бет'):''));
+      return '<div class="mk2'+(x.me?' me':'')+(x.idle?' idle':'')+'" style="left:'+p.x.toFixed(2)+'%;top:'+p.y.toFixed(2)+'%;--l:'+l+'">'
+        + '<span class="d">'+roomEsc(x.initial||'•')+'</span>'
+        + '<span class="l">'+lbl+'</span></div>';
+    }).join('');
+    marks.querySelectorAll('.mk2').forEach((el)=>el.addEventListener('click',()=>el.classList.toggle('open')));
+    const goal=document.getElementById('mtnGoal');
+    if(goal){
+      const nx=MTN_PEAKS.filter((pk)=>myPct<pk.at)[0];
+      goal.innerHTML = nx ? ('Келесі белес — <b>'+nx.name+'</b> · '+(nx.at-myPct)+'% қалды') : ('<b>Талғар шыңы</b> — бағындырылды');
+    }
+  }catch(e){}
+}
