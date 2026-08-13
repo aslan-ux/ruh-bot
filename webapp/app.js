@@ -2202,7 +2202,7 @@ function rdPingTick(force){
 }
 setInterval(rdPingTick, 15000);
 
-/* ================= Оқу залы: Іле Алатауының шыңына апарар жол ================= */
+/* ================= Оқу залы: Іле Алатауының шыңына апарар жол =================
 const MTN_PEAKS = [
   { at:20,  name:'Фурманов шыңы',     h:'3053 м' },
   { at:40,  name:'Күмбел шыңы',       h:'3200 м' },
@@ -2221,9 +2221,9 @@ function mtnHtml(){
       + '<path class="mtn-done" id="mtnDone" d="' + MTN_D + '"/>'
       + '<g id="mtnMs"></g>'
     + '</svg>'
-    + '<div class="mtn-top"><div class="n">Талғар шыңы</div><div class="h">4979 м</div></div>'
+    + '<div class="mtn-top"><b>Талғар шыңы</b> · 4979 м</div>'
     + '<div class="mtn-marks" id="mtnMarks"></div>'
-    + '<div class="mtn-goal" id="mtnGoal"></div>'
+    + '<div class="mtn-goal"><span id="mtnGoal"></span></div>'
   + '</div>';
 }
 async function loadRoom(){
@@ -2246,23 +2246,34 @@ async function loadRoom(){
     const marks=box.querySelector('#mtnMarks');
     if(!trail||!marks) return;
     const TL=trail.getTotalLength();
-    const at=(pct)=>{ const p=trail.getPointAtLength(TL*Math.max(0,Math.min(100,pct))/100); return { x:p.x/320*100, y:p.y/150*100 }; };
-    if(done){ done.style.strokeDasharray=TL+' '+TL; done.style.strokeDashoffset=String(TL); requestAnimationFrame(()=>{ done.style.strokeDashoffset=String(TL*(1-myPct/100)); }); }
+    const ptAt=(pct)=>trail.getPointAtLength(TL*Math.max(0,Math.min(100,pct))/100);
+    const normAt=(pct)=>{
+      const l=TL*Math.max(0,Math.min(100,pct))/100;
+      const a=trail.getPointAtLength(Math.max(0,l-2)), b=trail.getPointAtLength(Math.min(TL,l+2));
+      const dx=b.x-a.x, dy=b.y-a.y, m=Math.sqrt(dx*dx+dy*dy)||1;
+      return { x:dy/m, y:-dx/m };
+    };
+    if(done){
+      done.style.strokeDasharray=TL+' '+TL;
+      done.style.strokeDashoffset=String(TL);
+      requestAnimationFrame(()=>{ done.style.strokeDashoffset=String(TL*(1-myPct/100)); });
+    }
     if(msG){
       msG.innerHTML = MTN_PEAKS.map((pk)=>{
         if(pk.at>=100) return '';
-        const p=trail.getPointAtLength(TL*pk.at/100);
+        const p=ptAt(pk.at);
         return '<circle class="mtn-ms'+(myPct>=pk.at?' on':'')+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.6"/>';
       }).join('');
     }
     const used=[];
-    const lane=(x)=>{ let l=0; while(used.some((u)=>Math.abs(u.x-x)<8 && u.l===l)) l++; used.push({x:x,l:l}); return l; };
+    const lane=(pct)=>{ let l=0; while(used.some((u)=>Math.abs(u.p-pct)<7 && u.l===l)) l++; used.push({p:pct,l:l}); return l; };
     const sorted=list.slice().sort((a,b)=>(Number(a.percent)||0)-(Number(b.percent)||0));
     marks.innerHTML = sorted.map((x)=>{
       const pct=Math.max(0, Math.min(100, Math.round(Number(x.percent)||0)));
-      const p=at(pct); const l=lane(p.x);
+      const p=ptAt(pct), n=normAt(pct), l=lane(pct);
+      const ox=(n.x*l*17).toFixed(1), oy=(n.y*l*17).toFixed(1);
       const lbl = x.me ? ('Сен · '+pct+'%') : (roomEsc(x.name||'')+(x.page?(' · '+x.page+'-бет'):''));
-      return '<div class="mk2'+(x.me?' me':'')+(x.idle?' idle':'')+'" style="left:'+p.x.toFixed(2)+'%;top:'+p.y.toFixed(2)+'%;--l:'+l+'">'
+      return '<div class="mk2'+(x.me?' me':'')+(x.idle?' idle':'')+'" style="left:'+(p.x/320*100).toFixed(2)+'%;top:'+(p.y/150*100).toFixed(2)+'%;--ox:'+ox+'px;--oy:'+oy+'px">'
         + '<span class="d">'+roomEsc(x.initial||'•')+'</span>'
         + '<span class="l">'+lbl+'</span></div>';
     }).join('');

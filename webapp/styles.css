@@ -1087,37 +1087,42 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
 /* ---------- Оқу залы: Іле Алатауының шыңына апарар жол ---------- */
 .room-scene { padding:0 !important; min-height:0 !important; }
 .room-glow { display:none !important; }
-.room-seats { display:block !important; position:relative !important; padding:0 !important; height:176px; }
+.room-seats { display:block !important; position:relative !important; padding:0 !important; height:202px; }
 .room-seats::after { display:none !important; }
 .mtn { position:absolute; inset:0; color:var(--text); }
-.mtn-svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
-.mtn-far  { fill:currentColor; opacity:.09; }
-.mtn-near { fill:currentColor; opacity:.16; }
-.mtn-snow { fill:currentColor; opacity:.30; }
-.mtn-trail { fill:none; stroke:currentColor; opacity:.30; stroke-width:2; stroke-linecap:round; stroke-dasharray:1 6; }
+.mtn-svg { position:absolute; inset:0 0 28px 0; width:100%; height:auto; display:block; }
+.mtn-far  { fill:currentColor; opacity:.085; }
+.mtn-near { fill:currentColor; opacity:.155; }
+.mtn-snow { fill:currentColor; opacity:.28; }
+.mtn-trail { fill:none; stroke:currentColor; opacity:.3; stroke-width:2; stroke-linecap:round; stroke-dasharray:1 6; }
 .mtn-done { fill:none; stroke:var(--accent); stroke-width:2.4; stroke-linecap:round;
   transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1); }
-.mtn-ms { fill:var(--card); stroke:currentColor; stroke-width:1.4; opacity:.55; }
+.mtn-ms { fill:var(--card); stroke:currentColor; stroke-width:1.4; opacity:.5; }
 .mtn-ms.on { fill:var(--accent); stroke:none; opacity:1; }
-.mtn-top { position:absolute; right:12px; top:10px; text-align:right; line-height:1.25; pointer-events:none; }
-.mtn-top .n { font-size:11.5px; font-weight:700; color:var(--text); }
-.mtn-top .h { font-size:10px; color:var(--placeholder); }
-.mtn-goal { position:absolute; left:12px; bottom:10px; font-size:11px; color:var(--placeholder); }
+.mtn-top { position:absolute; right:12px; top:9px; font-size:10.5px; color:var(--placeholder);
+  white-space:nowrap; pointer-events:none; }
+.mtn-top b { color:var(--text); font-weight:700; font-size:11.5px; }
+.mtn-goal { position:absolute; left:0; right:0; bottom:0; height:28px; line-height:28px;
+  padding:0 12px; border-top:1px solid var(--line); font-size:11px; color:var(--placeholder);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mtn-goal b { color:var(--accent); font-weight:700; }
-.mtn-marks { position:absolute; inset:0; }
-.mk2 { position:absolute; transform:translate(-50%,-50%); z-index:3; cursor:pointer;
-  animation:mk2In .45s cubic-bezier(.22,1,.36,1) backwards; }
-@keyframes mk2In { from{opacity:0; transform:translate(-50%,-25%) scale(.6)} to{opacity:1; transform:translate(-50%,-50%) scale(1)} }
-.mk2 .d { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+.mtn-marks { position:absolute; inset:0 0 28px 0; }
+.mk2 { position:absolute; z-index:3; cursor:pointer;
+  transform:translate(calc(-50% + var(--ox,0px)), calc(-50% + var(--oy,0px)));
+  animation:mk2In .45s ease backwards; }
+@keyframes mk2In { from{opacity:0} to{opacity:1} }
+.mk2 .d { width:23px; height:23px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   font-size:10.5px; font-weight:700; color:var(--text); background:var(--card);
-  border:1.5px solid var(--accent); box-shadow:0 2px 8px rgba(0,0,0,.16); }
+  border:1.5px solid var(--accent); box-shadow:0 2px 8px rgba(0,0,0,.16);
+  animation:mk2Pop .45s cubic-bezier(.22,1,.36,1) backwards; }
+@keyframes mk2Pop { from{transform:scale(.5)} to{transform:scale(1)} }
 .mk2.me .d { background:var(--accent); color:var(--on-accent); border-color:transparent;
   box-shadow:0 0 0 3px var(--accent-soft), 0 4px 14px rgba(0,0,0,.2); }
 .mk2.idle .d { opacity:.5; }
-.mk2:not(.idle):not(.me) .d { animation:mk2Pulse 2.6s ease-in-out infinite; }
+.mk2:not(.idle):not(.me) .d { animation:mk2Pop .45s cubic-bezier(.22,1,.36,1) backwards, mk2Pulse 2.6s 1s ease-in-out infinite; }
 @keyframes mk2Pulse { 0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.16)} 50%{box-shadow:0 0 0 4px var(--accent-soft), 0 2px 8px rgba(0,0,0,.16)} }
-.mk2 .l { position:absolute; left:50%; transform:translateX(-50%); top:calc(-15px - var(--l,0) * 14px);
+.mk2 .l { position:absolute; left:50%; transform:translateX(-50%); top:-16px;
   white-space:nowrap; font-size:10px; font-weight:600; color:var(--placeholder);
-  opacity:0; transition:opacity .2s ease; pointer-events:none; }
+  text-shadow:0 1px 2px var(--card); opacity:0; transition:opacity .2s ease; pointer-events:none; }
 .mk2.me .l, .mk2.open .l { opacity:1; }
 .mk2.me .l { color:var(--accent); font-weight:700; }
