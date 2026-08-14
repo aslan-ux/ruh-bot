@@ -2211,16 +2211,78 @@ const MTN_PEAKS = [
   { at:100, name:'Талғар шыңы',       h:'4979 м' }
 ];
 const MTN_D = 'M12,138C46,132 58,117 84,111C112,105 122,97 146,93C176,88 186,75 212,65C238,55 252,45 278,29';
+// Тау рельефі: фракталды жалдар, көлеңке қыры, жон сызықтары және мәңгі қар
+function mtnRnd(seed){
+  let t=seed>>>0;
+  return function(){
+    t=(t+0x6D2B79F5)>>>0;
+    let r=Math.imul(t^(t>>>15), 1|t);
+    r=(r+Math.imul(r^(r>>>7), 61|r))^r;
+    return ((r^(r>>>14))>>>0)/4294967296;
+  };
+}
+function mtnFract(anchors, iters, rough, rnd){
+  let p=anchors.map(function(q){ return [q[0], q[1]]; });
+  for(let it=0; it<iters; it++){
+    const out=[p[0]];
+    for(let i=1;i<p.length;i++){
+      const u=p[i-1], v=p[i];
+      const w=Math.abs(v[0]-u[0]);
+      const amp=rough*Math.pow(0.54,it)*Math.min(30,w);
+      out.push([ (u[0]+v[0])/2, (u[1]+v[1])/2 + (rnd()-0.5)*amp ]);
+      out.push(v);
+    }
+    p=out;
+  }
+  return p;
+}
+function mtnSeg(pts){ return pts.map(function(q){ return q[0].toFixed(1)+','+q[1].toFixed(1); }).join('L'); }
+function mtnLine(pts){ return 'M'+mtnSeg(pts); }
+function mtnMass(pts){ return mtnLine(pts)+'L320,150L0,150Z'; }
+let MTN_SCENE=null;
+function mtnScene(){
+  if(MTN_SCENE) return MTN_SCENE;
+  const rnd=mtnRnd(20260813);
+  const far  = mtnFract([[0,88],[44,66],[88,84],[132,58],[178,80],[224,54],[268,74],[320,60]], 3, 0.55, rnd);
+  const mid  = mtnFract([[0,112],[50,90],[96,108],[142,82],[190,96],[232,70],[276,90],[320,76]], 3, 0.5, rnd);
+  const near = mtnFract([[0,150],[8,134],[40,123],[76,105],[112,97],[146,85],[180,77],[210,59],[240,45],[262,31],[278,21],[290,42],[302,58],[320,76]], 2, 0.22, rnd);
+  const nearD = mtnMass(near);
+  const spur = [[278,21],[286,52],[292,88],[297,124],[300,150]];
+  const shd = mtnLine(near.filter(function(q){ return q[0]>=278; }))+'L320,150L'+mtnSeg(spur.slice().reverse())+'Z';
+  const snowL = mtnFract([[198,70],[226,56],[248,44],[266,32],[278,21],[290,40],[304,54],[320,64]], 3, 0.55, rnd);
+  const snow = mtnLine(snowL)+'L320,0L198,0Z';
+  const ribs = [
+    [[277,24],[268,46],[260,74],[252,104],[247,134]],
+    [[262,34],[250,58],[240,86],[233,116]],
+    [[240,48],[228,72],[219,102],[214,130]],
+    [[210,62],[199,88],[192,118]]
+  ].map(function(s){ return '<path class="mtn-rib" d="'+mtnLine(s)+'"/>'; }).join('');
+  MTN_SCENE = '<svg class="mtn-svg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-hidden="true">'
+    + '<defs>'
+      + '<linearGradient id="mtnG" x1="0" y1="0" x2="0" y2="1">'
+        + '<stop offset="0" stop-color="currentColor" stop-opacity="1"/>'
+        + '<stop offset=".6" stop-color="currentColor" stop-opacity=".74"/>'
+        + '<stop offset="1" stop-color="currentColor" stop-opacity=".4"/>'
+      + '</linearGradient>'
+      + '<clipPath id="mtnClip"><path d="'+nearD+'"/></clipPath>'
+    + '</defs>'
+    + '<path class="mtn-far" d="'+mtnMass(far)+'"/>'
+    + '<path class="mtn-mid" d="'+mtnMass(mid)+'"/>'
+    + '<path class="mtn-near" d="'+nearD+'"/>'
+    + '<g clip-path="url(#mtnClip)">'
+      + '<path class="mtn-shd" d="'+shd+'"/>'
+      + ribs
+      + '<path class="mtn-snow" d="'+snow+'"/>'
+    + '</g>'
+    + '<path class="mtn-trail" d="' + MTN_D + '"/>'
+    + '<path class="mtn-done" id="mtnDone" d="' + MTN_D + '"/>'
+    + '<g id="mtnMs"></g>'
+  + '</svg>';
+  return MTN_SCENE;
+}
 function mtnHtml(){
   return '<div class="mtn">'
-    + '<svg class="mtn-svg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-hidden="true">'
-      + '<path class="mtn-far" d="M0,150L0,96L40,66L74,94L116,54L158,90L198,62L236,92L272,50L306,82L320,68L320,150Z"/>'
-      + '<path class="mtn-near" d="M0,150L0,126L36,104L74,122L116,94L152,120L200,86L244,112L278,26L320,70L320,150Z"/>'
-      + '<path class="mtn-snow" d="M278,26L293,42L272,42Z"/>'
-      + '<path class="mtn-trail" d="' + MTN_D + '"/>'
-      + '<path class="mtn-done" id="mtnDone" d="' + MTN_D + '"/>'
-      + '<g id="mtnMs"></g>'
-    + '</svg>'
+    + mtnScene()
     + '<div class="mtn-top"><b>Талғар шыңы</b> · 4979 м</div>'
     + '<div class="mtn-marks" id="mtnMarks"></div>'
     + '<div class="mtn-goal"><span id="mtnGoal"></span></div>'

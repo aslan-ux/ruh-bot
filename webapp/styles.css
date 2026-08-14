@@ -1091,9 +1091,12 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
 .room-seats::after { display:none !important; }
 .mtn { position:absolute; inset:0; color:var(--text); }
 .mtn-svg { position:absolute; inset:0 0 28px 0; width:100%; height:auto; display:block; }
-.mtn-far  { fill:currentColor; opacity:.085; }
-.mtn-near { fill:currentColor; opacity:.155; }
-.mtn-snow { fill:currentColor; opacity:.28; }
+.mtn-far  { fill:url(#mtnG); opacity:var(--rk-far,.075); }
+.mtn-mid  { fill:url(#mtnG); opacity:var(--rk-mid,.125); }
+.mtn-near { fill:url(#mtnG); opacity:var(--rk-near,.2); }
+.mtn-shd  { fill:currentColor; opacity:var(--rk-shd,.24); }
+.mtn-snow { fill:#fff; opacity:var(--sn,.82); }
+.mtn-rib  { fill:none; stroke:currentColor; stroke-width:.6; stroke-linecap:round; opacity:var(--rib,.075); }
 .mtn-trail { fill:none; stroke:currentColor; opacity:.3; stroke-width:2; stroke-linecap:round; stroke-dasharray:1 6; }
 .mtn-done { fill:none; stroke:var(--accent); stroke-width:2.4; stroke-linecap:round;
   transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1); }
@@ -1126,3 +1129,7 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
   text-shadow:0 1px 2px var(--card); opacity:0; transition:opacity .2s ease; pointer-events:none; }
 .mk2.me .l, .mk2.open .l { opacity:1; }
 .mk2.me .l { color:var(--accent); font-weight:700; }
+
+/* Тау: жарық/көлеңке және қар — тақырыпқа бейімделеді */
+.mtn { --rk-far:.075; --rk-mid:.125; --rk-near:.2; --rk-shd:.24; --sn:.82; --rib:.075; }
+:root[data-theme="dark"] .mtn { --rk-far:.07; --rk-mid:.11; --rk-near:.16; --rk-shd:.07; --sn:.28; --rib:.09; }
