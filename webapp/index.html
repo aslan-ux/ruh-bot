@@ -377,7 +377,36 @@
     <div id="finList" class="fin-list"></div>
   </section>
   <section id="screen-progress" class="screen">
-    <div class="placeholder-screen"><div class="ic"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-chart"/></svg></div><div class="t">Прогресс</div><div class="d">Бөлім жасалу үстінде</div></div>
+    <div class="screen-title"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-chart"/></svg><h1>Прогресс</h1></div>
+    <div class="pg-seg" id="pgSeg">
+      <button type="button" class="pg-sb" data-p="week">Апта</button>
+      <button type="button" class="pg-sb" data-p="month">Ай</button>
+      <button type="button" class="pg-sb" data-p="year">Жыл</button>
+      <button type="button" class="pg-sb on" data-p="all">Барлығы</button>
+    </div>
+    <div class="pg-hero">
+      <div class="pg-h"><div class="pg-hv" id="pgHRead">—</div><div class="pg-hl">Оқу, мин</div></div>
+      <div class="pg-h"><div class="pg-hv" id="pgHStep">—</div><div class="pg-hl">Қадам</div></div>
+      <div class="pg-h"><div class="pg-hv" id="pgHNet">—</div><div class="pg-hl">Қалдық ₸</div></div>
+    </div>
+    <div class="card pg-card">
+      <div class="pg-top"><div class="pg-t">Оқу</div><div class="pg-badge" id="pgStreak">—</div></div>
+      <div class="pg-nums"><div><b id="pgRMin">0</b><i>минут</i></div><div><b id="pgRPage">0</b><i>бет</i></div><div><b id="pgRDay">0</b><i>күн</i></div></div>
+      <div class="pg-chart" id="pgRChart"></div>
+      <div class="pg-foot" id="pgRFoot"></div>
+    </div>
+    <div class="card pg-card">
+      <div class="pg-top"><div class="pg-t">Қадам</div><div class="pg-badge" id="pgSGoal">—</div></div>
+      <div class="pg-nums"><div><b id="pgSTotal">0</b><i>барлығы</i></div><div><b id="pgSAvg">0</b><i>күніне</i></div><div><b id="pgSBest">0</b><i>рекорд</i></div></div>
+      <div class="pg-chart" id="pgSChart"></div>
+      <div class="pg-foot" id="pgSFoot"></div>
+    </div>
+    <div class="card pg-card">
+      <div class="pg-top"><div class="pg-t">Қаржы</div><div class="pg-badge" id="pgFTx">—</div></div>
+      <div class="pg-nums"><div><b id="pgFInc" class="up">0</b><i>кіріс</i></div><div><b id="pgFExp" class="down">0</b><i>шығыс</i></div><div><b id="pgFNet">0</b><i>қалдық</i></div></div>
+      <div class="pg-chart pg-chart2" id="pgFChart"></div>
+      <div class="pg-foot" id="pgFFoot"></div>
+    </div>
   </section>
 
   <!-- ЭКРАН: Профиль (тема) -->

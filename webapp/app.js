@@ -2347,3 +2347,76 @@ async function loadRoom(){
     }
   }catch(e){}
 }
+
+/* ================= Прогресс: жеке жиынтық ================= */
+const PG = { period:'all', busy:false };
+function pgFmt(n){ return (Number(n)||0).toLocaleString('ru-RU'); }
+function pgShort(n){
+  n=Number(n)||0; const a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(a>=1e7?0:1).replace('.0','')+'М';
+  if(a>=1e3) return (n/1e3).toFixed(a>=1e4?0:1).replace('.0','')+'к';
+  return String(Math.round(n));
+}
+function pgSet(id, v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function pgBars(el, items){
+  if(!el) return;
+  if(!items || !items.length){ el.innerHTML='<div class="pg-empty">Дерек жоқ</div>'; return; }
+  const arr=items.slice(-31);
+  const max=Math.max.apply(null, [1].concat(arr.map(function(x){ return Number(x.v)||0; })));
+  el.innerHTML=arr.map(function(x,i){
+    const h=Math.max(3, Math.round((Number(x.v)||0)/max*100));
+    return '<div class="pg-bar"><span style="height:'+h+'%;animation-delay:'+(i*14)+'ms"></span></div>';
+  }).join('');
+}
+function pgBars2(el, items){
+  if(!el) return;
+  if(!items || !items.length){ el.innerHTML='<div class="pg-empty">Дерек жоқ</div>'; return; }
+  const arr=items.slice(-24);
+  const max=Math.max.apply(null, [1].concat(arr.map(function(x){ return Math.max(Number(x.a)||0, Number(x.b)||0); })));
+  el.innerHTML=arr.map(function(x,i){
+    const ha=Math.max(3, Math.round((Number(x.a)||0)/max*100));
+    const hb=Math.max(3, Math.round((Number(x.b)||0)/max*100));
+    return '<div class="pg-b2"><span class="a" style="height:'+ha+'%;animation-delay:'+(i*18)+'ms"></span>'
+      + '<span class="b" style="height:'+hb+'%;animation-delay:'+(i*18+60)+'ms"></span></div>';
+  }).join('');
+}
+async function loadProgress(){
+  if(PG.busy) return; PG.busy=true;
+  try{
+    const r = await api('/api/progress', { period: PG.period });
+    if(!r || !r.ok) return;
+    const rd=r.read||{}, st=r.steps||{}, fn=r.fin||{};
+    pgSet('pgHRead', pgShort(rd.minutes));
+    pgSet('pgHStep', pgShort(st.total));
+    pgSet('pgHNet', pgShort(fn.net));
+    pgSet('pgStreak', (rd.streak||0)+' күн қатар');
+    pgSet('pgRMin', pgFmt(rd.minutes)); pgSet('pgRPage', pgFmt(rd.pages)); pgSet('pgRDay', pgFmt(rd.days));
+    pgBars(document.getElementById('pgRChart'), rd.series);
+    pgSet('pgRFoot', rd.days ? ('Күніне орта есеппен '+Math.round((rd.minutes||0)/rd.days)+' мин') : 'Әзірге оқу жазбасы жоқ');
+    pgSet('pgSGoal', (st.goalDays||0)+' күн мақсатта');
+    pgSet('pgSTotal', pgShort(st.total)); pgSet('pgSAvg', pgShort(st.avg));
+    pgSet('pgSBest', pgShort(st.best && st.best.steps));
+    pgBars(document.getElementById('pgSChart'), st.series);
+    pgSet('pgSFoot', (st.best && st.best.date) ? ('Рекорд: '+st.best.date+' · '+pgFmt(st.best.steps)+' қадам') : 'Әзірге қадам жазбасы жоқ');
+    pgSet('pgFTx', (fn.tx||0)+' операция');
+    pgSet('pgFInc', pgShort(fn.income)); pgSet('pgFExp', pgShort(fn.expense)); pgSet('pgFNet', pgShort(fn.net));
+    pgBars2(document.getElementById('pgFChart'), fn.series);
+    const parts=[];
+    if(fn.debtLeft) parts.push('Қарыз қалдығы: '+pgFmt(fn.debtLeft)+' ₸');
+    if(fn.assets) parts.push('Активтер: '+fn.assets);
+    pgSet('pgFFoot', parts.length ? parts.join(' · ') : 'Қарыз да, актив те жоқ');
+  }catch(e){}
+  finally{ PG.busy=false; }
+}
+(function(){
+  const seg=document.getElementById('pgSeg');
+  if(seg) seg.addEventListener('click', function(e){
+    const b=(e.target && e.target.closest) ? e.target.closest('.pg-sb') : null;
+    if(!b) return;
+    PG.period=b.dataset.p||'all';
+    seg.querySelectorAll('.pg-sb').forEach(function(x){ x.classList.toggle('on', x===b); });
+    loadProgress();
+  });
+  const tab=document.querySelector('.tab[data-screen="progress"]');
+  if(tab) tab.addEventListener('click', function(){ setTimeout(loadProgress, 60); });
+})();
