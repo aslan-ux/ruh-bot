@@ -2361,10 +2361,13 @@ function pgShort(n){
 function pgSet(id, v){ const e=document.getElementById(id); if(e) e.textContent=v; }
 function pgCount(id, to, fmt){
   const el=document.getElementById(id); if(!el) return;
-  to=Number(to)||0; const t0=performance.now(), dur=800;
+  to=Number(to)||0; const f=fmt||pgFmt;
+  el.textContent=f(to);
+  if(document.hidden || !window.requestAnimationFrame) return;
+  const t0=performance.now(), dur=800;
   const step=(t)=>{
     const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
-    el.textContent=(fmt||pgFmt)(Math.round(to*e));
+    el.textContent=f(k>=1 ? to : Math.round(to*e));
     if(k<1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -2373,8 +2376,12 @@ function pgRing(id, frac, circ){
   const el=document.getElementById(id); if(!el) return;
   const p=Math.max(0, Math.min(1, Number(frac)||0));
   el.style.strokeDasharray=circ+' '+circ;
-  el.style.strokeDashoffset=String(circ);
-  requestAnimationFrame(()=>{ el.style.strokeDashoffset=String(circ*(1-p)); });
+  if(el.dataset.seeded!=='1'){
+    el.style.strokeDashoffset=String(circ);
+    el.getBoundingClientRect();
+    el.dataset.seeded='1';
+  }
+  el.style.strokeDashoffset=String(circ*(1-p));
 }
 function pgSmooth(pts){
   if(pts.length<2) return 'M0,0';
