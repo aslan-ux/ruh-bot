@@ -972,6 +972,107 @@ if (USE_WEBHOOK) {
   app.use(secretPath, webhookCallback(bot, 'express'));
 }
 
+
+/* ================= Прогресс: барлық бөлім бойынша жеке жиынтық ================= */
+function pgDay(o) {
+  if (!o) return '';
+  if (typeof o.date === 'string' && o.date.length >= 10) return o.date.slice(0, 10);
+  const c = o.date || o.createdAt || o.ts;
+  if (!c) return '';
+  try { return new Date(c).toISOString().slice(0, 10); } catch (e) { return ''; }
+}
+function pgN(v) { const n = Number(v); return isFinite(n) ? n : 0; }
+function pgBack(days) { const d = new Date(); d.setUTCDate(d.getUTCDate() - days); return d.toISOString().slice(0, 10); }
+
+app.post('/api/progress', async (req, res) => {
+  try {
+    const tgUser = requireTelegram(req, res);
+    if (!tgUser) return;
+    const id = Number(tgUser.id);
+    const period = String((req.body && req.body.period) || 'all');
+    const today = new Date().toISOString().slice(0, 10);
+    let from = '0000-01-01';
+    if (period === 'week') from = pgBack(6);
+    else if (period === 'month') from = pgBack(29);
+    else if (period === 'year') from = pgBack(364);
+    const byDay = (period === 'week' || period === 'month');
+
+    const safe = (fn) => Promise.resolve().then(fn).catch(() => null);
+    const stepsDocs = (await safe(() => getUserSteps(id))) || [];
+    const readDocs  = (await safe(() => getReadDays(id))) || [];
+    const txDocs    = (await safe(() => getUserTx(id))) || [];
+    const debts     = (await safe(() => getUserDebts(id))) || [];
+    const assets    = (await safe(() => getUserAssets(id))) || [];
+    const goalRaw   = await safe(() => getGoal());
+    const goal = pgN(typeof goalRaw === 'number' ? goalRaw : (goalRaw && (goalRaw.goal || goalRaw.value))) || 10000;
+
+    const inR = (d) => !!d && d >= from && d <= today;
+    const key = (d) => byDay ? d : d.slice(0, 7);
+    const ser = (m) => Array.from(m.entries()).sort((a, b) => a[0] < b[0] ? -1 : 1).map((e) => ({ k: e[0], v: Math.round(e[1]) }));
+
+    const rMap = new Map(), rAll = new Map();
+    let rSec = 0, rPages = 0, rDays = 0;
+    readDocs.forEach((o) => {
+      const d = pgDay(o); if (!d) return;
+      const sec = pgN(o.seconds), pg = pgN(o.pages);
+      rAll.set(d, (rAll.get(d) || 0) + sec);
+      if (!inR(d)) return;
+      rSec += sec; rPages += pg;
+      if (sec > 0 || pg > 0) rDays++;
+      rMap.set(key(d), (rMap.get(key(d)) || 0) + sec / 60);
+    });
+    let streak = 0;
+    {
+      const d = new Date();
+      if ((rAll.get(d.toISOString().slice(0, 10)) || 0) < 300) d.setUTCDate(d.getUTCDate() - 1);
+      for (let i = 0; i < 400; i++) {
+        const k = d.toISOString().slice(0, 10);
+        if ((rAll.get(k) || 0) >= 300) { streak++; d.setUTCDate(d.getUTCDate() - 1); } else break;
+      }
+    }
+
+    const sMap = new Map();
+    let sTotal = 0, sDays = 0, sGoalDays = 0, sBest = { date: '', steps: 0 };
+    stepsDocs.forEach((o) => {
+      const d = pgDay(o); if (!inR(d)) return;
+      const v = pgN(o.steps); if (v <= 0) return;
+      sTotal += v; sDays++;
+      if (v >= goal) sGoalDays++;
+      if (v > sBest.steps) sBest = { date: d, steps: v };
+      sMap.set(key(d), (sMap.get(key(d)) || 0) + v);
+    });
+
+    const fInc = new Map(), fExp = new Map();
+    let inc = 0, exp = 0, txN = 0;
+    txDocs.forEach((o) => {
+      const d = pgDay(o); if (!inR(d)) return;
+      const amt = Math.abs(pgN(o.amount !== undefined ? o.amount : (o.sum !== undefined ? o.sum : o.value)));
+      if (!amt) return;
+      txN++;
+      const t = String(o.type || o.kind || '').toLowerCase();
+      if (t.indexOf('income') >= 0 || t.indexOf('kiris') >= 0) { inc += amt; fInc.set(key(d), (fInc.get(key(d)) || 0) + amt); }
+      else { exp += amt; fExp.set(key(d), (fExp.get(key(d)) || 0) + amt); }
+    });
+    let debtLeft = 0;
+    debts.forEach((o) => {
+      const total = pgN(o.amount !== undefined ? o.amount : o.total);
+      const left = total - pgN(o.paid);
+      if (left > 0) debtLeft += left;
+    });
+    const fKeys = Array.from(new Set(Array.from(fInc.keys()).concat(Array.from(fExp.keys())))).sort();
+    const finSeries = fKeys.map((k) => ({ k: k, a: Math.round(fInc.get(k) || 0), b: Math.round(fExp.get(k) || 0) }));
+
+    res.json({
+      ok: true, period: period, from: from, to: today, bucket: byDay ? 'day' : 'month',
+      read: { minutes: Math.round(rSec / 60), pages: rPages, days: rDays, streak: streak, series: ser(rMap) },
+      steps: { total: sTotal, days: sDays, avg: sDays ? Math.round(sTotal / sDays) : 0, goal: goal, goalDays: sGoalDays, best: sBest, series: ser(sMap) },
+      fin: { income: Math.round(inc), expense: Math.round(exp), net: Math.round(inc - exp), tx: txN, debtLeft: Math.round(debtLeft), assets: assets.length, series: finSeries }
+    });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`HTTP-сервер запущен на порту ${PORT}`);
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
