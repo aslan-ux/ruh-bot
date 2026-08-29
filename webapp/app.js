@@ -2350,6 +2350,7 @@ async function loadRoom(){
 
 /* ================= Прогресс: жеке жиынтық ================= */
 const PG = { period:'all', busy:false };
+const PG_C = { r1: 2*Math.PI*86, r2: 2*Math.PI*63, r3: 2*Math.PI*40 };
 function pgFmt(n){ return (Number(n)||0).toLocaleString('ru-RU'); }
 function pgShort(n){
   n=Number(n)||0; const a=Math.abs(n);
@@ -2358,48 +2359,110 @@ function pgShort(n){
   return String(Math.round(n));
 }
 function pgSet(id, v){ const e=document.getElementById(id); if(e) e.textContent=v; }
-function pgBars(el, items){
+function pgCount(id, to, fmt){
+  const el=document.getElementById(id); if(!el) return;
+  to=Number(to)||0; const t0=performance.now(), dur=800;
+  const step=(t)=>{
+    const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=(fmt||pgFmt)(Math.round(to*e));
+    if(k<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function pgRing(id, frac, circ){
+  const el=document.getElementById(id); if(!el) return;
+  const p=Math.max(0, Math.min(1, Number(frac)||0));
+  el.style.strokeDasharray=circ+' '+circ;
+  el.style.strokeDashoffset=String(circ);
+  requestAnimationFrame(()=>{ el.style.strokeDashoffset=String(circ*(1-p)); });
+}
+function pgSmooth(pts){
+  if(pts.length<2) return 'M0,0';
+  let d='M'+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+='C'+c1x.toFixed(1)+','+c1y.toFixed(1)+' '+c2x.toFixed(1)+','+c2y.toFixed(1)+' '+p2[0].toFixed(1)+','+p2[1].toFixed(1);
+  }
+  return d;
+}
+function pgArea(el, items){
   if(!el) return;
-  if(!items || !items.length){ el.innerHTML='<div class="pg-empty">Дерек жоқ</div>'; return; }
-  const arr=items.slice(-31);
-  const max=Math.max.apply(null, [1].concat(arr.map(function(x){ return Number(x.v)||0; })));
-  el.innerHTML=arr.map(function(x,i){
-    const h=Math.max(3, Math.round((Number(x.v)||0)/max*100));
-    return '<div class="pg-bar"><span style="height:'+h+'%;animation-delay:'+(i*14)+'ms"></span></div>';
+  const arr=(items||[]).slice(-40);
+  if(arr.length<2){ el.innerHTML='<div class="pg-empty">Дерек жинала бастады</div>'; return; }
+  const W=300, H=84, pad=8;
+  const vals=arr.map(function(x){ return Math.max(0, Number(x.v)||0); });
+  const max=Math.max.apply(null,[1].concat(vals));
+  const stepX=W/(arr.length-1);
+  const pts=vals.map(function(v,i){ return [i*stepX, H-pad-(v/max)*(H-pad*2)]; });
+  const d=pgSmooth(pts);
+  const last=pts[pts.length-1];
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'
+    + '<defs><linearGradient id="pgGrad" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" class="g0"/><stop offset="1" class="g1"/></linearGradient></defs>'
+    + '<path class="pg-fill" d="'+d+'L'+W+','+H+'L0,'+H+'Z"/>'
+    + '<path class="pg-line" d="'+d+'" vector-effect="non-scaling-stroke"/>'
+    + '<circle class="pg-dot" cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="3.2"/>'
+    + '</svg>';
+}
+function pgBars(el, items, goal){
+  if(!el) return;
+  const arr=(items||[]).slice(-31);
+  if(!arr.length){ el.innerHTML='<div class="pg-empty">Дерек жинала бастады</div>'; return; }
+  const vals=arr.map(function(x){ return Math.max(0, Number(x.v)||0); });
+  const max=Math.max.apply(null,[1].concat(vals));
+  const g=(Number(goal)||0);
+  const line=(g>0 && g<=max) ? '<div class="pg-goal" style="bottom:'+(g/max*100).toFixed(1)+'%"></div>' : '';
+  el.innerHTML=line+arr.map(function(x,i){
+    const v=Math.max(0,Number(x.v)||0);
+    const h=Math.max(4, Math.round(v/max*100));
+    const on=(g>0 && v>=g) ? ' on' : '';
+    return '<div class="pg-bar'+on+'"><span style="height:'+h+'%;animation-delay:'+(i*16)+'ms"></span></div>';
   }).join('');
 }
 function pgBars2(el, items){
   if(!el) return;
-  if(!items || !items.length){ el.innerHTML='<div class="pg-empty">Дерек жоқ</div>'; return; }
-  const arr=items.slice(-24);
-  const max=Math.max.apply(null, [1].concat(arr.map(function(x){ return Math.max(Number(x.a)||0, Number(x.b)||0); })));
+  const arr=(items||[]).slice(-24);
+  if(!arr.length){ el.innerHTML='<div class="pg-empty">Дерек жинала бастады</div>'; return; }
+  const max=Math.max.apply(null,[1].concat(arr.map(function(x){ return Math.max(Number(x.a)||0, Number(x.b)||0); })));
   el.innerHTML=arr.map(function(x,i){
-    const ha=Math.max(3, Math.round((Number(x.a)||0)/max*100));
-    const hb=Math.max(3, Math.round((Number(x.b)||0)/max*100));
+    const ha=Math.max(4, Math.round((Number(x.a)||0)/max*100));
+    const hb=Math.max(4, Math.round((Number(x.b)||0)/max*100));
     return '<div class="pg-b2"><span class="a" style="height:'+ha+'%;animation-delay:'+(i*18)+'ms"></span>'
-      + '<span class="b" style="height:'+hb+'%;animation-delay:'+(i*18+60)+'ms"></span></div>';
+      + '<span class="b" style="height:'+hb+'%;animation-delay:'+(i*18+70)+'ms"></span></div>';
   }).join('');
 }
+function pgPct(x){ return Math.round(Math.max(0, Math.min(1, x||0))*100)+'%'; }
 async function loadProgress(){
   if(PG.busy) return; PG.busy=true;
   try{
     const r = await api('/api/progress', { period: PG.period });
     if(!r || !r.ok) return;
     const rd=r.read||{}, st=r.steps||{}, fn=r.fin||{};
-    pgSet('pgHRead', pgShort(rd.minutes));
-    pgSet('pgHStep', pgShort(st.total));
-    pgSet('pgHNet', pgShort(fn.net));
+    const span=Math.max(1, Number(r.spanDays)||1);
+    const f1=(rd.days||0)/span;
+    const f2=(st.goalDays||0)/span;
+    const f3=(fn.income>0) ? Math.max(0,(fn.net||0))/fn.income : 0;
+    pgRing('pgRing1', f1, PG_C.r1);
+    pgRing('pgRing2', f2, PG_C.r2);
+    pgRing('pgRing3', f3, PG_C.r3);
+    pgSet('pgLg1', (rd.days||0)+' / '+span+' · '+pgPct(f1));
+    pgSet('pgLg2', (st.goalDays||0)+' / '+span+' · '+pgPct(f2));
+    pgSet('pgLg3', pgPct(f3));
     pgSet('pgStreak', (rd.streak||0)+' күн қатар');
-    pgSet('pgRMin', pgFmt(rd.minutes)); pgSet('pgRPage', pgFmt(rd.pages)); pgSet('pgRDay', pgFmt(rd.days));
-    pgBars(document.getElementById('pgRChart'), rd.series);
-    pgSet('pgRFoot', rd.days ? ('Күніне орта есеппен '+Math.round((rd.minutes||0)/rd.days)+' мин') : 'Әзірге оқу жазбасы жоқ');
+    pgCount('pgRMin', rd.minutes||0);
+    pgSet('pgRSub', pgFmt(rd.pages||0)+' бет · '+pgFmt(rd.days||0)+' күн');
+    pgArea(document.getElementById('pgRChart'), rd.series);
+    pgSet('pgRFoot', rd.days ? ('Күніне орта есеппен '+Math.round((rd.minutes||0)/rd.days)+' мин') : 'Оқуды бастасаң, график осында пайда болады');
     pgSet('pgSGoal', (st.goalDays||0)+' күн мақсатта');
-    pgSet('pgSTotal', pgShort(st.total)); pgSet('pgSAvg', pgShort(st.avg));
-    pgSet('pgSBest', pgShort(st.best && st.best.steps));
-    pgBars(document.getElementById('pgSChart'), st.series);
+    pgCount('pgSTotal', st.total||0, pgShort);
+    pgSet('pgSSub', 'Күніне орта '+pgFmt(st.avg||0)+' · мақсат '+pgFmt(st.goal||0));
+    pgBars(document.getElementById('pgSChart'), st.series, (r.bucket==='day' ? st.goal : 0));
     pgSet('pgSFoot', (st.best && st.best.date) ? ('Рекорд: '+st.best.date+' · '+pgFmt(st.best.steps)+' қадам') : 'Әзірге қадам жазбасы жоқ');
     pgSet('pgFTx', (fn.tx||0)+' операция');
-    pgSet('pgFInc', pgShort(fn.income)); pgSet('pgFExp', pgShort(fn.expense)); pgSet('pgFNet', pgShort(fn.net));
+    pgCount('pgFNet', fn.net||0, pgShort);
+    pgSet('pgFSub', 'Кіріс '+pgShort(fn.income)+' · Шығыс '+pgShort(fn.expense));
     pgBars2(document.getElementById('pgFChart'), fn.series);
     const parts=[];
     if(fn.debtLeft) parts.push('Қарыз қалдығы: '+pgFmt(fn.debtLeft)+' ₸');
@@ -2415,6 +2478,7 @@ async function loadProgress(){
     if(!b) return;
     PG.period=b.dataset.p||'all';
     seg.querySelectorAll('.pg-sb').forEach(function(x){ x.classList.toggle('on', x===b); });
+    try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(err){}
     loadProgress();
   });
   const tab=document.querySelector('.tab[data-screen="progress"]');

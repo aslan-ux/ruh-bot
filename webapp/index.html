@@ -384,26 +384,47 @@
       <button type="button" class="pg-sb" data-p="year">Жыл</button>
       <button type="button" class="pg-sb on" data-p="all">Барлығы</button>
     </div>
-    <div class="pg-hero">
-      <div class="pg-h"><div class="pg-hv" id="pgHRead">—</div><div class="pg-hl">Оқу, мин</div></div>
-      <div class="pg-h"><div class="pg-hv" id="pgHStep">—</div><div class="pg-hl">Қадам</div></div>
-      <div class="pg-h"><div class="pg-hv" id="pgHNet">—</div><div class="pg-hl">Қалдық ₸</div></div>
+
+    <div class="pg-rings">
+      <div class="pg-ring-box">
+        <svg class="pg-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+          <g transform="rotate(-90 100 100)">
+            <circle class="pg-rt" cx="100" cy="100" r="86"/>
+            <circle class="pg-rv r1" id="pgRing1" cx="100" cy="100" r="86"/>
+            <circle class="pg-rt" cx="100" cy="100" r="63"/>
+            <circle class="pg-rv r2" id="pgRing2" cx="100" cy="100" r="63"/>
+            <circle class="pg-rt" cx="100" cy="100" r="40"/>
+            <circle class="pg-rv r3" id="pgRing3" cx="100" cy="100" r="40"/>
+          </g>
+        </svg>
+      </div>
+      <div class="pg-legend">
+        <div class="pg-lg"><span class="dot r1"></span><div><b id="pgLg1">—</b><i>Оқыған күн</i></div></div>
+        <div class="pg-lg"><span class="dot r2"></span><div><b id="pgLg2">—</b><i>Мақсатқа жеткен күн</i></div></div>
+        <div class="pg-lg"><span class="dot r3"></span><div><b id="pgLg3">—</b><i>Жинақ үлесі</i></div></div>
+      </div>
     </div>
+
     <div class="card pg-card">
       <div class="pg-top"><div class="pg-t">Оқу</div><div class="pg-badge" id="pgStreak">—</div></div>
-      <div class="pg-nums"><div><b id="pgRMin">0</b><i>минут</i></div><div><b id="pgRPage">0</b><i>бет</i></div><div><b id="pgRDay">0</b><i>күн</i></div></div>
-      <div class="pg-chart" id="pgRChart"></div>
+      <div class="pg-big"><b id="pgRMin">0</b><i>минут</i></div>
+      <div class="pg-sub" id="pgRSub">—</div>
+      <div class="pg-area" id="pgRChart"></div>
       <div class="pg-foot" id="pgRFoot"></div>
     </div>
+
     <div class="card pg-card">
       <div class="pg-top"><div class="pg-t">Қадам</div><div class="pg-badge" id="pgSGoal">—</div></div>
-      <div class="pg-nums"><div><b id="pgSTotal">0</b><i>барлығы</i></div><div><b id="pgSAvg">0</b><i>күніне</i></div><div><b id="pgSBest">0</b><i>рекорд</i></div></div>
+      <div class="pg-big"><b id="pgSTotal">0</b><i>қадам</i></div>
+      <div class="pg-sub" id="pgSSub">—</div>
       <div class="pg-chart" id="pgSChart"></div>
       <div class="pg-foot" id="pgSFoot"></div>
     </div>
+
     <div class="card pg-card">
       <div class="pg-top"><div class="pg-t">Қаржы</div><div class="pg-badge" id="pgFTx">—</div></div>
-      <div class="pg-nums"><div><b id="pgFInc" class="up">0</b><i>кіріс</i></div><div><b id="pgFExp" class="down">0</b><i>шығыс</i></div><div><b id="pgFNet">0</b><i>қалдық</i></div></div>
+      <div class="pg-big"><b id="pgFNet">0</b><i>₸ қалдық</i></div>
+      <div class="pg-sub" id="pgFSub">—</div>
       <div class="pg-chart pg-chart2" id="pgFChart"></div>
       <div class="pg-foot" id="pgFFoot"></div>
     </div>
