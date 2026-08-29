@@ -385,7 +385,7 @@
       <button type="button" class="pg-sb on" data-p="all">Барлығы</button>
     </div>
 
-    <div class="pg-rings">
+    <div class="pg-rings" id="pgRings">
       <div class="pg-ring-box">
         <svg class="pg-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
           <g transform="rotate(-90 100 100)">
@@ -399,9 +399,12 @@
         </svg>
       </div>
       <div class="pg-legend">
-        <div class="pg-lg"><span class="dot r1"></span><div><b id="pgLg1">—</b><i>Оқыған күн</i></div></div>
-        <div class="pg-lg"><span class="dot r2"></span><div><b id="pgLg2">—</b><i>Мақсатқа жеткен күн</i></div></div>
-        <div class="pg-lg"><span class="dot r3"></span><div><b id="pgLg3">—</b><i>Жинақ үлесі</i></div></div>
+        <div class="pg-lg"><span class="ic r1"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-book"/></svg></span>
+          <div class="tx"><b>Оқу</b><i id="pgLg1">—</i></div><span class="pct r1" id="pgPct1">—</span></div>
+        <div class="pg-lg"><span class="ic r2"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-steps"/></svg></span>
+          <div class="tx"><b>Қадам</b><i id="pgLg2">—</i></div><span class="pct r2" id="pgPct2">—</span></div>
+        <div class="pg-lg"><span class="ic r3"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-wallet"/></svg></span>
+          <div class="tx"><b>Қаржы</b><i id="pgLg3">—</i></div><span class="pct r3" id="pgPct3">—</span></div>
       </div>
     </div>
 
@@ -418,6 +421,7 @@
       <div class="pg-big"><b id="pgSTotal">0</b><i>қадам</i></div>
       <div class="pg-sub" id="pgSSub">—</div>
       <div class="pg-chart" id="pgSChart"></div>
+      <div class="pg-hint">Бағанды бассаң — сол күнгі қадам көрінеді</div>
       <div class="pg-foot" id="pgSFoot"></div>
     </div>
 

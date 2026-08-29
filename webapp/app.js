@@ -2349,8 +2349,9 @@ async function loadRoom(){
 }
 
 /* ================= Прогресс: жеке жиынтық ================= */
-const PG = { period:'all', busy:false };
+const PG = { period:'all', data:null, busy:false, at:0 };
 const PG_C = { r1: 2*Math.PI*86, r2: 2*Math.PI*63, r3: 2*Math.PI*40 };
+const PG_MON = ['қаңтар','ақпан','наурыз','сәуір','мамыр','маусым','шілде','тамыз','қыркүйек','қазан','қараша','желтоқсан'];
 function pgFmt(n){ return (Number(n)||0).toLocaleString('ru-RU'); }
 function pgShort(n){
   n=Number(n)||0; const a=Math.abs(n);
@@ -2358,13 +2359,20 @@ function pgShort(n){
   if(a>=1e3) return (n/1e3).toFixed(a>=1e4?0:1).replace('.0','')+'к';
   return String(Math.round(n));
 }
+function pgLabel(k){
+  k=String(k||'');
+  const p=k.split('-');
+  if(p.length>=3) return Number(p[2])+' '+(PG_MON[Number(p[1])-1]||'');
+  if(p.length===2) return (PG_MON[Number(p[1])-1]||'')+' '+p[0];
+  return k;
+}
 function pgSet(id, v){ const e=document.getElementById(id); if(e) e.textContent=v; }
 function pgCount(id, to, fmt){
   const el=document.getElementById(id); if(!el) return;
   to=Number(to)||0; const f=fmt||pgFmt;
   el.textContent=f(to);
   if(document.hidden || !window.requestAnimationFrame) return;
-  const t0=performance.now(), dur=800;
+  const t0=performance.now(), dur=700;
   const step=(t)=>{
     const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
     el.textContent=f(k>=1 ? to : Math.round(to*e));
@@ -2421,11 +2429,12 @@ function pgBars(el, items, goal){
   const max=Math.max.apply(null,[1].concat(vals));
   const g=(Number(goal)||0);
   const line=(g>0 && g<=max) ? '<div class="pg-goal" style="bottom:'+(g/max*100).toFixed(1)+'%"></div>' : '';
-  el.innerHTML=line+arr.map(function(x,i){
+  el.innerHTML=line+'<div class="pg-tip" id="pgTip"></div>'+arr.map(function(x,i){
     const v=Math.max(0,Number(x.v)||0);
     const h=Math.max(4, Math.round(v/max*100));
     const on=(g>0 && v>=g) ? ' on' : '';
-    return '<div class="pg-bar'+on+'"><span style="height:'+h+'%;animation-delay:'+(i*16)+'ms"></span></div>';
+    return '<div class="pg-bar'+on+'" data-k="'+String(x.k)+'" data-v="'+v+'" data-i="'+i+'" data-n="'+arr.length+'">'
+      + '<span style="height:'+h+'%;animation-delay:'+(i*16)+'ms"></span></div>';
   }).join('');
 }
 function pgBars2(el, items){
@@ -2440,43 +2449,72 @@ function pgBars2(el, items){
       + '<span class="b" style="height:'+hb+'%;animation-delay:'+(i*18+70)+'ms"></span></div>';
   }).join('');
 }
+let PG_TIP_T=null;
+function pgShowTip(bar){
+  const chart=document.getElementById('pgSChart'); if(!chart||!bar) return;
+  const tip=document.getElementById('pgTip'); if(!tip) return;
+  chart.querySelectorAll('.pg-bar.sel').forEach(function(b){ b.classList.remove('sel'); });
+  bar.classList.add('sel');
+  const i=Number(bar.dataset.i)||0, n=Math.max(1, Number(bar.dataset.n)||1);
+  const pos=Math.min(88, Math.max(12, ((i+0.5)/n)*100));
+  tip.innerHTML='<b>'+pgFmt(bar.dataset.v)+'</b><i>'+pgLabel(bar.dataset.k)+'</i>';
+  tip.style.left=pos.toFixed(1)+'%';
+  tip.classList.add('on');
+  try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){}
+  clearTimeout(PG_TIP_T);
+  PG_TIP_T=setTimeout(function(){
+    tip.classList.remove('on');
+    bar.classList.remove('sel');
+  }, 2600);
+}
 function pgPct(x){ return Math.round(Math.max(0, Math.min(1, x||0))*100)+'%'; }
-async function loadProgress(){
-  if(PG.busy) return; PG.busy=true;
+function pgRender(){
+  const d = PG.data && PG.data[PG.period];
+  if(!d) return;
+  const rd=d.read||{}, st=d.steps||{}, fn=d.fin||{};
+  const span=Math.max(1, Number(d.spanDays)||1);
+  const f1=(rd.days||0)/span, f2=(st.goalDays||0)/span;
+  const f3=(fn.income>0) ? Math.max(0,(fn.net||0))/fn.income : 0;
+  pgRing('pgRing1', f1, PG_C.r1);
+  pgRing('pgRing2', f2, PG_C.r2);
+  pgRing('pgRing3', f3, PG_C.r3);
+  pgSet('pgPct1', pgPct(f1)); pgSet('pgPct2', pgPct(f2)); pgSet('pgPct3', pgPct(f3));
+  pgSet('pgLg1', (rd.days||0)+' / '+span+' күн оқыдың');
+  pgSet('pgLg2', (st.goalDays||0)+' / '+span+' күн мақсатта');
+  pgSet('pgLg3', 'кірістің жинақталған үлесі');
+  pgSet('pgStreak', (rd.streak||0)+' күн қатар');
+  pgCount('pgRMin', rd.minutes||0);
+  pgSet('pgRSub', pgFmt(rd.pages||0)+' бет · '+pgFmt(rd.days||0)+' күн');
+  pgArea(document.getElementById('pgRChart'), rd.series);
+  pgSet('pgRFoot', rd.days ? ('Күніне орта есеппен '+Math.round((rd.minutes||0)/rd.days)+' мин') : 'Оқуды бастасаң, график осында пайда болады');
+  pgSet('pgSGoal', (st.goalDays||0)+' күн мақсатта');
+  pgCount('pgSTotal', st.total||0, pgShort);
+  pgSet('pgSSub', 'Күніне орта '+pgFmt(st.avg||0)+' · мақсат '+pgFmt(st.goal||0));
+  pgBars(document.getElementById('pgSChart'), st.series, (d.bucket==='day' ? st.goal : 0));
+  pgSet('pgSFoot', (st.best && st.best.date) ? ('Рекорд: '+pgLabel(st.best.date)+' · '+pgFmt(st.best.steps)+' қадам') : 'Әзірге қадам жазбасы жоқ');
+  pgSet('pgFTx', (fn.tx||0)+' операция');
+  pgCount('pgFNet', fn.net||0, pgShort);
+  pgSet('pgFSub', 'Кіріс '+pgShort(fn.income)+' · Шығыс '+pgShort(fn.expense));
+  pgBars2(document.getElementById('pgFChart'), fn.series);
+  const parts=[];
+  if(fn.debtLeft) parts.push('Қарыз қалдығы: '+pgFmt(fn.debtLeft)+' ₸');
+  if(fn.assets) parts.push('Активтер: '+fn.assets);
+  pgSet('pgFFoot', parts.length ? parts.join(' · ') : 'Қарыз да, актив те жоқ');
+}
+async function loadProgress(force){
+  if(PG.data && !force && (Date.now()-PG.at) < 120000){ pgRender(); return; }
+  if(PG.busy) return;
+  PG.busy=true;
+  const scr=document.getElementById('screen-progress');
+  if(scr && !PG.data) scr.classList.add('pg-loading');
   try{
-    const r = await api('/api/progress', { period: PG.period });
-    if(!r || !r.ok) return;
-    const rd=r.read||{}, st=r.steps||{}, fn=r.fin||{};
-    const span=Math.max(1, Number(r.spanDays)||1);
-    const f1=(rd.days||0)/span;
-    const f2=(st.goalDays||0)/span;
-    const f3=(fn.income>0) ? Math.max(0,(fn.net||0))/fn.income : 0;
-    pgRing('pgRing1', f1, PG_C.r1);
-    pgRing('pgRing2', f2, PG_C.r2);
-    pgRing('pgRing3', f3, PG_C.r3);
-    pgSet('pgLg1', (rd.days||0)+' / '+span+' · '+pgPct(f1));
-    pgSet('pgLg2', (st.goalDays||0)+' / '+span+' · '+pgPct(f2));
-    pgSet('pgLg3', pgPct(f3));
-    pgSet('pgStreak', (rd.streak||0)+' күн қатар');
-    pgCount('pgRMin', rd.minutes||0);
-    pgSet('pgRSub', pgFmt(rd.pages||0)+' бет · '+pgFmt(rd.days||0)+' күн');
-    pgArea(document.getElementById('pgRChart'), rd.series);
-    pgSet('pgRFoot', rd.days ? ('Күніне орта есеппен '+Math.round((rd.minutes||0)/rd.days)+' мин') : 'Оқуды бастасаң, график осында пайда болады');
-    pgSet('pgSGoal', (st.goalDays||0)+' күн мақсатта');
-    pgCount('pgSTotal', st.total||0, pgShort);
-    pgSet('pgSSub', 'Күніне орта '+pgFmt(st.avg||0)+' · мақсат '+pgFmt(st.goal||0));
-    pgBars(document.getElementById('pgSChart'), st.series, (r.bucket==='day' ? st.goal : 0));
-    pgSet('pgSFoot', (st.best && st.best.date) ? ('Рекорд: '+st.best.date+' · '+pgFmt(st.best.steps)+' қадам') : 'Әзірге қадам жазбасы жоқ');
-    pgSet('pgFTx', (fn.tx||0)+' операция');
-    pgCount('pgFNet', fn.net||0, pgShort);
-    pgSet('pgFSub', 'Кіріс '+pgShort(fn.income)+' · Шығыс '+pgShort(fn.expense));
-    pgBars2(document.getElementById('pgFChart'), fn.series);
-    const parts=[];
-    if(fn.debtLeft) parts.push('Қарыз қалдығы: '+pgFmt(fn.debtLeft)+' ₸');
-    if(fn.assets) parts.push('Активтер: '+fn.assets);
-    pgSet('pgFFoot', parts.length ? parts.join(' · ') : 'Қарыз да, актив те жоқ');
+    const r = await api('/api/progress', {});
+    if(r && r.ok && r.periods){ PG.data=r.periods; PG.at=Date.now(); pgRender(); }
   }catch(e){}
-  finally{ PG.busy=false; }
+  finally{
+    PG.busy=false;
+    if(scr) scr.classList.remove('pg-loading');
+  }
 }
 (function(){
   const seg=document.getElementById('pgSeg');
@@ -2486,8 +2524,14 @@ async function loadProgress(){
     PG.period=b.dataset.p||'all';
     seg.querySelectorAll('.pg-sb').forEach(function(x){ x.classList.toggle('on', x===b); });
     try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(err){}
+    pgRender();
     loadProgress();
   });
+  const chart=document.getElementById('pgSChart');
+  if(chart) chart.addEventListener('click', function(e){
+    const b=(e.target && e.target.closest) ? e.target.closest('.pg-bar') : null;
+    if(b) pgShowTip(b);
+  });
   const tab=document.querySelector('.tab[data-screen="progress"]');
-  if(tab) tab.addEventListener('click', function(){ setTimeout(loadProgress, 60); });
+  if(tab) tab.addEventListener('click', function(){ setTimeout(function(){ loadProgress(); }, 40); });
 })();
