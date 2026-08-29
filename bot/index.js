@@ -1059,11 +1059,22 @@ app.post('/api/progress', async (req, res) => {
       const left = total - pgN(o.paid);
       if (left > 0) debtLeft += left;
     });
+    let minDate = '';
+    const seen = (d) => { if (d && (!minDate || d < minDate)) minDate = d; };
+    stepsDocs.forEach((o) => seen(pgDay(o)));
+    readDocs.forEach((o) => seen(pgDay(o)));
+    txDocs.forEach((o) => seen(pgDay(o)));
+    let spanDays = 7;
+    if (period === 'month') spanDays = 30;
+    else if (period === 'year') spanDays = 365;
+    else if (period === 'all') {
+      spanDays = minDate ? Math.max(1, Math.round((Date.parse(today) - Date.parse(minDate)) / 86400000) + 1) : 1;
+    }
     const fKeys = Array.from(new Set(Array.from(fInc.keys()).concat(Array.from(fExp.keys())))).sort();
     const finSeries = fKeys.map((k) => ({ k: k, a: Math.round(fInc.get(k) || 0), b: Math.round(fExp.get(k) || 0) }));
 
     res.json({
-      ok: true, period: period, from: from, to: today, bucket: byDay ? 'day' : 'month',
+      ok: true, period: period, from: from, to: today, bucket: byDay ? 'day' : 'month', spanDays: spanDays,
       read: { minutes: Math.round(rSec / 60), pages: rPages, days: rDays, streak: streak, series: ser(rMap) },
       steps: { total: sTotal, days: sDays, avg: sDays ? Math.round(sTotal / sDays) : 0, goal: goal, goalDays: sGoalDays, best: sBest, series: ser(sMap) },
       fin: { income: Math.round(inc), expense: Math.round(exp), net: Math.round(inc - exp), tx: txN, debtLeft: Math.round(debtLeft), assets: assets.length, series: finSeries }
