@@ -1135,7 +1135,9 @@ app.post('/api/friends/invite', async (req, res) => {
     await addFriendReq(me, to);
     res.json({ ok: true });
   } catch (e) {
-    res.json({ ok: false,
+    res.json({ ok: false, error: 'server' });
+  }
+});
 
 /* ===== Аватар: сақтау және тарату ===== */
 app.post('/api/avatar/save', async (req, res) => {
@@ -1189,9 +1191,6 @@ app.post('/api/avatars', async (req, res) => {
     res.json({ ok: true, map: map });
   } catch (e) {
     res.json({ ok: false, error: 'server' });
-  }
-});
- error: 'server' });
   }
 });
 
