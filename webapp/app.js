@@ -2535,3 +2535,189 @@ async function loadProgress(force){
   const tab=document.querySelector('.tab[data-screen="progress"]');
   if(tab) tab.addEventListener('click', function(){ setTimeout(function(){ loadProgress(); }, 40); });
 })();
+
+/* ================= Қаржы: жоғарғы қойындылар ================= */
+(function(){
+  function build(){
+    const top=document.querySelector('#screen-qarjy .fin-top');
+    const btn=document.getElementById('finTabBtn');
+    if(!top || !btn || typeof FIN_TABS==='undefined' || document.getElementById('finTabs')) return;
+    btn.style.display='none';
+    const menu=document.getElementById('finTabMenu'); if(menu) menu.style.display='none';
+    const strip=document.createElement('div');
+    strip.className='fin-tabs'; strip.id='finTabs';
+    top.insertBefore(strip, top.firstChild);
+    const paint=function(){
+      strip.innerHTML=FIN_TABS.map(function(t,i){
+        return '<button type="button" class="fin-tb'+(i===FIN.tabI?' on':'')+'" data-i="'+i+'">'+t.n+'</button>';
+      }).join('');
+    };
+    paint();
+    window.__finPaintTabs=paint;
+    strip.addEventListener('click', function(e){
+      const b=(e.target && e.target.closest) ? e.target.closest('.fin-tb') : null;
+      if(!b) return;
+      FIN.tabI=Number(b.dataset.i)||0;
+      const nm=document.getElementById('finTabName');
+      if(nm && FIN_TABS[FIN.tabI]) nm.textContent=FIN_TABS[FIN.tabI].n;
+      paint();
+      const act=strip.querySelector('.fin-tb.on');
+      if(act && act.scrollIntoView) act.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' });
+      try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(err){}
+      if(typeof renderFin==='function') renderFin();
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', build);
+  else build();
+})();
+
+/* ================= Профиль: Duolingo стиліндегі бет ================= */
+const PF = { data:null, friends:[], busy:false };
+const PF_ACH = [
+  { n:'Алғашқы бет',    d:'Кітап оқуды баста',        goal:1,      ic:'i-book',   f:function(p){ return p.read.days; } },
+  { n:'Апталық серия',  d:'7 күн қатарынан оқы',      goal:7,      ic:'i-target', f:function(p){ return p.read.streak; } },
+  { n:'Кітапқұмар',     d:'1000 минут оқы',           goal:1000,   ic:'i-clock',  f:function(p){ return p.read.minutes; } },
+  { n:'Марафоншы',      d:'100 000 қадам жаса',       goal:100000, ic:'i-steps',  f:function(p){ return p.steps.total; } },
+  { n:'Темірдей тәртіп',d:'30 күн мақсатқа жет',      goal:30,     ic:'i-shield', f:function(p){ return p.steps.goalDays; } }
+];
+function pfEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+function pfIni(name){
+  const p=String(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!p.length) return '•';
+  return (p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();
+}
+function pfIcon(n){ return '<svg class="ic-svg" viewBox="0 0 24 24"><use href="#'+n+'"/></svg>'; }
+function pfBuild(){
+  const sec=document.getElementById('screen-profile');
+  if(!sec || document.getElementById('pfHero')) return;
+  const oldName=document.getElementById('profileName');
+  const nameTxt=oldName ? oldName.textContent : '';
+  const seg=document.getElementById('themeSeg');
+  const inc=document.getElementById('frIncoming');
+  const list=document.getElementById('frList');
+  if(seg) seg.remove();
+  if(inc) inc.remove();
+  if(list) list.remove();
+  sec.innerHTML=[
+    '<div class="pf-hero" id="pfHero">',
+    '  <div class="pf-ava" id="pfAva">•</div>',
+    '  <div class="pf-name" id="profileName"></div>',
+    '  <div class="pf-since" id="pfSince">Spirit қауымдастығы</div>',
+    '</div>',
+    '<div class="pf-stats">',
+    '  <div class="pf-st"><span class="ic s1">'+pfIcon('i-clock')+'</span><div><b id="pfMin">0</b><i>оқыған минут</i></div></div>',
+    '  <div class="pf-st"><span class="ic s2">'+pfIcon('i-steps')+'</span><div><b id="pfSteps">0</b><i>қадам</i></div></div>',
+    '  <div class="pf-st"><span class="ic s3">'+pfIcon('i-target')+'</span><div><b id="pfStreak">0</b><i>күн қатар</i></div></div>',
+    '  <div class="pf-st"><span class="ic s4">'+pfIcon('i-people')+'</span><div><b id="pfFriends">0</b><i>дос</i></div></div>',
+    '</div>',
+    '<div class="pf-h">Жетістіктер</div>',
+    '<div class="pf-ach" id="pfAch"></div>',
+    '<div class="pf-h">Достар</div>',
+    '<button type="button" class="pf-addbtn" id="pfAddBtn">'+pfIcon('i-plus')+'<span>Дос қосу</span></button>',
+    '<div id="pfFrSlot"></div>',
+    '<div class="pf-h">Тема</div>',
+    '<div id="pfSegSlot"></div>',
+    '<div class="profile-hint">«Авто» — телефон/Telegram параметріне сай ауысады.</div>',
+    '<div class="fin-modal hidden" id="pfFrModal">',
+    '  <div class="fin-sheet">',
+    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Дос қосу</div>',
+    '      <button type="button" class="fin-x" id="pfFrX">'+pfIcon('i-x')+'</button></div>',
+    '    <input class="input" id="pfFrQ" placeholder="Атын жаз…" autocomplete="off">',
+    '    <div class="pf-res" id="pfFrRes"></div>',
+    '  </div>',
+    '</div>'
+  ].join('\n');
+  const slotFr=document.getElementById('pfFrSlot');
+  if(inc) slotFr.appendChild(inc);
+  if(list) slotFr.appendChild(list);
+  const slotSeg=document.getElementById('pfSegSlot');
+  if(seg) slotSeg.appendChild(seg);
+  const nm=document.getElementById('profileName');
+  if(nm) nm.textContent=nameTxt;
+  const ava=document.getElementById('pfAva');
+  if(ava) ava.textContent=pfIni(nameTxt);
+  const add=document.getElementById('pfAddBtn');
+  if(add) add.addEventListener('click', function(){ pfOpenFr(); });
+  const x=document.getElementById('pfFrX');
+  if(x) x.addEventListener('click', function(){ pfCloseFr(); });
+  const modal=document.getElementById('pfFrModal');
+  if(modal) modal.addEventListener('click', function(e){ if(e.target===modal) pfCloseFr(); });
+  const q=document.getElementById('pfFrQ');
+  if(q) q.addEventListener('input', function(){ clearTimeout(PF.t); PF.t=setTimeout(pfSearch, 260); });
+}
+function pfAchRender(p){
+  const box=document.getElementById('pfAch'); if(!box||!p) return;
+  box.innerHTML=PF_ACH.map(function(a){
+    let cur=0; try{ cur=Number(a.f(p))||0; }catch(e){}
+    const done=cur>=a.goal;
+    const pct=Math.min(100, Math.round(cur/a.goal*100));
+    return '<div class="pf-a'+(done?' done':'')+'">'
+      + '<span class="pf-a-ic">'+pfIcon(a.ic)+'</span>'
+      + '<div class="pf-a-tx"><b>'+pfEsc(a.n)+'</b><i>'+pfEsc(a.d)+'</i>'
+      + '<div class="pf-a-bar"><span style="width:'+pct+'%"></span></div></div>'
+      + '<span class="pf-a-n">'+(done ? '✓' : (pgShort(cur)+'/'+pgShort(a.goal)))+'</span></div>';
+  }).join('');
+}
+async function pfLoad(){
+  if(PF.busy) return; PF.busy=true;
+  try{
+    if(!PG.data){ await loadProgress(); }
+    const p=PG.data && PG.data.all;
+    if(p){
+      pgCount('pfMin', p.read.minutes||0, pgShort);
+      pgCount('pfSteps', p.steps.total||0, pgShort);
+      pgCount('pfStreak', p.read.streak||0, pgShort);
+      pfAchRender(p);
+    }
+    const fr=await api('/api/friends/me', {});
+    const arr=(fr && (fr.friends || fr.list || fr.items)) || [];
+    PF.friends=Array.isArray(arr)?arr:[];
+    pgCount('pfFriends', PF.friends.length, pgShort);
+  }catch(e){}
+  finally{ PF.busy=false; }
+}
+function pfOpenFr(){
+  const m=document.getElementById('pfFrModal'); if(!m) return;
+  m.classList.remove('hidden');
+  const q=document.getElementById('pfFrQ'); if(q){ q.value=''; }
+  pfSearch();
+}
+function pfCloseFr(){
+  const m=document.getElementById('pfFrModal'); if(m) m.classList.add('hidden');
+}
+async function pfSearch(){
+  const box=document.getElementById('pfFrRes'); if(!box) return;
+  const q=(document.getElementById('pfFrQ')||{}).value||'';
+  box.innerHTML='<div class="pf-res-e">Ізделуде…</div>';
+  try{
+    const r=await api('/api/friends/search', { q:q });
+    const list=(r && r.users) || [];
+    if(!list.length){ box.innerHTML='<div class="pf-res-e">'+(q?'Табылмады':'Әзірге ұсыныс жоқ')+'</div>'; return; }
+    box.innerHTML=list.map(function(u){
+      return '<div class="pf-r" data-id="'+u.id+'">'
+        + '<span class="pf-r-ava">'+pfEsc(pfIni(u.name))+'</span>'
+        + '<span class="pf-r-n">'+pfEsc(u.name)+'</span>'
+        + '<button type="button" class="pf-r-b">Қосу</button></div>';
+    }).join('');
+    box.querySelectorAll('.pf-r-b').forEach(function(b){
+      b.addEventListener('click', async function(){
+        const row=b.closest('.pf-r'); if(!row) return;
+        b.disabled=true; b.textContent='…';
+        try{
+          const rr=await api('/api/friends/invite', { id:Number(row.dataset.id) });
+          b.textContent=(rr && rr.ok) ? 'Жіберілді' : 'Қате';
+          if(rr && rr.ok){ b.classList.add('sent'); try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){} }
+        }catch(e){ b.textContent='Қате'; }
+      });
+    });
+  }catch(e){ box.innerHTML='<div class="pf-res-e">Желі қатесі</div>'; }
+}
+(function(){
+  function init(){
+    pfBuild();
+    const tab=document.querySelector('.tab[data-screen="profile"]');
+    if(tab) tab.addEventListener('click', function(){ setTimeout(pfLoad, 60); });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
