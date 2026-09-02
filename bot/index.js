@@ -852,7 +852,7 @@ app.post('/api/book/room', async (req, res) => {
   const readers = rows
     .filter((r) => byId[r.telegramId] && r.updatedAt && (now - new Date(r.updatedAt).getTime()) < LIVE)
     .map((r) => { const nm = shortName(byId[r.telegramId]);
-      return { telegramId: r.telegramId, name: nm, initial: (nm[0] || '?').toUpperCase(),
+      return { telegramId: r.telegramId, name: nm, av: ((byId || {})[r.telegramId] || {}).avatar || null, initial: (nm[0] || '?').toUpperCase(),
         percent: Math.round(r.percent || 0), page: (Number(r.offset) || 0) + 1, ch: (Number(r.location) || 0) + 1, me: r.telegramId === tgUser.id }; })
     .sort((a, b) => b.percent - a.percent);
   res.json({ ok: true, readers, count: readers.length, book: { title: book?.title || '', author: book?.author || '', cover: book?.cover || '' } });
@@ -1114,7 +1114,7 @@ app.post('/api/friends/search', async (req, res) => {
       if (!uid || uid === me || linked[uid]) continue;
       const nm = frName(u);
       if (q && nm.toLowerCase().indexOf(q) < 0) continue;
-      out.push({ id: uid, name: nm });
+      out.push({ id: uid, name: nm, av: u.avatar || null });
       if (out.length >= 30) break;
     }
     out.sort((a, b) => a.name.localeCompare(b.name, 'kk'));
@@ -1135,7 +1135,63 @@ app.post('/api/friends/invite', async (req, res) => {
     await addFriendReq(me, to);
     res.json({ ok: true });
   } catch (e) {
+    res.json({ ok: false,
+
+/* ===== Аватар: сақтау және тарату ===== */
+app.post('/api/avatar/save', async (req, res) => {
+  try {
+    const tgUser = requireTelegram(req, res);
+    if (!tgUser) return;
+    const body = req.body || {};
+    const type = String(body.type || '');
+    let avatar = null;
+    if (type === 'photo') {
+      const src = String(body.src || '');
+      if (src.indexOf('data:image/') !== 0) return res.json({ ok: false, error: 'bad image' });
+      if (src.length > 400000) return res.json({ ok: false, error: 'too big' });
+      avatar = { t: 'p', s: src };
+    } else if (type === 'char') {
+      const cfg = body.cfg && typeof body.cfg === 'object' ? body.cfg : null;
+      if (!cfg) return res.json({ ok: false, error: 'bad cfg' });
+      const clean = {};
+      Object.keys(cfg).slice(0, 20).forEach((k) => {
+        const v = cfg[k];
+        if (typeof v === 'number') clean[k] = v;
+        else if (typeof v === 'string') clean[k] = v.slice(0, 24);
+      });
+      avatar = { t: 'c', c: clean };
+    } else if (type === 'none') {
+      avatar = null;
+    } else {
+      return res.json({ ok: false, error: 'bad type' });
+    }
+    await upsertUser({ telegramId: Number(tgUser.id), avatar: avatar });
+    res.json({ ok: true, avatar: avatar });
+  } catch (e) {
     res.json({ ok: false, error: 'server' });
+  }
+});
+app.post('/api/avatars', async (req, res) => {
+  try {
+    const tgUser = requireTelegram(req, res);
+    if (!tgUser) return;
+    const users = (await getUsers()) || [];
+    const map = {};
+    let n = 0;
+    for (let i = 0; i < users.length && n < 300; i++) {
+      const u = users[i];
+      if (!u || !u.avatar) continue;
+      const id = Number(u.telegramId);
+      if (!id) continue;
+      map[id] = u.avatar;
+      n++;
+    }
+    res.json({ ok: true, map: map });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+ error: 'server' });
   }
 });
 
