@@ -2722,83 +2722,27 @@ async function pfSearch(){
   else init();
 })();
 
-/* ================= Аватар: сурет немесе кейіпкер ================= */
-const AV = { map:{}, mine:null, at:0, cfg:null, cat:'skin' };
-const AV_SKIN = ['#F7D9BE','#EFC49F','#DFA97C','#C4855A','#9C6238','#6E4423'];
-const AV_HAIRC = ['#241A14','#3E2B20','#6B4423','#A9662F','#D8B26A','#8E8E93','#EDEDED','#39506B','#7B3F6B'];
-const AV_CLOTH = ['#5E5CE6','#30A46C','#F5A524','#E5484D','#0EA5A0','#3B4A6B','#8E8E93','#1B1D22'];
-const AV_BG = [['#EEF0FF','#D9DDFF'],['#E8F6EE','#CFEEDF'],['#FFF4E0','#FFE3B8'],['#FFE9EA','#FFD2D5'],['#E9F4FF','#CFE4FF'],['#F3EEFF','#E0D6FF']];
-const AV_FACE = [{rx:21,ry:26},{rx:23,ry:25},{rx:20,ry:27.5}];
-function avDef(){ return { face:0, skin:1, hair:0, hairc:1, eyes:0, brow:0, mouth:0, beard:0, glass:0, cloth:0, bg:0 }; }
-function avPick(arr,i){ return arr[((Number(i)||0)%arr.length+arr.length)%arr.length]; }
-function avShade(hex, k){
-  const c=String(hex||'#000').replace('#','');
-  const n=parseInt(c.length===3 ? c.split('').map(function(x){return x+x;}).join('') : c, 16);
-  let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
-  r=Math.max(0,Math.min(255,Math.round(r*k))); g=Math.max(0,Math.min(255,Math.round(g*k))); b=Math.max(0,Math.min(255,Math.round(b*k)));
-  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+/* ================= Аватар: сурет немесе дайын аватар ================= */
+const AV = { map:{}, mine:null, at:0, seeds:[], pick:null, img:null, box:260, base:1, s:1, x:0, y:0, ptr:{}, pinch:0 };
+const AV_STYLE = 'avataaars';
+const AV_BG = 'b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf,d1f4e0';
+function avUrl(seed){
+  return 'https://api.dicebear.com/9.x/' + AV_STYLE + '/svg?seed=' + encodeURIComponent(seed)
+    + '&radius=50&backgroundType=gradientLinear&backgroundColor=' + AV_BG;
 }
-function avCharSvg(cfg){
-  const c = Object.assign(avDef(), cfg||{});
-  const uid = 'a'+Math.random().toString(36).slice(2,8);
-  const f = avPick(AV_FACE, c.face);
-  const skin = avPick(AV_SKIN, c.skin);
-  const hair = avPick(AV_HAIRC, c.hairc);
-  const cloth = avPick(AV_CLOTH, c.cloth);
-  const bg = avPick(AV_BG, c.bg);
-  const sk2 = avShade(skin, .86), sk3 = avShade(skin, .72);
-  const hr2 = avShade(hair, .78);
-  const cy = 46, cx = 50;
-  let s = '<svg class="av-s" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">';
-  s += '<defs>'
-    + '<radialGradient id="bg'+uid+'" cx="38%" cy="26%" r="82%"><stop offset="0" stop-color="'+bg[0]+'"/><stop offset="1" stop-color="'+bg[1]+'"/></radialGradient>'
-    + '<radialGradient id="sk'+uid+'" cx="36%" cy="28%" r="78%"><stop offset="0" stop-color="'+avShade(skin,1.08)+'"/><stop offset=".55" stop-color="'+skin+'"/><stop offset="1" stop-color="'+sk3+'"/></radialGradient>'
-    + '<linearGradient id="hr'+uid+'" x1=".2" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="'+avShade(hair,1.18)+'"/><stop offset="1" stop-color="'+hr2+'"/></linearGradient>'
-    + '<linearGradient id="cl'+uid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+avShade(cloth,1.12)+'"/><stop offset="1" stop-color="'+avShade(cloth,.82)+'"/></linearGradient>'
-    + '</defs>';
-  s += '<rect width="100" height="100" fill="url(#bg'+uid+')"/>';
-  if(c.hair===2||c.hair===3){ s += '<path d="M'+(cx-f.rx-4)+',60 Q'+(cx-f.rx-6)+',26 '+cx+',22 Q'+(cx+f.rx+6)+',26 '+(cx+f.rx+4)+',60 L'+(cx+f.rx+2)+',86 L'+(cx-f.rx-2)+',86 Z" fill="'+hr2+'"/>'; }
-  s += '<path d="M'+(cx-7)+','+(cy+16)+' h14 v10 h-14 Z" fill="'+sk3+'"/>';
-  s += '<path d="M22,100 q4,-20 28,-22 q24,2 28,22 Z" fill="url(#cl'+uid+')"/>';
-  s += '<ellipse cx="'+(cx-f.rx)+'" cy="'+(cy+3)+'" rx="3.4" ry="4.6" fill="'+sk2+'"/>';
-  s += '<ellipse cx="'+(cx+f.rx)+'" cy="'+(cy+3)+'" rx="3.4" ry="4.6" fill="'+sk2+'"/>';
-  s += '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+f.rx+'" ry="'+f.ry+'" fill="url(#sk'+uid+')"/>';
-  if(c.beard===1) s += '<ellipse cx="'+cx+'" cy="'+(cy+13)+'" rx="'+(f.rx-3)+'" ry="10" fill="'+hair+'" opacity=".16"/>';
-  if(c.beard===3) s += '<path d="M'+(cx-f.rx+2)+','+(cy+3)+' q0,'+(f.ry-4)+' '+f.rx+','+(f.ry-4)+' q'+f.rx+',0 '+f.rx+',-'+(f.ry-4)+' q-3,16 -'+f.rx+',16 q-'+f.rx+',0 -'+f.rx+',-16 Z" fill="url(#hr'+uid+')"/>';
-  const ey = cy - 2, ex = 7.6;
-  const brY = ey - 8;
-  if(c.brow===0){ s += '<path d="M'+(cx-ex-4)+','+brY+' q4,-2.6 8,0" stroke="'+hr2+'" stroke-width="1.9" fill="none" stroke-linecap="round"/><path d="M'+(cx+ex-4)+','+brY+' q4,-2.6 8,0" stroke="'+hr2+'" stroke-width="1.9" fill="none" stroke-linecap="round"/>'; }
-  if(c.brow===1){ s += '<path d="M'+(cx-ex-4)+','+(brY+1)+' q4,-4.4 8,-1" stroke="'+hr2+'" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M'+(cx+ex-4)+','+(brY)+' q4,-3.4 8,1" stroke="'+hr2+'" stroke-width="1.8" fill="none" stroke-linecap="round"/>'; }
-  if(c.brow===2){ s += '<rect x="'+(cx-ex-4.5)+'" y="'+(brY-1.4)+'" width="9" height="2.8" rx="1.4" fill="'+hr2+'"/><rect x="'+(cx+ex-4.5)+'" y="'+(brY-1.4)+'" width="9" height="2.8" rx="1.4" fill="'+hr2+'"/>'; }
-  const eye=function(sx){
-    if(c.eyes===3) return '<path d="M'+(sx-3.6)+','+(ey+1)+' q3.6,-4 7.2,0" stroke="#2A2A2E" stroke-width="1.9" fill="none" stroke-linecap="round"/>';
-    const rw = c.eyes===2 ? 4.4 : 3.7;
-    const rh = c.eyes===1 ? 2.2 : (c.eyes===2 ? 4.2 : 3.4);
-    return '<ellipse cx="'+sx+'" cy="'+ey+'" rx="'+rw+'" ry="'+rh+'" fill="#FFFFFF"/>'
-      + '<circle cx="'+sx+'" cy="'+ey+'" r="'+(rh>2.6?2.1:1.6)+'" fill="#2E2A26"/>'
-      + '<circle cx="'+(sx-0.7)+'" cy="'+(ey-0.9)+'" r=".62" fill="#FFFFFF"/>';
-  };
-  s += eye(cx-ex) + eye(cx+ex);
-  s += '<path d="M'+cx+','+(cy+2)+' q-1.8,4 1.4,4.6" stroke="'+sk3+'" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
-  const my = cy + 12;
-  if(c.mouth===0) s += '<path d="M'+(cx-5.4)+','+(my-1)+' q5.4,5.4 10.8,0" stroke="#8A4A44" stroke-width="2" fill="none" stroke-linecap="round"/>';
-  if(c.mouth===1) s += '<path d="M'+(cx-6)+','+(my-1.6)+' q6,7 12,0 Z" fill="#8A4A44"/><path d="M'+(cx-4.4)+','+(my-1.2)+' h8.8 v2 h-8.8 Z" fill="#FFFFFF"/>';
-  if(c.mouth===2) s += '<rect x="'+(cx-4.6)+'" y="'+(my-0.8)+'" width="9.2" height="1.9" rx="1" fill="#8A4A44"/>';
-  if(c.mouth===3) s += '<ellipse cx="'+cx+'" cy="'+my+'" rx="2.6" ry="2.9" fill="#8A4A44"/>';
-  if(c.beard===2) s += '<path d="M'+(cx-6)+','+(my-4)+' q6,-2.6 12,0 q-6,3 -12,0 Z" fill="'+hair+'"/>';
-  if(c.hair===0) s += '<path d="M'+(cx-f.rx-1)+','+(cy-6)+' q2,-'+(f.ry+2)+' '+(f.rx+1)+',-'+(f.ry-2)+' q'+(f.rx+1)+',-4 '+(f.rx+1)+','+(f.ry-2)+' q-6,-9 -'+(f.rx+1)+',-7 q-'+(f.rx-2)+',-2 -'+(f.rx+1)+',7 Z" fill="url(#hr'+uid+')"/>';
-  if(c.hair===1){ let cl=''; for(let i=0;i<7;i++){ const a=Math.PI*(0.08+0.14*i); cl += '<circle cx="'+(cx-Math.cos(a)*(f.rx+1))+'" cy="'+(cy-Math.sin(a)*(f.ry-3)-3)+'" r="6" fill="url(#hr'+uid+')"/>'; } s += cl; }
-  if(c.hair===2) s += '<path d="M'+(cx-f.rx-2)+','+(cy-4)+' q1,-'+(f.ry+4)+' '+(f.rx+2)+',-'+(f.ry)+' q'+(f.rx+2)+',-1 '+(f.rx+2)+','+f.ry+' q-8,-12 -'+(f.rx+2)+',-9 q-'+(f.rx-4)+',-3 -'+(f.rx+2)+',9 Z" fill="url(#hr'+uid+')"/>';
-  if(c.hair===3) s += '<circle cx="'+cx+'" cy="'+(cy-f.ry-4)+'" r="7" fill="url(#hr'+uid+')"/><path d="M'+(cx-f.rx-1)+','+(cy-6)+' q2,-'+(f.ry+2)+' '+(f.rx+1)+',-'+(f.ry-2)+' q'+(f.rx+1)+',-4 '+(f.rx+1)+','+(f.ry-2)+' q-6,-9 -'+(f.rx+1)+',-7 q-'+(f.rx-2)+',-2 -'+(f.rx+1)+',7 Z" fill="url(#hr'+uid+')"/>';
-  if(c.hair===5) s += '<path d="M'+(cx-f.rx-1)+','+(cy-7)+' q3,-'+(f.ry+4)+' '+(f.rx+3)+',-'+(f.ry-1)+' q'+(f.rx-1)+',-3 '+(f.rx-1)+','+(f.ry-6)+' q-10,-4 -'+(f.rx*2)+',6 Z" fill="url(#hr'+uid+')"/>';
-  if(c.glass===1) s += '<g fill="none" stroke="#3A3A3E" stroke-width="1.5" opacity=".85"><circle cx="'+(cx-ex)+'" cy="'+ey+'" r="6"/><circle cx="'+(cx+ex)+'" cy="'+ey+'" r="6"/><path d="M'+(cx-ex+6)+','+ey+' h'+(2*ex-12)+'"/></g>';
-  if(c.glass===2) s += '<g fill="none" stroke="#3A3A3E" stroke-width="1.5" opacity=".85"><rect x="'+(cx-ex-5.6)+'" y="'+(ey-4.6)+'" width="11.2" height="9.2" rx="2.4"/><rect x="'+(cx+ex-5.6)+'" y="'+(ey-4.6)+'" width="11.2" height="9.2" rx="2.4"/><path d="M'+(cx-ex+5.6)+','+ey+' h'+(2*ex-11.2)+'"/></g>';
-  s += '</svg>';
-  return s;
+function avSeeds(n){
+  const out=[];
+  for(let i=0;i<n;i++) out.push(Math.random().toString(36).slice(2,10));
+  return out;
+}
+function avB64(str){
+  const bytes=new TextEncoder().encode(str);
+  let bin='';
+  for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
 }
 function avHtml(av, name){
   if(av && av.t==='p' && av.s) return '<img class="av-i" src="'+String(av.s).replace(/"/g,'&quot;')+'" alt="">';
-  if(av && av.t==='c' && av.c) return avCharSvg(av.c);
   return '<span class="av-t">'+pfEsc(pfIni(name))+'</span>';
 }
 async function avLoadAll(force){
@@ -2816,14 +2760,50 @@ function avPaintMine(){
   box.classList.add('av');
   box.innerHTML=avHtml(AV.mine, nm);
 }
-/* ---- екі батырмалы парақ ---- */
-function avOpenMenu(){
-  const m=document.getElementById('avMenu'); if(m) m.classList.remove('hidden');
+function avToast(t){ try{ if(typeof rdToast==='function') rdToast(t); }catch(e){} }
+function avShow(id, on){ const e=document.getElementById(id); if(e) e.classList.toggle('hidden', !on); }
+async function avSave(type, extra){
+  try{
+    const r=await api('/api/avatar/save', Object.assign({ type:type }, extra||{}));
+    if(r && r.ok){
+      AV.mine=r.avatar||null; AV.at=0;
+      avPaintMine();
+      avShow('avMenu',false); avShow('avPick',false); avShow('avCrop',false);
+      try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){}
+      avToast('Аватар жаңарды');
+    } else { avToast('Сақталмады'); }
+  }catch(e){ avToast('Желі қатесі'); }
 }
-function avCloseMenu(){
-  const m=document.getElementById('avMenu'); if(m) m.classList.add('hidden');
+/* ---- дайын аватарлар ---- */
+function avOpenPick(){
+  avShow('avMenu', false);
+  AV.pick=null;
+  avRoll();
+  avShow('avPick', true);
 }
-/* ---- сурет таңдау ---- */
+function avRoll(){
+  AV.seeds=avSeeds(24);
+  AV.pick=null;
+  const g=document.getElementById('avGrid');
+  if(g) g.innerHTML=AV.seeds.map(function(s){
+    return '<button type="button" class="av-g" data-seed="'+s+'"><img loading="eager" src="'+avUrl(s)+'" alt=""></button>';
+  }).join('');
+  const ok=document.getElementById('avPickOk');
+  if(ok) ok.disabled=true;
+}
+async function avPickSave(){
+  if(!AV.pick) return;
+  const ok=document.getElementById('avPickOk');
+  if(ok){ ok.disabled=true; ok.textContent='Сақталуда…'; }
+  try{
+    const r=await fetch(avUrl(AV.pick), { cache:'force-cache' });
+    const svg=await r.text();
+    const src='data:image/svg+xml;base64,'+avB64(svg);
+    await avSave('photo', { src:src });
+  }catch(e){ avToast('Жүктелмеді'); }
+  finally{ if(ok){ ok.disabled=false; ok.textContent='Сақтау'; } }
+}
+/* ---- сурет: қиып алу ---- */
 function avPickPhoto(){
   const inp=document.getElementById('avFile');
   if(inp){ inp.value=''; inp.click(); }
@@ -2834,79 +2814,98 @@ function avOnFile(e){
   const rd=new FileReader();
   rd.onload=function(){
     const img=new Image();
-    img.onload=function(){
-      const S=256;
-      const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
-      const ctx=cv.getContext('2d');
-      const side=Math.min(img.width, img.height);
-      ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S, S);
-      const src=cv.toDataURL('image/jpeg', 0.82);
-      avSave('photo', { src:src });
-    };
+    img.onload=function(){ avOpenCrop(img); };
     img.onerror=function(){ avToast('Сурет оқылмады'); };
     img.src=rd.result;
   };
   rd.onerror=function(){ avToast('Файл оқылмады'); };
   rd.readAsDataURL(f);
 }
-function avToast(t){ try{ if(typeof rdToast==='function') rdToast(t); }catch(e){} }
-async function avSave(type, extra){
-  try{
-    const body=Object.assign({ type:type }, extra||{});
-    const r=await api('/api/avatar/save', body);
-    if(r && r.ok){
-      AV.mine=r.avatar||null;
-      AV.at=0;
-      avPaintMine();
-      avCloseMenu(); avCloseMaker();
-      try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){}
-      avToast('Аватар жаңарды');
-    } else { avToast('Сақталмады'); }
-  }catch(e){ avToast('Желі қатесі'); }
+function avOpenCrop(img){
+  AV.img=img;
+  AV.base=AV.box/Math.min(img.naturalWidth, img.naturalHeight);
+  AV.s=1; AV.x=0; AV.y=0;
+  avShow('avMenu', false);
+  avShow('avCrop', true);
+  const holder=document.getElementById('avCropImg');
+  if(holder){
+    holder.innerHTML='';
+    img.className='av-crop-img';
+    holder.appendChild(img);
+  }
+  const z=document.getElementById('avZoom');
+  if(z) z.value='1';
+  avCropPaint();
 }
-/* ---- кейіпкер жасаушы ---- */
-const AV_CATS = [
-  { k:'skin',  n:'Тері',        len:AV_SKIN.length,  sw:AV_SKIN },
-  { k:'face',  n:'Бет пішіні',  len:AV_FACE.length },
-  { k:'hair',  n:'Шаш',         len:6 },
-  { k:'hairc', n:'Шаш түсі',    len:AV_HAIRC.length, sw:AV_HAIRC },
-  { k:'eyes',  n:'Көз',         len:4 },
-  { k:'brow',  n:'Қас',         len:3 },
-  { k:'mouth', n:'Ауыз',        len:4 },
-  { k:'beard', n:'Сақал',       len:4 },
-  { k:'glass', n:'Көзілдірік',  len:3 },
-  { k:'cloth', n:'Киім',        len:AV_CLOTH.length, sw:AV_CLOTH },
-  { k:'bg',    n:'Фон',         len:AV_BG.length,    sw:AV_BG.map(function(p){ return p[1]; }) }
-];
-function avOpenMaker(){
-  avCloseMenu();
-  AV.cfg = (AV.mine && AV.mine.t==='c' && AV.mine.c) ? Object.assign(avDef(), AV.mine.c) : avDef();
-  AV.cat = 'skin';
-  const m=document.getElementById('avMaker'); if(m) m.classList.remove('hidden');
-  avMakerPaint();
+function avClamp(){
+  const w=AV.img.naturalWidth*AV.base*AV.s, h=AV.img.naturalHeight*AV.base*AV.s;
+  const mx=Math.max(0,(w-AV.box)/2), my=Math.max(0,(h-AV.box)/2);
+  AV.x=Math.max(-mx, Math.min(mx, AV.x));
+  AV.y=Math.max(-my, Math.min(my, AV.y));
 }
-function avCloseMaker(){ const m=document.getElementById('avMaker'); if(m) m.classList.add('hidden'); }
-function avMakerPaint(){
-  const prev=document.getElementById('avPrev');
-  if(prev) prev.innerHTML=avCharSvg(AV.cfg);
-  const cats=document.getElementById('avCats');
-  if(cats) cats.innerHTML=AV_CATS.map(function(c){
-    return '<button type="button" class="av-cat'+(c.k===AV.cat?' on':'')+'" data-k="'+c.k+'">'+c.n+'</button>';
-  }).join('');
-  const cat=AV_CATS.filter(function(c){ return c.k===AV.cat; })[0] || AV_CATS[0];
-  const opts=document.getElementById('avOpts');
-  if(opts) opts.innerHTML=Array.from({length:cat.len}).map(function(_,i){
-    const on = (Number(AV.cfg[cat.k])||0)===i ? ' on' : '';
-    if(cat.sw) return '<button type="button" class="av-sw'+on+'" data-i="'+i+'" style="background:'+cat.sw[i]+'"></button>';
-    const mini=Object.assign({}, AV.cfg); mini[cat.k]=i;
-    return '<button type="button" class="av-op'+on+'" data-i="'+i+'">'+avCharSvg(mini)+'</button>';
-  }).join('');
+function avCropPaint(){
+  if(!AV.img) return;
+  avClamp();
+  const w=AV.img.naturalWidth*AV.base*AV.s, h=AV.img.naturalHeight*AV.base*AV.s;
+  AV.img.style.width=w+'px';
+  AV.img.style.height=h+'px';
+  AV.img.style.marginLeft=(-w/2)+'px';
+  AV.img.style.marginTop=(-h/2)+'px';
+  AV.img.style.transform='translate('+AV.x+'px,'+AV.y+'px)';
 }
-function avRandom(){
-  const c=avDef();
-  AV_CATS.forEach(function(k){ c[k.k]=Math.floor(Math.random()*k.len); });
-  AV.cfg=c; avMakerPaint();
-  try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){}
+function avCropSave(){
+  if(!AV.img) return;
+  const S=256, k=AV.base*AV.s;
+  const side=AV.box/k;
+  const sx=AV.img.naturalWidth/2 - (AV.box/2 + AV.x)/k;
+  const sy=AV.img.naturalHeight/2 - (AV.box/2 + AV.y)/k;
+  const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+  const ctx=cv.getContext('2d');
+  ctx.drawImage(AV.img, sx, sy, side, side, 0, 0, S, S);
+  avSave('photo', { src: cv.toDataURL('image/jpeg', 0.85) });
+}
+function avCropBind(){
+  const box=document.getElementById('avCropBox');
+  if(!box || box.dataset.bound==='1') return;
+  box.dataset.bound='1';
+  const dist=function(){
+    const k=Object.keys(AV.ptr);
+    if(k.length<2) return 0;
+    const a=AV.ptr[k[0]], b=AV.ptr[k[1]];
+    return Math.hypot(a.x-b.x, a.y-b.y);
+  };
+  box.addEventListener('pointerdown', function(e){
+    box.setPointerCapture(e.pointerId);
+    AV.ptr[e.pointerId]={x:e.clientX, y:e.clientY};
+    AV.pinch=dist();
+  });
+  box.addEventListener('pointermove', function(e){
+    if(!AV.ptr[e.pointerId]) return;
+    const prev=AV.ptr[e.pointerId];
+    const n=Object.keys(AV.ptr).length;
+    AV.ptr[e.pointerId]={x:e.clientX, y:e.clientY};
+    if(n>=2){
+      const d=dist();
+      if(AV.pinch>0 && d>0){
+        AV.s=Math.max(1, Math.min(3, AV.s*(d/AV.pinch)));
+        const z=document.getElementById('avZoom'); if(z) z.value=String(AV.s);
+      }
+      AV.pinch=d;
+    } else {
+      AV.x+=e.clientX-prev.x;
+      AV.y+=e.clientY-prev.y;
+    }
+    avCropPaint();
+  });
+  const up=function(e){ delete AV.ptr[e.pointerId]; AV.pinch=0; };
+  box.addEventListener('pointerup', up);
+  box.addEventListener('pointercancel', up);
+  box.addEventListener('wheel', function(e){
+    e.preventDefault();
+    AV.s=Math.max(1, Math.min(3, AV.s*(e.deltaY<0?1.08:0.93)));
+    const z=document.getElementById('avZoom'); if(z) z.value=String(AV.s);
+    avCropPaint();
+  }, {passive:false});
 }
 /* ---- бет құрылымы ---- */
 function avMount(){
@@ -2914,7 +2913,7 @@ function avMount(){
   const ava=document.getElementById('pfAva');
   if(!sec || !ava || document.getElementById('avMenu')) return;
   ava.classList.add('av','av-tap');
-  ava.addEventListener('click', function(){ avOpenMenu(); });
+  ava.addEventListener('click', function(){ avShow('avMenu', true); });
   const wrap=document.createElement('div');
   wrap.innerHTML=[
     '<input type="file" id="avFile" accept="image/'+'*" style="display:none">',
@@ -2922,55 +2921,69 @@ function avMount(){
     '  <div class="fin-sheet av-menu">',
     '    <div class="fin-sheet-top"><div class="fin-sheet-title">Аватар</div>',
     '      <button type="button" class="fin-x" id="avMenuX">'+pfIcon('i-x')+'</button></div>',
-    '    <button type="button" class="av-b" id="avBmake"><span class="ic">'+pfIcon('i-user')+'</span>',
-    '      <span class="tx"><b>Ава жасау</b><i>Өз кейіпкеріңді құрастыр</i></span></button>',
-    '    <button type="button" class="av-b" id="avBphoto"><span class="ic ph">'+pfIcon('i-book')+'</span>',
+    '    <button type="button" class="av-b" id="avBpick"><span class="ic">'+pfIcon('i-people')+'</span>',
+    '      <span class="tx"><b>Аватар таңдау</b><i>Дайын кейіпкерлер жинағы</i></span></button>',
+    '    <button type="button" class="av-b" id="avBphoto"><span class="ic ph">'+pfIcon('i-user')+'</span>',
     '      <span class="tx"><b>Суретті таңдау</b><i>Телефондағы галереядан</i></span></button>',
     '    <button type="button" class="av-b del" id="avBdel"><span class="tx"><b>Аватарды өшіру</b></span></button>',
     '  </div>',
     '</div>',
-    '<div class="fin-modal hidden" id="avMaker">',
-    '  <div class="fin-sheet av-maker">',
-    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Ава жасау</div>',
-    '      <button type="button" class="fin-x" id="avMakerX">'+pfIcon('i-x')+'</button></div>',
-    '    <div class="av-prev av" id="avPrev"></div>',
-    '    <div class="av-cats" id="avCats"></div>',
-    '    <div class="av-opts" id="avOpts"></div>',
+    '<div class="fin-modal hidden" id="avPick">',
+    '  <div class="fin-sheet av-picker">',
+    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Аватар таңдау</div>',
+    '      <button type="button" class="fin-x" id="avPickX">'+pfIcon('i-x')+'</button></div>',
+    '    <div class="av-grid" id="avGrid"></div>',
     '    <div class="av-acts">',
-    '      <button type="button" class="av-rnd" id="avRnd">Кездейсоқ</button>',
-    '      <button type="button" class="av-ok" id="avOk">Сақтау</button>',
+    '      <button type="button" class="av-rnd" id="avMore">Басқа нұсқалар</button>',
+    '      <button type="button" class="av-ok" id="avPickOk" disabled>Сақтау</button>',
+    '    </div>',
+    '  </div>',
+    '</div>',
+    '<div class="fin-modal hidden" id="avCrop">',
+    '  <div class="fin-sheet av-cropper">',
+    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Суретті реттеу</div>',
+    '      <button type="button" class="fin-x" id="avCropX">'+pfIcon('i-x')+'</button></div>',
+    '    <div class="av-crop-box" id="avCropBox"><div class="av-crop-in" id="avCropImg"></div><div class="av-crop-mask"></div></div>',
+    '    <input type="range" class="av-zoom" id="avZoom" min="1" max="3" step="0.01" value="1">',
+    '    <div class="av-hint">Саусақпен жылжыт, екі саусақпен үлкейт</div>',
+    '    <div class="av-acts">',
+    '      <button type="button" class="av-rnd" id="avCropOther">Басқа сурет</button>',
+    '      <button type="button" class="av-ok" id="avCropOk">Сақтау</button>',
     '    </div>',
     '  </div>',
     '</div>'
   ].join('\n');
   while(wrap.firstChild) sec.appendChild(wrap.firstChild);
   const on=function(id, fn){ const e=document.getElementById(id); if(e) e.addEventListener('click', fn); };
-  on('avMenuX', avCloseMenu);
-  on('avMakerX', avCloseMaker);
-  on('avBmake', avOpenMaker);
+  on('avMenuX', function(){ avShow('avMenu', false); });
+  on('avPickX', function(){ avShow('avPick', false); });
+  on('avCropX', function(){ avShow('avCrop', false); });
+  on('avBpick', avOpenPick);
   on('avBphoto', avPickPhoto);
   on('avBdel', function(){ avSave('none', {}); });
-  on('avRnd', avRandom);
-  on('avOk', function(){ avSave('char', { cfg:AV.cfg }); });
+  on('avMore', avRoll);
+  on('avPickOk', avPickSave);
+  on('avCropOther', avPickPhoto);
+  on('avCropOk', avCropSave);
   const fi=document.getElementById('avFile');
   if(fi) fi.addEventListener('change', avOnFile);
-  ['avMenu','avMaker'].forEach(function(id){
-    const m=document.getElementById(id);
-    if(m) m.addEventListener('click', function(e){ if(e.target===m) m.classList.add('hidden'); });
+  const z=document.getElementById('avZoom');
+  if(z) z.addEventListener('input', function(){ AV.s=Number(z.value)||1; avCropPaint(); });
+  ['avMenu','avPick','avCrop'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('click', function(e){ if(e.target===el) el.classList.add('hidden'); });
   });
-  const cats=document.getElementById('avCats');
-  if(cats) cats.addEventListener('click', function(e){
-    const b=(e.target && e.target.closest) ? e.target.closest('.av-cat') : null;
-    if(!b) return; AV.cat=b.dataset.k; avMakerPaint();
-  });
-  const opts=document.getElementById('avOpts');
-  if(opts) opts.addEventListener('click', function(e){
-    const b=(e.target && e.target.closest) ? e.target.closest('.av-sw,.av-op') : null;
+  const g=document.getElementById('avGrid');
+  if(g) g.addEventListener('click', function(e){
+    const b=(e.target && e.target.closest) ? e.target.closest('.av-g') : null;
     if(!b) return;
-    AV.cfg[AV.cat]=Number(b.dataset.i)||0;
-    avMakerPaint();
+    g.querySelectorAll('.av-g.on').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    AV.pick=b.dataset.seed;
+    const ok=document.getElementById('avPickOk'); if(ok) ok.disabled=false;
     try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(err){}
   });
+  avCropBind();
 }
 (function(){
   function boot(){
