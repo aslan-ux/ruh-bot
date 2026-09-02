@@ -1090,6 +1090,55 @@ app.post('/api/progress', async (req, res) => {
   }
 });
 
+
+/* ===== Достар: кодсыз іздеу және сұраныс ===== */
+function frName(u) {
+  const p = [u && u.firstName, u && u.lastName].filter(Boolean).join(' ').trim();
+  return p || (u && u.username ? String(u.username) : '') || 'Қатысушы';
+}
+app.post('/api/friends/search', async (req, res) => {
+  try {
+    const tgUser = requireTelegram(req, res);
+    if (!tgUser) return;
+    const me = Number(tgUser.id);
+    const q = String((req.body && req.body.q) || '').trim().toLowerCase();
+    const users = (await getUsers()) || [];
+    const docs = (await getFriendDocs(me)) || [];
+    const linked = {};
+    docs.forEach((d) => { linked[Number(d.a)] = 1; linked[Number(d.b)] = 1; });
+    const out = [];
+    for (let i = 0; i < users.length; i++) {
+      const u = users[i];
+      if (String(u.status || '') !== 'approved') continue;
+      const uid = Number(u.telegramId);
+      if (!uid || uid === me || linked[uid]) continue;
+      const nm = frName(u);
+      if (q && nm.toLowerCase().indexOf(q) < 0) continue;
+      out.push({ id: uid, name: nm });
+      if (out.length >= 30) break;
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name, 'kk'));
+    res.json({ ok: true, users: out });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+app.post('/api/friends/invite', async (req, res) => {
+  try {
+    const tgUser = requireTelegram(req, res);
+    if (!tgUser) return;
+    const me = Number(tgUser.id);
+    const to = Number((req.body && req.body.id) || 0);
+    if (!to || to === me) return res.json({ ok: false, error: 'bad id' });
+    const u = await getUser(to);
+    if (!u || String(u.status || '') !== 'approved') return res.json({ ok: false, error: 'not found' });
+    await addFriendReq(me, to);
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`HTTP-сервер запущен на порту ${PORT}`);
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
