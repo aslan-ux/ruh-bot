@@ -1293,7 +1293,7 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
   background:var(--surface); border:none; border-radius:16px; padding:14px; margin-top:10px; cursor:pointer; }
 .av-menu .av-b .ic { width:40px; height:40px; border-radius:13px; flex:0 0 auto;
   display:flex; align-items:center; justify-content:center; background:var(--accent); color:var(--on-accent); }
-.av-menu .av-b .ic.ph { background:#30A46C; }
+.av-menu .av-b .ic.ph { background:var(--accent); }
 .av-menu .av-b .ic .ic-svg { width:20px; height:20px; }
 .av-menu .av-b .tx { flex:1; min-width:0; }
 .av-menu .av-b .tx b { display:block; font-size:15px; font-weight:700; color:var(--text); }
@@ -1302,22 +1302,12 @@ html, body, .reader, .rd-view, .rd-pager, .rd-page, .rd-page * {
 .av-menu .av-b.del .tx b { color:#E5484D; font-size:14px; text-align:center; }
 .av-menu .av-b:active { transform:scale(.99); }
 
-.av-picker { max-height:88vh; }
-.av-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; padding:6px 0 4px;
-  max-height:56vh; overflow:auto; }
-.av-g { padding:0; border:2px solid transparent; background:transparent; border-radius:50%;
-  aspect-ratio:1/1; cursor:pointer; overflow:hidden; }
-.av-g img { width:100%; height:100%; display:block; border-radius:50%; background:var(--surface); }
-.av-g.on { border-color:var(--accent); }
-.av-g:active { transform:scale(.95); }
-
 .av-cropper { max-height:92vh; }
 .av-crop-box { position:relative; width:260px; height:260px; margin:8px auto 14px;
   overflow:hidden; border-radius:18px; background:var(--surface); touch-action:none; cursor:grab; }
 .av-crop-in { position:absolute; left:50%; top:50%; width:0; height:0; }
 .av-crop-img { position:absolute; left:0; top:0; max-width:none; user-select:none; -webkit-user-drag:none; }
-.av-crop-mask { position:absolute; inset:0; pointer-events:none; border-radius:18px;
-  box-shadow:0 0 0 999px rgba(0,0,0,.45) inset; }
+.av-crop-mask { position:absolute; inset:0; pointer-events:none; border-radius:18px; }
 .av-crop-mask::after { content:''; position:absolute; inset:0; border-radius:50%;
   box-shadow:0 0 0 999px rgba(0,0,0,.45); border:2px solid rgba(255,255,255,.85); }
 .av-zoom { width:100%; margin:0 0 8px; accent-color:var(--accent); }

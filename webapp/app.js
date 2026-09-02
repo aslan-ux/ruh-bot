@@ -2722,25 +2722,8 @@ async function pfSearch(){
   else init();
 })();
 
-/* ================= Аватар: сурет немесе дайын аватар ================= */
-const AV = { map:{}, mine:null, at:0, seeds:[], pick:null, img:null, box:260, base:1, s:1, x:0, y:0, ptr:{}, pinch:0 };
-const AV_STYLE = 'avataaars';
-const AV_BG = 'b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf,d1f4e0';
-function avUrl(seed){
-  return 'https://api.dicebear.com/9.x/' + AV_STYLE + '/svg?seed=' + encodeURIComponent(seed)
-    + '&radius=50&backgroundType=gradientLinear&backgroundColor=' + AV_BG;
-}
-function avSeeds(n){
-  const out=[];
-  for(let i=0;i<n;i++) out.push(Math.random().toString(36).slice(2,10));
-  return out;
-}
-function avB64(str){
-  const bytes=new TextEncoder().encode(str);
-  let bin='';
-  for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
-  return btoa(bin);
-}
+/* ================= Аватар: тек сурет ================= */
+const AV = { map:{}, mine:null, at:0, img:null, box:260, base:1, s:1, x:0, y:0, ptr:{}, pinch:0 };
 function avHtml(av, name){
   if(av && av.t==='p' && av.s) return '<img class="av-i" src="'+String(av.s).replace(/"/g,'&quot;')+'" alt="">';
   return '<span class="av-t">'+pfEsc(pfIni(name))+'</span>';
@@ -2768,42 +2751,12 @@ async function avSave(type, extra){
     if(r && r.ok){
       AV.mine=r.avatar||null; AV.at=0;
       avPaintMine();
-      avShow('avMenu',false); avShow('avPick',false); avShow('avCrop',false);
+      avShow('avMenu',false); avShow('avCrop',false);
       try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){}
       avToast('Аватар жаңарды');
     } else { avToast('Сақталмады'); }
   }catch(e){ avToast('Желі қатесі'); }
 }
-/* ---- дайын аватарлар ---- */
-function avOpenPick(){
-  avShow('avMenu', false);
-  AV.pick=null;
-  avRoll();
-  avShow('avPick', true);
-}
-function avRoll(){
-  AV.seeds=avSeeds(24);
-  AV.pick=null;
-  const g=document.getElementById('avGrid');
-  if(g) g.innerHTML=AV.seeds.map(function(s){
-    return '<button type="button" class="av-g" data-seed="'+s+'"><img loading="eager" src="'+avUrl(s)+'" alt=""></button>';
-  }).join('');
-  const ok=document.getElementById('avPickOk');
-  if(ok) ok.disabled=true;
-}
-async function avPickSave(){
-  if(!AV.pick) return;
-  const ok=document.getElementById('avPickOk');
-  if(ok){ ok.disabled=true; ok.textContent='Сақталуда…'; }
-  try{
-    const r=await fetch(avUrl(AV.pick), { cache:'force-cache' });
-    const svg=await r.text();
-    const src='data:image/svg+xml;base64,'+avB64(svg);
-    await avSave('photo', { src:src });
-  }catch(e){ avToast('Жүктелмеді'); }
-  finally{ if(ok){ ok.disabled=false; ok.textContent='Сақтау'; } }
-}
-/* ---- сурет: қиып алу ---- */
 function avPickPhoto(){
   const inp=document.getElementById('avFile');
   if(inp){ inp.value=''; inp.click(); }
@@ -2907,7 +2860,6 @@ function avCropBind(){
     avCropPaint();
   }, {passive:false});
 }
-/* ---- бет құрылымы ---- */
 function avMount(){
   const sec=document.getElementById('screen-profile');
   const ava=document.getElementById('pfAva');
@@ -2919,24 +2871,11 @@ function avMount(){
     '<input type="file" id="avFile" accept="image/'+'*" style="display:none">',
     '<div class="fin-modal hidden" id="avMenu">',
     '  <div class="fin-sheet av-menu">',
-    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Аватар</div>',
+    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Профиль суреті</div>',
     '      <button type="button" class="fin-x" id="avMenuX">'+pfIcon('i-x')+'</button></div>',
-    '    <button type="button" class="av-b" id="avBpick"><span class="ic">'+pfIcon('i-people')+'</span>',
-    '      <span class="tx"><b>Аватар таңдау</b><i>Дайын кейіпкерлер жинағы</i></span></button>',
     '    <button type="button" class="av-b" id="avBphoto"><span class="ic ph">'+pfIcon('i-user')+'</span>',
     '      <span class="tx"><b>Суретті таңдау</b><i>Телефондағы галереядан</i></span></button>',
-    '    <button type="button" class="av-b del" id="avBdel"><span class="tx"><b>Аватарды өшіру</b></span></button>',
-    '  </div>',
-    '</div>',
-    '<div class="fin-modal hidden" id="avPick">',
-    '  <div class="fin-sheet av-picker">',
-    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Аватар таңдау</div>',
-    '      <button type="button" class="fin-x" id="avPickX">'+pfIcon('i-x')+'</button></div>',
-    '    <div class="av-grid" id="avGrid"></div>',
-    '    <div class="av-acts">',
-    '      <button type="button" class="av-rnd" id="avMore">Басқа нұсқалар</button>',
-    '      <button type="button" class="av-ok" id="avPickOk" disabled>Сақтау</button>',
-    '    </div>',
+    '    <button type="button" class="av-b del" id="avBdel"><span class="tx"><b>Суретті өшіру</b></span></button>',
     '  </div>',
     '</div>',
     '<div class="fin-modal hidden" id="avCrop">',
@@ -2956,32 +2895,18 @@ function avMount(){
   while(wrap.firstChild) sec.appendChild(wrap.firstChild);
   const on=function(id, fn){ const e=document.getElementById(id); if(e) e.addEventListener('click', fn); };
   on('avMenuX', function(){ avShow('avMenu', false); });
-  on('avPickX', function(){ avShow('avPick', false); });
   on('avCropX', function(){ avShow('avCrop', false); });
-  on('avBpick', avOpenPick);
   on('avBphoto', avPickPhoto);
   on('avBdel', function(){ avSave('none', {}); });
-  on('avMore', avRoll);
-  on('avPickOk', avPickSave);
   on('avCropOther', avPickPhoto);
   on('avCropOk', avCropSave);
   const fi=document.getElementById('avFile');
   if(fi) fi.addEventListener('change', avOnFile);
   const z=document.getElementById('avZoom');
   if(z) z.addEventListener('input', function(){ AV.s=Number(z.value)||1; avCropPaint(); });
-  ['avMenu','avPick','avCrop'].forEach(function(id){
+  ['avMenu','avCrop'].forEach(function(id){
     const el=document.getElementById(id);
     if(el) el.addEventListener('click', function(e){ if(e.target===el) el.classList.add('hidden'); });
-  });
-  const g=document.getElementById('avGrid');
-  if(g) g.addEventListener('click', function(e){
-    const b=(e.target && e.target.closest) ? e.target.closest('.av-g') : null;
-    if(!b) return;
-    g.querySelectorAll('.av-g.on').forEach(function(x){ x.classList.remove('on'); });
-    b.classList.add('on');
-    AV.pick=b.dataset.seed;
-    const ok=document.getElementById('avPickOk'); if(ok) ok.disabled=false;
-    try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(err){}
   });
   avCropBind();
 }
