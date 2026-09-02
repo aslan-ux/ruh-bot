@@ -3000,3 +3000,87 @@ function avMount(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
   else setTimeout(boot, 0);
 })();
+
+/* ================= Профиль: атын өзгерту ================= */
+function pnVal(id){ const e=document.getElementById(id); return e ? String(e.value||'').trim() : ''; }
+function pnOpen(){
+  const m=document.getElementById('pnModal'); if(!m) return;
+  m.classList.remove('hidden');
+  (async function(){
+    try{
+      const me=await api('/api/me', {});
+      const u=(me && me.user) || {};
+      const set=function(id,v){ const e=document.getElementById(id); if(e) e.value=v||''; };
+      set('pnFirst', u.firstName);
+      set('pnLast', u.lastName);
+      set('pnPatr', u.patronymic);
+    }catch(e){}
+  })();
+}
+function pnClose(){ const m=document.getElementById('pnModal'); if(m) m.classList.add('hidden'); }
+async function pnSave(){
+  const first=pnVal('pnFirst'), last=pnVal('pnLast'), patr=pnVal('pnPatr');
+  const err=document.getElementById('pnErr');
+  if(!first || !last){
+    if(err){ err.textContent='Аты мен жөнін толтыр'; err.classList.remove('hidden'); }
+    return;
+  }
+  if(err) err.classList.add('hidden');
+  const btn=document.getElementById('pnOk');
+  if(btn){ btn.disabled=true; btn.textContent='Сақталуда…'; }
+  try{
+    const r=await api('/api/profile/save', { firstName:first, lastName:last, patronymic:patr });
+    if(r && r.ok){
+      const nm=document.getElementById('profileName');
+      if(nm) nm.textContent=(first+' '+last).trim();
+      if(typeof avPaintMine==='function') avPaintMine();
+      pnClose();
+      try{ if(typeof rdHaptic==='function') rdHaptic('light'); }catch(e){}
+      try{ if(typeof rdToast==='function') rdToast('Профиль жаңарды'); }catch(e){}
+    } else if(err){
+      err.textContent='Сақталмады';
+      err.classList.remove('hidden');
+    }
+  }catch(e){
+    if(err){ err.textContent='Желі қатесі'; err.classList.remove('hidden'); }
+  }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='Сақтау'; } }
+}
+function pnMount(){
+  const hero=document.getElementById('pfHero');
+  const sec=document.getElementById('screen-profile');
+  if(!hero || !sec || document.getElementById('pnEdit')) return;
+  const b=document.createElement('button');
+  b.type='button'; b.className='pn-edit'; b.id='pnEdit';
+  b.innerHTML=pfIcon('i-note')+'<span>Атын өзгерту</span>';
+  hero.appendChild(b);
+  b.addEventListener('click', pnOpen);
+  const wrap=document.createElement('div');
+  wrap.innerHTML=[
+    '<div class="fin-modal hidden" id="pnModal">',
+    '  <div class="fin-sheet pn-sheet">',
+    '    <div class="fin-sheet-top"><div class="fin-sheet-title">Профиль</div>',
+    '      <button type="button" class="fin-x" id="pnX">'+pfIcon('i-x')+'</button></div>',
+    '    <label class="pn-l">Аты</label>',
+    '    <input class="input" id="pnFirst" placeholder="Аты" autocomplete="given-name">',
+    '    <label class="pn-l">Жөні</label>',
+    '    <input class="input" id="pnLast" placeholder="Тегі" autocomplete="family-name">',
+    '    <label class="pn-l">Әкесінің аты</label>',
+    '    <input class="input" id="pnPatr" placeholder="Міндетті емес">',
+    '    <div class="pn-err hidden" id="pnErr"></div>',
+    '    <button type="button" class="av-ok pn-ok" id="pnOk">Сақтау</button>',
+    '  </div>',
+    '</div>'
+  ].join('\n');
+  while(wrap.firstChild) sec.appendChild(wrap.firstChild);
+  const on=function(id, fn){ const e=document.getElementById(id); if(e) e.addEventListener('click', fn); };
+  on('pnX', pnClose);
+  on('pnOk', pnSave);
+  const m=document.getElementById('pnModal');
+  if(m) m.addEventListener('click', function(e){ if(e.target===m) pnClose(); });
+}
+(function(){
+  function boot(){ pnMount(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+  else setTimeout(boot, 30);
+})();
