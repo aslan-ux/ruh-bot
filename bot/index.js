@@ -1194,6 +1194,30 @@ app.post('/api/avatars', async (req, res) => {
   }
 });
 
+
+/* ===== Профиль: атын өзгерту ===== */
+app.post('/api/profile/save', async (req, res) => {
+  try {
+    const tgUser = requireTelegram(req, res);
+    if (!tgUser) return;
+    const body = req.body || {};
+    const clean = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, 40);
+    const first = clean(body.firstName);
+    const last = clean(body.lastName);
+    const patr = clean(body.patronymic);
+    if (!first || !last) return res.json({ ok: false, error: 'empty' });
+    await upsertUser({
+      telegramId: Number(tgUser.id),
+      firstName: first,
+      lastName: last,
+      patronymic: patr
+    });
+    res.json({ ok: true, user: { firstName: first, lastName: last, patronymic: patr } });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`HTTP-сервер запущен на порту ${PORT}`);
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
