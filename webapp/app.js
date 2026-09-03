@@ -2602,7 +2602,7 @@ function pfBuild(){
     '<div class="pf-hero" id="pfHero">',
     '  <div class="pf-ava" id="pfAva">•</div>',
     '  <div class="pf-name" id="profileName"></div>',
-    '  <div class="pf-since" id="pfSince">Spirit қауымдастығы</div>',
+    '  <div class="pf-since" id="pfSince">Ruh қауымдастығы</div>',
     '</div>',
     '<div class="pf-stats">',
     '  <div class="pf-st"><span class="ic s1">'+pfIcon('i-clock')+'</span><div><b id="pfMin">0</b><i>оқыған минут</i></div></div>',
