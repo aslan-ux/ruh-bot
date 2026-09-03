@@ -138,9 +138,9 @@ await initStorage();
 const bot = new Bot(BOT_TOKEN);
 
 bot.command('start', async (ctx) => {
-  const kb = new InlineKeyboard().webApp('🚀 Spirit-ті ашу', WEBAPP_URL);
+  const kb = new InlineKeyboard().webApp('🚀 Ruh-ты ашу', WEBAPP_URL);
   await ctx.reply(
-    'Spirit қауымдастығына қош келдің! Қосымшаны ашу үшін төмендегі батырманы бас.',
+    'Ruh қауымдастығына қош келдің! Қосымшаны ашу үшін төмендегі батырманы бас.',
     { reply_markup: kb }
   );
 });
@@ -510,7 +510,7 @@ app.post('/api/fin/asset/delete', async (req, res) => {
 // Онлайн-котировки (без ключа). Публичный эндпоинт — цены не персональны.
 // Единая схема символов: usdkzt (курс), xauusd/xagusd/xptusd (металлы), *.us (акции США).
 const priceCache = new Map();
-const UA = { 'User-Agent': 'Mozilla/5.0 (compatible; SpiritBot/1.0)' };
+const UA = { 'User-Agent': 'Mozilla/5.0 (compatible; RuhBot/1.0)' };
 
 function mapYahoo(sym) {
   if (sym === 'usdkzt') return 'KZT=X';
@@ -751,7 +751,7 @@ app.post('/api/admin/status', async (req, res) => {
     try {
       await bot.api.sendMessage(
         Number(telegramId),
-        `🎉 Құттықтаймыз, ${user.firstName}! Сен Spirit қауымдастығына қабылдандың. Қосымшаны қайта аш.`
+        `🎉 Құттықтаймыз, ${user.firstName}! Сен Ruh қауымдастығына қабылдандың. Қосымшаны қайта аш.`
       );
     } catch {}
   }
@@ -1225,7 +1225,7 @@ app.listen(PORT, async () => {
 
   try {
     await bot.api.setChatMenuButton({
-      menu_button: { type: 'web_app', text: 'Spirit', web_app: { url: WEBAPP_URL } },
+      menu_button: { type: 'web_app', text: 'Ruh', web_app: { url: WEBAPP_URL } },
     });
 
     if (USE_WEBHOOK) {
