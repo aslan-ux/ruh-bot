@@ -3,7 +3,7 @@ tg.ready();
 tg.expand();
 
 // ---------- Тема (авто по Telegram/системе + ручной выбор) ----------
-const THEME_KEY = 'spirit-theme';
+const THEME_KEY = 'ruh-theme';
 function themePref() { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch { return 'auto'; } }
 function systemDark() {
   if (tg && tg.colorScheme) return tg.colorScheme === 'dark';
@@ -428,9 +428,9 @@ async function openReader(){
   } catch {}
   rdPanelClose(); rdMsg('Жүктелуде…');
   try {
-    RD.theme=localStorage.getItem('spirit-rd-theme')||'day';
-    RD.font=+(localStorage.getItem('spirit-rd-font')||100);
-    RD.anim=localStorage.getItem('spirit-rd-anim')||'slide';
+    RD.theme=localStorage.getItem('ruh-rd-theme')||'day';
+    RD.font=+(localStorage.getItem('ruh-rd-font')||100);
+    RD.anim=localStorage.getItem('ruh-rd-anim')||'slide';
   } catch {}
   rdApplyAnim();
   try { const rr=await api('/api/book/read/get',{}); if(rr.ok&&rr.reading) RD.reading=Object.assign({location:'',percent:0,bookmarks:[],highlights:[]}, rr.reading); } catch {}
@@ -1175,11 +1175,11 @@ document.getElementById('rdPrev')?.addEventListener('click', rdPrev);
 document.getElementById('rdTocBtn')?.addEventListener('click', ()=>rdToggle('rdToc', rdOpenToc));
 document.getElementById('rdMarkBtn')?.addEventListener('click', ()=>rdToggle('rdNotes', rdOpenNotes));
 document.getElementById('rdAaBtn')?.addEventListener('click', ()=>rdToggle('rdAa'));
-document.getElementById('rdFontMinus')?.addEventListener('click', ()=>{ RD.font=Math.max(70,RD.font-10); try{localStorage.setItem('spirit-rd-font',RD.font);}catch{} rdApplyFont(); if(RD.fmt==='pdf') rdRenderPdf(RD.page); });
-document.getElementById('rdFontPlus')?.addEventListener('click', ()=>{ RD.font=Math.min(180,RD.font+10); try{localStorage.setItem('spirit-rd-font',RD.font);}catch{} rdApplyFont(); if(RD.fmt==='pdf') rdRenderPdf(RD.page); });
-document.querySelectorAll('.rd-th').forEach(b=>b.addEventListener('click', ()=>{ RD.theme=b.dataset.th; try{localStorage.setItem('spirit-rd-theme',RD.theme);}catch{} rdApplyTheme(); }));
+document.getElementById('rdFontMinus')?.addEventListener('click', ()=>{ RD.font=Math.max(70,RD.font-10); try{localStorage.setItem('ruh-rd-font',RD.font);}catch{} rdApplyFont(); if(RD.fmt==='pdf') rdRenderPdf(RD.page); });
+document.getElementById('rdFontPlus')?.addEventListener('click', ()=>{ RD.font=Math.min(180,RD.font+10); try{localStorage.setItem('ruh-rd-font',RD.font);}catch{} rdApplyFont(); if(RD.fmt==='pdf') rdRenderPdf(RD.page); });
+document.querySelectorAll('.rd-th').forEach(b=>b.addEventListener('click', ()=>{ RD.theme=b.dataset.th; try{localStorage.setItem('ruh-rd-theme',RD.theme);}catch{} rdApplyTheme(); }));
 document.querySelectorAll('.rd-an').forEach(b=>b.addEventListener('click', ()=>{
-  RD.anim=b.dataset.an; try{localStorage.setItem('spirit-rd-anim',RD.anim);}catch{}
+  RD.anim=b.dataset.an; try{localStorage.setItem('ruh-rd-anim',RD.anim);}catch{}
   rdApplyAnim(); rdHaptic('light');
 }));
 
@@ -1248,7 +1248,7 @@ document.getElementById('checkStatusBtn')?.addEventListener('click', async () =>
 });
 
 // ---------- Қадам (шаги) ----------
-const QD = { stepsMap: {}, today: '', leaderboard: { day: [], week: [], month: [] }, friendsBoard: { day: [], week: [], month: [] }, period: 'day', scope: 'spirit', selMonth: null };
+const QD = { stepsMap: {}, today: '', leaderboard: { day: [], week: [], month: [] }, friendsBoard: { day: [], week: [], month: [] }, period: 'day', scope: 'ruh', selMonth: null };
 const KK_WD = ['Жс', 'Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сб']; // index = getUTCDay()
 const KK_MON_SHORT = ['Қаң', 'Ақп', 'Нау', 'Сәу', 'Мам', 'Мау', 'Шіл', 'Там', 'Қыр', 'Қаз', 'Қар', 'Жел'];
 let QD_GOAL = 10000;
