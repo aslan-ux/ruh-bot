@@ -3279,3 +3279,73 @@ function pnMount(){
     };
   }
 })();
+
+
+/* ===== RX_SEL_FIX_V1 : тұтқа саусақпен жүрсін + ескі белгі өшсін ===== */
+(function () {
+
+  /* --- 1. Тұтқаны сүйреген кезде каретканы іздеу тұтқаның өзіне тірелмеуі керек --- */
+  var origHandles = window.rdHandles;
+  if (typeof origHandles === "function") {
+    window.rdHandles = function () {
+      var r = origHandles.apply(this, arguments);
+      try {
+        var H = (typeof RD === "object" && RD && RD.handles) ? RD.handles : null;
+        if (!H) return r;
+        var hs = H.hs, he = H.he;
+        var off = function () {
+          if (hs) hs.style.pointerEvents = "none";
+          if (he) he.style.pointerEvents = "none";
+        };
+        var on = function () {
+          if (hs) hs.style.pointerEvents = "";
+          if (he) he.style.pointerEvents = "";
+        };
+        [hs, he].forEach(function (el) {
+          if (!el) return;
+          el.addEventListener("touchstart", off, { passive: true });
+          el.addEventListener("touchend", on, { passive: true });
+          el.addEventListener("touchcancel", on, { passive: true });
+        });
+      } catch (e) {}
+      return r;
+    };
+  }
+
+  /* --- 2. Жаңа ерекшелеу басталғанда ескі уақытша белгі көрінбеуі керек --- */
+  function softHideTemp() {
+    try {
+      var old = document.querySelectorAll("#rdPage .rd-tmp");
+      for (var i = 0; i < old.length; i++) {
+        old[i].style.background = "transparent";
+        old[i].setAttribute("data-stale", "1");
+      }
+    } catch (e) {}
+  }
+
+  var origOnSelect = window.rdOnSelect;
+  if (typeof origOnSelect === "function") {
+    window.rdOnSelect = function () {
+      softHideTemp();
+      return origOnSelect.apply(this, arguments);
+    };
+  }
+
+  var origSelHide = window.rdSelHide;
+  if (typeof origSelHide === "function") {
+    window.rdSelHide = function () {
+      var r = origSelHide.apply(this, arguments);
+      try { if (typeof rdClearTemp === "function") rdClearTemp(); } catch (e) {}
+      return r;
+    };
+  }
+
+  /* --- 3. Бет ауысқанда да қалдық белгі қалмасын --- */
+  var origRender = window.rdRenderChapter;
+  if (typeof origRender === "function") {
+    window.rdRenderChapter = function () {
+      try { if (typeof rdClearTemp === "function") rdClearTemp(); } catch (e) {}
+      return origRender.apply(this, arguments);
+    };
+  }
+})();
