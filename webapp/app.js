@@ -3464,3 +3464,115 @@ function pnMount(){
     };
   }
 })();
+
+
+/* ===== RX_MARKET_V1 : AIX / KASE — қағаз іздеу ===== */
+(function () {
+  var MK = { seq: 0 };
+
+  function mkFmt(n, cur) {
+    var v = Number(n) || 0;
+    var s;
+    try { s = v.toLocaleString("ru-RU", { maximumFractionDigits: v >= 100 ? 0 : 2 }); }
+    catch (e) { s = String(v); }
+    return s + " " + (cur || "KZT");
+  }
+
+  function mkEsc(t) {
+    return String(t == null ? "" : t)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function mkEnsure() {
+    var sheet = document.querySelector("#finAssetModal .fin-sheet");
+    var name = document.getElementById("finAName");
+    if (!sheet || !name || document.getElementById("mkSearch")) return;
+
+    var wrap = document.createElement("div");
+    wrap.id = "mkWrap";
+    wrap.style.cssText = "position:relative;margin:0 0 8px";
+
+    var inp = document.createElement("input");
+    inp.id = "mkSearch"; inp.className = "input"; inp.type = "text";
+    inp.setAttribute("autocomplete", "off");
+    inp.placeholder = "AIX / KASE — тикер немесе атауы";
+
+    var list = document.createElement("div");
+    list.id = "mkList";
+    list.style.cssText = "position:absolute;left:0;right:0;top:100%;margin-top:6px;max-height:240px;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--card,#fff);border:1px solid rgba(0,0,0,.10);border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.18);z-index:60;display:none";
+
+    wrap.appendChild(inp); wrap.appendChild(list);
+    sheet.insertBefore(wrap, name);
+
+    inp.addEventListener("input", function () { mkSearch(inp.value); });
+    inp.addEventListener("focus", function () { if (inp.value.trim()) mkSearch(inp.value); });
+    document.addEventListener("click", function (e) {
+      if (!wrap.contains(e.target)) list.style.display = "none";
+    });
+  }
+
+  function mkSearch(q) {
+    var list = document.getElementById("mkList");
+    if (!list) return;
+    q = String(q || "").trim();
+    if (!q) { list.style.display = "none"; return; }
+    var my = ++MK.seq;
+    api("/api/fin/market/list", { q: q }).then(function (r) {
+      if (my !== MK.seq) return;
+      if (!r || !r.ok) { list.style.display = "none"; return; }
+      var rows = r.list || [];
+      if (!rows.length) {
+        list.innerHTML = '<div style="padding:12px 14px;opacity:.6;font-size:14px">Табылмады</div>';
+        list.style.display = "block"; return;
+      }
+      list.innerHTML = rows.map(function (x, i) {
+        return '<div class="mk-row" data-i="' + i + '" style="padding:10px 14px;display:flex;gap:10px;align-items:center;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06)">'
+          + '<div style="font-weight:600;min-width:62px;font-size:14px">' + mkEsc(x.sym) + '</div>'
+          + '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;opacity:.75">' + mkEsc(x.name) + '</div>'
+          + '<div style="text-align:right"><div style="font-size:13px">' + mkEsc(mkFmt(x.price, x.cur)) + '</div>'
+          + '<div style="opacity:.5;font-size:11px">' + mkEsc(x.ex) + '</div></div></div>';
+      }).join("");
+      list.style.display = "block";
+      var els = list.querySelectorAll(".mk-row");
+      for (var i = 0; i < els.length; i++) {
+        (function (el) {
+          el.addEventListener("click", function () { mkPick(rows[Number(el.getAttribute("data-i"))]); });
+        })(els[i]);
+      }
+    }).catch(function () { list.style.display = "none"; });
+  }
+
+  function mkSet(id, v) {
+    var e = document.getElementById(id);
+    if (!e || v == null || v === "") return;
+    e.value = v;
+    try { e.dispatchEvent(new Event("input", { bubbles: true })); } catch (err) {}
+  }
+
+  function mkPick(x) {
+    if (!x) return;
+    mkSet("finAName", x.name || x.sym);
+    mkSet("finATicker", x.sym);
+    mkSet("finACur", x.cur);
+    var buy = document.getElementById("finABuy");
+    if (buy && !String(buy.value || "").trim()) mkSet("finABuy", x.price);
+    var s = document.getElementById("mkSearch");
+    if (s) s.value = x.sym + " · " + x.ex;
+    var l = document.getElementById("mkList");
+    if (l) l.style.display = "none";
+    try { Telegram.WebApp.HapticFeedback.selectionChanged(); } catch (e) {}
+  }
+
+  var origOpen = window.finOpenAssetModal;
+  if (typeof origOpen === "function") {
+    window.finOpenAssetModal = function () {
+      var r = origOpen.apply(this, arguments);
+      setTimeout(function () {
+        mkEnsure();
+        var s = document.getElementById("mkSearch"); if (s) s.value = "";
+        var l = document.getElementById("mkList"); if (l) l.style.display = "none";
+      }, 0);
+      return r;
+    };
+  }
+})();
