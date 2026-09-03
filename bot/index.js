@@ -1308,6 +1308,17 @@ async function mktRefresh(force) {
   return MKT;
 }
 
+/* Стартта бір рет жаңартып, логқа жазамыз */
+async function mktWarm() {
+  try {
+    await mktRefresh(true);
+    console.log('Биржа: AIX/KASE —', JSON.stringify(MKT.src), 'барлығы:', MKT.list.length);
+  } catch (e) {
+    console.log('Биржа: жаңарту қатесі —', String(e && e.message).slice(0, 120));
+  }
+}
+setTimeout(mktWarm, 8000);
+setInterval(mktWarm, 900000);
 app.post('/api/fin/market/list', async (req, res) => {
   const tgUser = requireTelegram(req, res); if (!tgUser) return;
   try {
