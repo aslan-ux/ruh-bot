@@ -3009,3 +3009,126 @@ function pnMount(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
   else setTimeout(boot, 30);
 })();
+
+
+/* ===== RX_READER_EXIT_V1 : выход из ридера + быстрая загрузка ===== */
+(function () {
+  var TG = (window.Telegram && window.Telegram.WebApp) || null;
+  var RX = { loading: false, buf: null, bound: false };
+
+  function rxBack(on) {
+    try {
+      if (!TG || !TG.BackButton) return;
+      if (on) { TG.BackButton.show(); } else { TG.BackButton.hide(); }
+    } catch (e) {}
+  }
+
+  var origClose = window.closeReader;
+  var origOpen = window.openReader;
+
+  function rxExit() {
+    RX.loading = false;
+    rxBack(false);
+    var done = false;
+    try { origClose(); done = true; } catch (e) {}
+    if (done) return;
+    try {
+      var el = document.getElementById("reader");
+      if (el) { el.classList.add("hidden"); el.classList.remove("immersive"); }
+      document.body.classList.remove("reading");
+      if (typeof show === "function") show("home");
+    } catch (e2) {}
+  }
+
+  window.closeReader = rxExit;
+
+  try {
+    if (TG && TG.BackButton && TG.BackButton.onClick && !RX.bound) {
+      TG.BackButton.onClick(rxExit);
+      RX.bound = true;
+    }
+  } catch (e) {}
+
+  function rxBindClose() {
+    var b = document.getElementById("rdClose");
+    if (b) b.onclick = rxExit;
+  }
+  rxBindClose();
+  document.addEventListener("DOMContentLoaded", rxBindClose);
+
+  window.openReader = function () {
+    var r = origOpen.apply(this, arguments);
+    RX.loading = true;
+    rxBack(true);
+    try {
+      var el = document.getElementById("reader");
+      if (el) el.classList.remove("immersive");
+    } catch (e) {}
+    rxBindClose();
+    return r;
+  };
+
+  var origMsgHide = window.rdMsgHide;
+  if (typeof origMsgHide === "function") {
+    window.rdMsgHide = function () {
+      var out = origMsgHide.apply(this, arguments);
+      if (RX.loading) {
+        RX.loading = false;
+        setTimeout(function () {
+          try {
+            var el = document.getElementById("reader");
+            if (el && !el.classList.contains("hidden")) el.classList.add("immersive");
+          } catch (e) {}
+        }, 600);
+      }
+      return out;
+    };
+  }
+
+  function rxMb(n) { return (n / 1048576).toFixed(1).replace(".", ",") + " МБ"; }
+  function rxSay(t) { try { if (typeof rdMsg === "function") rdMsg(t); } catch (e) {} }
+
+  var origFetch = window.fetch ? window.fetch.bind(window) : null;
+  if (origFetch && typeof Response === "function") {
+    window.fetch = function (input, init) {
+      var url = (typeof input === "string") ? input : ((input && input.url) || "");
+      if (url.indexOf("/api/book/file") < 0) return origFetch(input, init);
+      if (RX.buf) { return Promise.resolve(new Response(RX.buf.slice(0), { status: 200 })); }
+      return origFetch(input, init).then(function (resp) {
+        if (!resp.ok || !resp.body || !resp.body.getReader) return resp;
+        var total = Number(resp.headers.get("content-length") || 0);
+        var reader = resp.body.getReader();
+        var parts = [], got = 0;
+        return new Promise(function (ok, bad) {
+          function pump() {
+            reader.read().then(function (r) {
+              if (r.done) {
+                var all = new Uint8Array(got), off = 0;
+                for (var i = 0; i < parts.length; i++) { all.set(parts[i], off); off += parts[i].length; }
+                RX.buf = all.buffer;
+                rxSay("Кітап ашылуда…");
+                ok(new Response(all.buffer, { status: 200 }));
+                return;
+              }
+              parts.push(r.value);
+              got += r.value.length;
+              rxSay(total ? ("Жүктелуде… " + Math.round(got * 100 / total) + "%") : ("Жүктелуде… " + rxMb(got)));
+              pump();
+            }).catch(bad);
+          }
+          pump();
+        });
+      });
+    };
+  }
+
+  function rxPreload() {
+    try {
+      if (typeof rdScript !== "function") return;
+      rdScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js");
+      rdScript("https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js");
+    } catch (e) {}
+  }
+  if (window.requestIdleCallback) { requestIdleCallback(rxPreload, { timeout: 6000 }); }
+  else { setTimeout(rxPreload, 3000); }
+})();
