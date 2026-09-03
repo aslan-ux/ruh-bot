@@ -3029,15 +3029,21 @@ function pnMount(){
   function rxExit() {
     RX.loading = false;
     rxBack(false);
-    var done = false;
-    try { origClose(); done = true; } catch (e) {}
-    if (done) return;
+    var threw = false;
+    try { origClose(); } catch (e) { threw = true; }
     try {
       var el = document.getElementById("reader");
-      if (el) { el.classList.add("hidden"); el.classList.remove("immersive"); }
-      document.body.classList.remove("reading");
-      if (typeof show === "function") show("home");
+      if (el && !el.classList.contains("hidden")) {
+        el.classList.add("hidden");
+        el.classList.remove("immersive");
+        document.body.classList.remove("reading");
+        if (typeof show === "function") show("home");
+      }
     } catch (e2) {}
+    if (threw) {
+      try { if (typeof loadRoom === "function") loadRoom(); } catch (e3) {}
+      try { if (typeof loadRoomStats === "function") loadRoomStats(); } catch (e4) {}
+    }
   }
 
   window.closeReader = rxExit;
