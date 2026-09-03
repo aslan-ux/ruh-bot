@@ -3138,3 +3138,144 @@ function pnMount(){
   if (window.requestIdleCallback) { requestIdleCallback(rxPreload, { timeout: 6000 }); }
   else { setTimeout(rxPreload, 3000); }
 })();
+
+
+/* ===== RX_PEAKS_V1 : Іле Алатау шыңдары — қола / күміс / алтын ===== */
+(function () {
+  var TIERS = {
+    qola: [
+      { n:"Көктөбе",            h:1130 },
+      { n:"Фурманов шыңы",      h:3053 },
+      { n:"Күмбел шыңы",        h:3200 },
+      { n:"Школьник шыңы",      h:3590 },
+      { n:"Үлкен Алматы шыңы",  h:3681 }
+    ],
+    kumis: [
+      { n:"Снег үстірті",       h:3800 },
+      { n:"Қарлығаш ұясы",      h:3880 },
+      { n:"Чкалов шыңы",        h:3892 },
+      { n:"Өзбинка шыңы",       h:3910 },
+      { n:"Горельник шыңы",     h:4000 },
+      { n:"Амангелді шыңы",     h:4000 },
+      { n:"Абай шыңы",          h:4010 },
+      { n:"Пионер шыңы",        h:4031 },
+      { n:"Ұстаз шыңы",         h:4045 },
+      { n:"Трезубец шыңы",      h:4089 },
+      { n:"Қарлытау шыңы",      h:4100 },
+      { n:"Аристов шыңы",       h:4102 },
+      { n:"Космодемьянская шыңы", h:4108 },
+      { n:"Панфиловшылар шыңы", h:4120 },
+      { n:"Жастар шыңы",        h:4147 }
+    ],
+    altyn: [
+      { n:"Локомотив шыңы",     h:4182 },
+      { n:"Маншүк Мәметова шыңы", h:4194 },
+      { n:"Маяковский шыңы",    h:4208 },
+      { n:"Түйіксу инелері",    h:4213 },
+      { n:"Түйіксу шыңы",       h:4218 },
+      { n:"Погребецкий шыңы",   h:4231 },
+      { n:"Кеңестер шыңы",      h:4317 },
+      { n:"Нұрсұлтан шыңы",     h:4376 },
+      { n:"Партизан шыңы",      h:4390 },
+      { n:"Орджоникидзе шыңы",  h:4410 },
+      { n:"Талғар шыңы",        h:5017 }
+    ]
+  };
+
+  var PK = { words: 0, tier: null, asked: false, counted: false };
+
+  function tierOf(w) {
+    if (!w) return "kumis";
+    if (w < 45000) return "qola";
+    if (w < 130000) return "kumis";
+    return "altyn";
+  }
+
+  function spread(list, n) {
+    var out = [], L = list.length, i;
+    for (i = 0; i < n; i++) out.push(list[Math.round(i * (L - 1) / (n - 1))]);
+    return out;
+  }
+
+  function applyTier(w) {
+    var t = tierOf(w);
+    if (PK.tier === t) return false;
+    PK.tier = t;
+    var five = spread(TIERS[t], 5), i;
+    MTN_PEAKS.length = 0;
+    for (i = 0; i < 5; i++) {
+      MTN_PEAKS.push({ at: (i + 1) * 20, name: five[i].n, h: five[i].h + " м", tier: t });
+    }
+    try { localStorage.setItem("ruh-peak-tier", t); } catch (e) {}
+    return true;
+  }
+
+  try {
+    var saved = localStorage.getItem("ruh-peak-tier");
+    if (saved && TIERS[saved]) { PK.tier = null; applyTier(saved === "qola" ? 1000 : saved === "altyn" ? 200000 : 60000); }
+    else applyTier(0);
+  } catch (e) { applyTier(0); }
+
+  function askWords() {
+    if (PK.asked) return;
+    PK.asked = true;
+    try {
+      api("/api/book/words", {}).then(function (r) {
+        if (!r || !r.ok) return;
+        PK.words = Number(r.words || 0);
+        if (PK.words > 0 && applyTier(PK.words)) {
+          try { loadRoom(); } catch (e) {}
+        }
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  var origLoadRoom = window.loadRoom;
+  if (typeof origLoadRoom === "function") {
+    window.loadRoom = function () {
+      askWords();
+      return origLoadRoom.apply(this, arguments);
+    };
+  }
+
+  function countWords() {
+    if (PK.counted) return;
+    PK.counted = true;
+    setTimeout(function () {
+      try {
+        var bk = (typeof RD === "object" && RD) ? RD.book : null;
+        if (!bk || !bk.spine) return;
+        var items = bk.spine.spineItems || bk.spine.items || [];
+        var total = 0, i = 0;
+        function step() {
+          if (i >= items.length) {
+            if (total > 1000) { try { api("/api/book/words", { words: total }); } catch (e) {} }
+            return;
+          }
+          var it = items[i++];
+          var p;
+          try { p = it.load(bk.load.bind(bk)); } catch (e) { p = null; }
+          Promise.resolve(p).then(function (doc) {
+            try {
+              var txt = (doc && (doc.body ? doc.body.textContent : doc.textContent)) || "";
+              var m = txt.replace(/\s+/g, " ").trim();
+              if (m) total += m.split(" ").length;
+              it.unload();
+            } catch (e) {}
+            setTimeout(step, 0);
+          }).catch(function () { setTimeout(step, 0); });
+        }
+        step();
+      } catch (e) {}
+    }, 4000);
+  }
+
+  var origLoadEpub = window.rdLoadEpub;
+  if (typeof origLoadEpub === "function") {
+    window.rdLoadEpub = function () {
+      var r = origLoadEpub.apply(this, arguments);
+      try { Promise.resolve(r).then(countWords).catch(function () {}); } catch (e) {}
+      return r;
+    };
+  }
+})();
