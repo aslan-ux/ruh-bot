@@ -1218,6 +1218,25 @@ app.post('/api/profile/save', async (req, res) => {
   }
 });
 
+
+/* ===== Кітап көлемі: сөз саны (шың деңгейі үшін) ===== */
+app.post('/api/book/words', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  try {
+    const book = await getBook();
+    if (!book) { res.json({ ok: true, words: 0, id: null }); return; }
+    const inc = Number((req.body && req.body.words) || 0);
+    let words = Number(book.words || 0);
+    if (!words && inc > 1000 && inc < 20000000) {
+      words = Math.round(inc);
+      await updateBook(book.id, { words });
+    }
+    res.json({ ok: true, words, id: book.id });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`HTTP-сервер запущен на порту ${PORT}`);
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
