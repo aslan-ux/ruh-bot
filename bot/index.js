@@ -546,7 +546,21 @@ async function fxErApi() {
     return Number.isFinite(p) ? p : null;
   } catch { return null; }
 }
+
+function mktQuote(sym) {
+  const k = String(sym || '').trim().toUpperCase();
+  if (!k || !MKT.list.length) return 0;
+  for (const it of MKT.list) {
+    if (it.sym.toUpperCase() === k) return it.price;
+  }
+  return 0;
+}
 async function priceOf(sym) {
+  /* Алдымен AIX/KASE тізімінен іздейміз */
+  try {
+    const mq = mktQuote(sym);
+    if (mq) return mq;
+  } catch (e) {}
   const cached = priceCache.get(sym);
   if (cached && Date.now() - cached.ts < 10 * 60 * 1000) return cached.price;
   let p = await yahooPrice(sym);
@@ -1323,6 +1337,18 @@ app.post('/api/fin/market/list', async (req, res) => {
   const tgUser = requireTelegram(req, res); if (!tgUser) return;
   try {
     await mktRefresh(!!(req.body && req.body.force));
+    const syms = Array.isArray(req.body && req.body.syms) ? req.body.syms : null;
+    if (syms) {
+      const want = {};
+      syms.forEach((v) => { const k = String(v || '').trim().toUpperCase(); if (k) want[k] = 1; });
+      const quotes = {};
+      for (const it of MKT.list) {
+        const k = it.sym.toUpperCase();
+        if (want[k] && !quotes[k]) quotes[k] = { price: it.price, cur: it.cur, chg: it.chg, ex: it.ex, name: it.name };
+      }
+      res.json({ ok: true, at: MKT.at, quotes: quotes });
+      return;
+    }
     const q = String((req.body && req.body.q) || '').trim().toLowerCase();
     let list = MKT.list;
     if (q) list = list.filter((x) => x.sym.toLowerCase().includes(q) || x.name.toLowerCase().includes(q));
