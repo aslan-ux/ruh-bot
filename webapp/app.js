@@ -3551,11 +3551,10 @@ function pnMount(){
 
   function mkPick(x) {
     if (!x) return;
+    /* Тек атауы мен тикерін толтырамыз; сан өрістері — маскамен, оларға тимейміз */
+    /* қалған өрістер — қолданушынікі */
     mkSet("finAName", x.name || x.sym);
     mkSet("finATicker", x.sym);
-    mkSet("finACur", x.cur);
-    var buy = document.getElementById("finABuy");
-    if (buy && !String(buy.value || "").trim()) mkSet("finABuy", x.price);
     var s = document.getElementById("mkSearch");
     if (s) s.value = x.sym + " · " + x.ex;
     var l = document.getElementById("mkList");
