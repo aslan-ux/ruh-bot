@@ -3349,3 +3349,67 @@ function pnMount(){
     };
   }
 })();
+
+
+/* ===== RX_SEL_OVERLAY_V1 : уақытша ерекшелеу — мәтінді өзгертпей, үстіне салынады ===== */
+(function () {
+
+  function rxView() { return document.getElementById("rdView"); }
+
+  function rxClearRects() {
+    var v = rxView(); if (!v) return;
+    var n = v.querySelectorAll(".rd-selrect");
+    for (var i = 0; i < n.length; i++) n[i].parentNode.removeChild(n[i]);
+  }
+
+  function rxUnwrapOld() {
+    try {
+      var old = document.querySelectorAll("#rdPage .rd-tmp, #rdPage .rd-hl[data-hid='__tmp']");
+      for (var i = 0; i < old.length; i++) {
+        var s = old[i], p = s.parentNode; if (!p) continue;
+        while (s.firstChild) p.insertBefore(s.firstChild, s);
+        p.removeChild(s); p.normalize();
+      }
+    } catch (e) {}
+  }
+
+  window.rdClearTemp = function () {
+    rxClearRects();
+    rxUnwrapOld();
+  };
+
+  window.rdMarkTemp = function (range) {
+    rxClearRects();
+    var v = rxView(); if (!v || !range) return;
+    var vb, rects;
+    try { vb = v.getBoundingClientRect(); rects = range.getClientRects(); } catch (e) { return; }
+    var frag = document.createDocumentFragment(), made = 0, i, r, d;
+    for (i = 0; i < rects.length; i++) {
+      r = rects[i];
+      if (!r || r.width <= 0.5 || r.height <= 0.5) continue;
+      d = document.createElement("div");
+      d.className = "rd-selrect";
+      d.style.cssText = "position:absolute;pointer-events:none;z-index:20;border-radius:3px;background:rgba(94,92,230,.28);left:" + (r.left - vb.left) + "px;top:" + (r.top - vb.top) + "px;width:" + r.width + "px;height:" + r.height + "px;";
+      frag.appendChild(d); made++;
+    }
+    if (made) v.appendChild(frag);
+  };
+
+  /* ерекшелеу жабылғанда да, бет ауысқанда да таза болсын */
+  var origHide = window.rdSelHide;
+  if (typeof origHide === "function") {
+    window.rdSelHide = function () {
+      var r = origHide.apply(this, arguments);
+      rdClearTemp();
+      return r;
+    };
+  }
+  var origClear = window.rdClearSelection;
+  if (typeof origClear === "function") {
+    window.rdClearSelection = function () {
+      var r = origClear.apply(this, arguments);
+      rdClearTemp();
+      return r;
+    };
+  }
+})();
