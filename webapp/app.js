@@ -3413,3 +3413,54 @@ function pnMount(){
     };
   }
 })();
+
+
+/* ===== RX_SEL_MENU_V1 : ерекшелеу мәзірі — мәтіннің қасында, үстін жаппай ===== */
+(function () {
+
+  function rxRects() {
+    var v = document.getElementById("rdView");
+    if (!v) return [];
+    var n = v.querySelectorAll(".rd-selrect"), out = [], i, r;
+    for (i = 0; i < n.length; i++) {
+      r = n[i].getBoundingClientRect();
+      if (r.width > 0.5 && r.height > 0.5) out.push(r);
+    }
+    out.sort(function (a, b) { return (a.top - b.top) || (a.left - b.left); });
+    return out;
+  }
+
+  function rxPlaceMenu() {
+    var el = document.getElementById("rdSel");
+    if (!el || el.classList.contains("hidden")) return;
+    var rects = rxRects();
+    if (!rects.length) return;
+    var first = rects[0], last = rects[rects.length - 1];
+    var box = el.getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var gap = 12, topLimit = 66, bottomLimit = vh - 70;
+    var anchor, top;
+    if (first.top - box.height - gap >= topLimit) {
+      anchor = first; top = first.top - box.height - gap;
+    } else if (last.bottom + gap + box.height <= bottomLimit) {
+      anchor = last; top = last.bottom + gap;
+    } else {
+      anchor = first;
+      top = Math.max(topLimit, Math.min(first.top - box.height - gap, bottomLimit - box.height));
+    }
+    var left = anchor.left + anchor.width / 2 - box.width / 2;
+    left = Math.min(Math.max(8, left), Math.max(8, vw - box.width - 8));
+    el.style.left = Math.round(left) + "px";
+    el.style.top = Math.round(top) + "px";
+  }
+
+  var origShow = window.rdSelShow;
+  if (typeof origShow === "function") {
+    window.rdSelShow = function () {
+      var r = origShow.apply(this, arguments);
+      try { rxPlaceMenu(); } catch (e) {}
+      try { setTimeout(rxPlaceMenu, 0); } catch (e) {}
+      return r;
+    };
+  }
+})();
