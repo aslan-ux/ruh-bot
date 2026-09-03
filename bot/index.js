@@ -1237,6 +1237,96 @@ app.post('/api/book/words', async (req, res) => {
   }
 });
 
+
+/* ===== Биржа: AIX + KASE — бумаги мен бағалар ===== */
+const MKT = { at: 0, list: [], src: {} };
+
+function mktNum(v) {
+  const n = Number(String(v == null ? '' : v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
+  return isFinite(n) ? n : 0;
+}
+
+async function mktAix() {
+  const r = await fetch('https://data-feed.aix.kz/api/table/mw-main-records', {
+    headers: { 'accept': 'application/json', 'user-agent': 'Mozilla/5.0' }
+  });
+  if (!r.ok) throw new Error(String(r.status));
+  const arr = await r.json();
+  if (!Array.isArray(arr)) return [];
+  return arr.map((x) => ({
+    ex: 'AIX',
+    sym: String(x.secCode || '').trim(),
+    name: String(x.issuer || x.instrument || '').trim(),
+    isin: String(x.isin || '').trim(),
+    cur: String(x.currency || 'KZT').trim(),
+    price: mktNum(x.lastTrade) || mktNum(x.referencePrice),
+    chg: mktNum(x.percentChange),
+    kind: x.securityGroup === 'EQTY' ? 'share' : 'bond'
+  })).filter((x) => x.sym && x.price > 0);
+}
+
+async function mktKase() {
+  const r = await fetch('https://kase.kz/en/markets/shares-and-adr-gdr', {
+    headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'accept': 'text/html' }
+  });
+  if (!r.ok) throw new Error(String(r.status));
+  const html = await r.text();
+  const out = [];
+  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
+  let m;
+  while ((m = rowRe.exec(html))) {
+    const cells = [];
+    const cRe = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g;
+    let c;
+    while ((c = cRe.exec(m[1]))) {
+      cells.push(c[1].replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim());
+    }
+    if (cells.length < 6) continue;
+    const isin = cells[2] || '';
+    if (!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(isin)) continue;
+    const price = mktNum(cells[5]);
+    if (!price) continue;
+    out.push({
+      ex: 'KASE', sym: cells[0], name: cells[1], isin: isin,
+      cur: (cells[4] || 'KZT').toUpperCase(), price: price, chg: 0, kind: 'share'
+    });
+  }
+  return out;
+}
+
+async function mktRefresh(force) {
+  const now = Date.now();
+  if (!force && MKT.list.length && now - MKT.at < 900000) return MKT;
+  const res = await Promise.allSettled([mktAix(), mktKase()]);
+  const aix = res[0].status === "fulfilled" ? res[0].value : [];
+  const kase = res[1].status === "fulfilled" ? res[1].value : [];
+  MKT.src = {
+    aix: res[0].status === "fulfilled" ? aix.length : ("err: " + String(res[0].reason && res[0].reason.message).slice(0, 60)),
+    kase: res[1].status === "fulfilled" ? kase.length : ("err: " + String(res[1].reason && res[1].reason.message).slice(0, 60))
+  };
+  if (aix.length || kase.length) { MKT.list = aix.concat(kase); MKT.at = now; }
+  return MKT;
+}
+
+app.post('/api/fin/market/list', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  try {
+    await mktRefresh(!!(req.body && req.body.force));
+    const q = String((req.body && req.body.q) || '').trim().toLowerCase();
+    let list = MKT.list;
+    if (q) list = list.filter((x) => x.sym.toLowerCase().includes(q) || x.name.toLowerCase().includes(q));
+    list = list.slice(0, 40);
+    res.json({
+      ok: true, at: MKT.at, total: MKT.list.length, src: MKT.src,
+      aix: MKT.list.filter((x) => x.ex === 'AIX').length,
+      kase: MKT.list.filter((x) => x.ex === 'KASE').length,
+      list: list
+    });
+  } catch (e) {
+    res.json({ ok: false, error: 'server' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`HTTP-сервер запущен на порту ${PORT}`);
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
