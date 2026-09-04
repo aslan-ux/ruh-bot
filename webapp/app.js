@@ -1483,6 +1483,7 @@ const FIN_METALS = [
   { n: 'Алтын', s: 'xauusd' },
   { n: 'Күміс', s: 'xagusd' },
   { n: 'Платина', s: 'xptusd' },
+  { n: 'Палладий', s: 'xpdusd' },
   { n: 'Басқа (қолмен)', s: '' },
 ];
 const FIN_DEBT = {
@@ -1623,11 +1624,13 @@ async function finLoadPrices() {
   if (FIN_TABS[FIN.tabI].kind === 'invest') renderFin();
 }
 function finAssetCur(a) {
+  if (a.market === 'aix' && a.symbol && FIN.prices[a.symbol]) return FIN.prices[a.symbol];
   if (a.market === 'us' && a.symbol && FIN.prices[a.symbol] && FIN.fx) return FIN.prices[a.symbol] * FIN.fx;
   if (a.market === 'metal' && a.symbol && FIN.prices[a.symbol] && FIN.fx) return FIN.prices[a.symbol] / 31.1035 * FIN.fx;
   return a.curManual || a.buyPrice;
 }
 function finAssetLive(a) {
+  if (a.market === 'aix') return !!(a.symbol && FIN.prices[a.symbol]);
   return (a.market === 'us' || a.market === 'metal') && a.symbol && FIN.prices[a.symbol] && FIN.fx;
 }
 
@@ -1799,7 +1802,8 @@ document.getElementById('finASave')?.addEventListener('click', async () => {
   let market = 'manual', symbol = '', unit = 'piece';
   if (kind === 'qujat') {
     const tick = finNormTicker(document.getElementById('finATicker').value);
-    if (tick) { market = 'us'; symbol = tick; unit = 'share'; } else { market = 'manual'; unit = 'share'; }
+    if (tick) { market = tick.endsWith('.aix') ? 'aix' : 'us'; symbol = tick; unit = 'share'; }
+    else { market = 'manual'; unit = 'share'; }
   } else {
     const mt = FIN_METALS[+document.getElementById('finAType').value] || FIN_METALS[3];
     if (mt.s) { market = 'metal'; symbol = mt.s; unit = 'gram'; } else { market = 'manual'; unit = 'piece'; }
@@ -3554,7 +3558,7 @@ function pnMount(){
     /* Тек атауы мен тикерін толтырамыз; сан өрістері — маскамен, оларға тимейміз */
     /* қалған өрістер — қолданушынікі */
     mkSet("finAName", x.name || x.sym);
-    mkSet("finATicker", x.sym);
+    mkSet("finATicker", x.sym + ".aix");
     var s = document.getElementById("mkSearch");
     if (s) s.value = x.sym + " · " + x.ex;
     var l = document.getElementById("mkList");
@@ -3567,10 +3571,117 @@ function pnMount(){
     window.finOpenAssetModal = function () {
       var r = origOpen.apply(this, arguments);
       setTimeout(function () {
-        mkEnsure();
+        var md = document.getElementById("finAssetModal");
+        var isQ = !!(md && md.dataset && md.dataset.kind === "qujat");
+        if (isQ) mkEnsure();
+        var w = document.getElementById("mkWrap");
+        if (w) w.style.display = isQ ? "" : "none";
         var s = document.getElementById("mkSearch"); if (s) s.value = "";
         var l = document.getElementById("mkList"); if (l) l.style.display = "none";
       }, 0);
+      return r;
+    };
+  }
+})();
+
+
+/* ===== RX_FIN_V2 : автосома в формі + портфель графигі ===== */
+(function () {
+
+  function num(v) {
+    return Number(String(v == null ? "" : v).replace(/[\s\u00a0]/g, "").replace(",", ".")) || 0;
+  }
+
+  /* ---- 1. Саны × бағасы = жалпы сома ---- */
+  function sumEnsure() {
+    var buy = document.getElementById("finABuy");
+    if (!buy || document.getElementById("mkSum")) return;
+    var el = document.createElement("div");
+    el.id = "mkSum";
+    el.style.cssText = "margin:-2px 0 10px;font-size:13px;opacity:.7;min-height:17px";
+    buy.parentNode.insertBefore(el, buy.nextSibling);
+    ["finAQty", "finABuy"].forEach(function (id) {
+      var f = document.getElementById(id);
+      if (f) f.addEventListener("input", sumCalc);
+    });
+  }
+
+  function sumCalc() {
+    var el = document.getElementById("mkSum");
+    if (!el) return;
+    var q = num((document.getElementById("finAQty") || {}).value);
+    var p = num((document.getElementById("finABuy") || {}).value);
+    if (q > 0 && p > 0) {
+      var t = q * p;
+      var txt = (typeof finFmt === "function") ? finFmt(Math.round(t)) : String(Math.round(t));
+      el.textContent = "Жұмсалады: " + txt;
+    } else {
+      el.textContent = "";
+    }
+  }
+
+  /* ---- 2. Портфель құрамының графигі ---- */
+  var PAL = ["#5E5CE6", "#30A46C", "#F59E0B", "#06B6D4", "#EC4899", "#8B5CF6", "#F97316", "#0EA5E9"];
+
+  function esc(t) {
+    return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function chart(kind) {
+    var head = document.getElementById("finInvestHead");
+    if (!head || typeof FIN === "undefined") return;
+    var box = document.getElementById("mkChart");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "mkChart";
+      box.style.cssText = "margin:10px 0 14px";
+      head.parentNode.insertBefore(box, head.nextSibling);
+    }
+    var list = (FIN.assets || []).filter(function (a) { return a.kind === kind; });
+    var rows = list.map(function (a) {
+      return { n: a.name || "—", v: (Number(a.qty) || 0) * (Number(finAssetCur(a)) || 0) };
+    }).filter(function (x) { return x.v > 0; }).sort(function (x, y) { return y.v - x.v; });
+    var total = rows.reduce(function (s2, x) { return s2 + x.v; }, 0);
+    if (rows.length < 1 || total <= 0) { box.innerHTML = ""; return; }
+
+    var bar = rows.map(function (x, i) {
+      return '<div style="width:' + (x.v / total * 100).toFixed(2) + "%;background:" + PAL[i % PAL.length] + '"></div>';
+    }).join("");
+
+    var legend = rows.slice(0, 6).map(function (x, i) {
+      var pct = (x.v / total * 100);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'
+        + '<span style="width:9px;height:9px;border-radius:3px;flex:none;background:' + PAL[i % PAL.length] + '"></span>'
+        + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(x.n) + "</span>"
+        + '<span style="opacity:.55">' + pct.toFixed(pct < 10 ? 1 : 0) + '%</span>'
+        + '<span style="min-width:82px;text-align:right">' + ((typeof finFmt === "function") ? finFmt(Math.round(x.v)) : Math.round(x.v)) + "</span>"
+        + "</div>";
+    }).join("");
+
+    var more = rows.length > 6
+      ? '<div style="font-size:12px;opacity:.5;padding-top:2px">және тағы ' + (rows.length - 6) + " актив</div>"
+      : "";
+
+    box.innerHTML =
+      '<div style="display:flex;height:10px;border-radius:6px;overflow:hidden;gap:2px;background:rgba(127,127,127,.12)">'
+      + bar + "</div>"
+      + '<div style="margin-top:8px">' + legend + more + "</div>";
+  }
+
+  var origRender = window.renderInvest;
+  if (typeof origRender === "function") {
+    window.renderInvest = function (kind) {
+      var r = origRender.apply(this, arguments);
+      try { chart(kind); } catch (e) {}
+      return r;
+    };
+  }
+
+  var origOpen = window.finOpenAssetModal;
+  if (typeof origOpen === "function") {
+    window.finOpenAssetModal = function () {
+      var r = origOpen.apply(this, arguments);
+      setTimeout(function () { sumEnsure(); sumCalc(); }, 0);
       return r;
     };
   }
