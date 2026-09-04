@@ -517,6 +517,7 @@ function mapYahoo(sym) {
   if (sym === 'xauusd') return 'GC=F';
   if (sym === 'xagusd') return 'SI=F';
   if (sym === 'xptusd') return 'PL=F';
+  if (sym === 'xpdusd') return 'PA=F';
   if (sym.endsWith('.us')) return sym.slice(0, -3).toUpperCase();
   return sym.toUpperCase();
 }
@@ -548,7 +549,8 @@ async function fxErApi() {
 }
 
 function mktQuote(sym) {
-  const k = String(sym || '').trim().toUpperCase();
+  let k = String(sym || '').trim().toUpperCase();
+  if (k.endsWith('.AIX')) k = k.slice(0, -4);
   if (!k || !MKT.list.length) return 0;
   for (const it of MKT.list) {
     if (it.sym.toUpperCase() === k) return it.price;
@@ -1279,44 +1281,15 @@ async function mktAix() {
   })).filter((x) => x.sym && x.price > 0);
 }
 
-async function mktKase() {
-  const r = await fetch('https://kase.kz/en/markets/shares-and-adr-gdr', {
-    headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'accept': 'text/html' }
-  });
-  if (!r.ok) throw new Error(String(r.status));
-  const html = await r.text();
-  const out = [];
-  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
-  let m;
-  while ((m = rowRe.exec(html))) {
-    const cells = [];
-    const cRe = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g;
-    let c;
-    while ((c = cRe.exec(m[1]))) {
-      cells.push(c[1].replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim());
-    }
-    if (cells.length < 6) continue;
-    const isin = cells[2] || '';
-    if (!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(isin)) continue;
-    const price = mktNum(cells[5]);
-    if (!price) continue;
-    out.push({
-      ex: 'KASE', sym: cells[0], name: cells[1], isin: isin,
-      cur: (cells[4] || 'KZT').toUpperCase(), price: price, chg: 0, kind: 'share'
-    });
-  }
-  return out;
-}
-
 async function mktRefresh(force) {
   const now = Date.now();
   if (!force && MKT.list.length && now - MKT.at < 900000) return MKT;
-  const res = await Promise.allSettled([mktAix(), mktKase()]);
+  const res = await Promise.allSettled([mktAix()]);
   const aix = res[0].status === "fulfilled" ? res[0].value : [];
-  const kase = res[1].status === "fulfilled" ? res[1].value : [];
+  const kase = [];
   MKT.src = {
     aix: res[0].status === "fulfilled" ? aix.length : ("err: " + String(res[0].reason && res[0].reason.message).slice(0, 60)),
-    kase: res[1].status === "fulfilled" ? kase.length : ("err: " + String(res[1].reason && res[1].reason.message).slice(0, 60))
+    kase: 0
   };
   if (aix.length || kase.length) { MKT.list = aix.concat(kase); MKT.at = now; }
   return MKT;
