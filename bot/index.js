@@ -560,6 +560,25 @@ function mktQuote(sym) {
   }
   return 0;
 }
+
+/* Бағалы металдар: gold-api.com (кілтсіз, унция/USD) */
+const METAL_MAP = { xauusd: "XAU", xagusd: "XAG", xptusd: "XPT", xpdusd: "XPD" };
+const metalCache = new Map();
+async function goldApiPrice(sym) {
+  const code = METAL_MAP[sym];
+  if (!code) return null;
+  const hit = metalCache.get(code);
+  if (hit && Date.now() - hit.ts < 10 * 60 * 1000) return hit.price;
+  try {
+    const r = await fetch('https://api.gold-api.com/price/' + code, { headers: UA });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const p = Number(j && j.price);
+    if (!isFinite(p) || p <= 0) return null;
+    metalCache.set(code, { price: p, ts: Date.now() });
+    return p;
+  } catch (e) { return null; }
+}
 async function priceOf(sym) {
   /* Алдымен AIX/KASE тізімінен іздейміз */
   try {
@@ -568,7 +587,8 @@ async function priceOf(sym) {
   } catch (e) {}
   const cached = priceCache.get(sym);
   if (cached && Date.now() - cached.ts < 10 * 60 * 1000) return cached.price;
-  let p = await yahooPrice(sym);
+  let p = await goldApiPrice(sym);
+  if (p == null) p = await yahooPrice(sym);
   if (p == null) p = await stooqPrice(sym);
   if (p == null && sym === 'usdkzt') p = await fxErApi();
   if (p != null) priceCache.set(sym, { price: p, ts: Date.now() });
@@ -1304,6 +1324,7 @@ async function mktWarm() {
   try {
     await mktRefresh(true);
     console.log('Биржа: AIX/KASE —', JSON.stringify(MKT.src), 'барлығы:', MKT.list.length);
+    try { const g = await goldApiPrice('xauusd'); console.log('Металл: алтын (унция, USD) —', g); } catch (e) {}
   } catch (e) {
     console.log('Биржа: жаңарту қатесі —', String(e && e.message).slice(0, 120));
   }
