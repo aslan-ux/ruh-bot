@@ -553,7 +553,10 @@ function mktQuote(sym) {
   if (k.endsWith('.AIX')) k = k.slice(0, -4);
   if (!k || !MKT.list.length) return 0;
   for (const it of MKT.list) {
-    if (it.sym.toUpperCase() === k) return it.price;
+    if (it.sym.toUpperCase() !== k) continue;
+    if (it.cur === 'KZT') return it.price;
+    if (it.cur === 'USD' && MKT.fx) return it.price * MKT.fx;
+    return 0;
   }
   return 0;
 }
@@ -1255,7 +1258,7 @@ app.post('/api/book/words', async (req, res) => {
 
 
 /* ===== Биржа: AIX + KASE — бумаги мен бағалар ===== */
-const MKT = { at: 0, list: [], src: {} };
+const MKT = { at: 0, list: [], src: {}, fx: 0 };
 
 function mktNum(v) {
   const n = Number(String(v == null ? '' : v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
@@ -1284,6 +1287,7 @@ async function mktAix() {
 async function mktRefresh(force) {
   const now = Date.now();
   if (!force && MKT.list.length && now - MKT.at < 900000) return MKT;
+  try { const fx = await fxErApi(); if (fx) MKT.fx = fx; } catch (e) {}
   const res = await Promise.allSettled([mktAix()]);
   const aix = res[0].status === "fulfilled" ? res[0].value : [];
   const kase = [];
