@@ -150,11 +150,29 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, '..', 'webapp')));
 
+/* Сұраныс шегі: бір қолданушыға минутына 90 */
+const rxRate = new Map();
+function rxRateOk(key) {
+  const now = Date.now();
+  const win = 60000;
+  let b = rxRate.get(key);
+  if (!b || now - b.at > win) { b = { at: now, n: 0 }; rxRate.set(key, b); }
+  b.n++;
+  if (rxRate.size > 5000) {
+    for (const [k, v] of rxRate) { if (now - v.at > win) rxRate.delete(k); }
+  }
+  return b.n <= 90;
+}
 function requireTelegram(req, res) {
   const initData = req.body?.initData || req.get('X-Init-Data');
   const check = validateInitData(initData, BOT_TOKEN);
   if (!check.ok) {
     res.status(401).json({ ok: false, error: 'auth: ' + check.error });
+    return null;
+  }
+  const uid = String((check.user && check.user.id) || '');
+  if (uid && !rxRateOk(uid)) {
+    res.status(429).json({ ok: false, error: 'Тым көп сұраныс. Сәл кідіріңіз' });
     return null;
   }
   return check.user;
