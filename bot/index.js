@@ -1380,6 +1380,21 @@ app.post('/api/fin/market/list', async (req, res) => {
   }
 });
 
+
+/* ===== Қолданушының деректерін жою (App Store талабы) ===== */
+app.post('/api/me/delete', async (req, res) => {
+  const tgUser = requireTelegram(req, res); if (!tgUser) return;
+  try {
+    const id = String(tgUser.id);
+    await deleteUser(id);
+    console.log('Деректер жойылды:', id);
+    res.json({ ok: true });
+  } catch (e) {
+    console.log('Жою қатесі:', String(e && e.message).slice(0, 120));
+    res.json({ ok: false, error: 'server' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log(`HTTP-сервер запущен на порту ${PORT}`);
   console.log(`Публичный адрес: ${WEBAPP_URL}`);
