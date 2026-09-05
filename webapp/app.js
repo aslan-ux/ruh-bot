@@ -1,3 +1,9 @@
+/* rxEsc: ерте жариялау */
+window.rxEsc = function (t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+};
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
@@ -1396,8 +1402,8 @@ function qdRenderLb() {
     el.className = 'qd-lbitem' + (x.you ? ' you' : '');
     const ini = (x.name || '?').split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
     el.innerHTML = '<div class="r">' + (i + 1) + '</div>' +
-      '<div class="av">' + ini + '</div>' +
-      '<div class="nm">' + x.name + (x.you ? ' <span style="color:var(--green)">(сен)</span>' : '') + '</div>' +
+      '<div class="av">' + rxEsc(ini) + '</div>' +
+      '<div class="nm">' + rxEsc(x.name) + (x.you ? ' <span style="color:var(--green)">(сен)</span>' : '') + '</div>' +
       '<div class="sp">' + qdFmt(x.steps) + '</div>';
     lb.appendChild(el);
   });
@@ -1565,7 +1571,7 @@ function finRenderBanks() {
     const logo = b.d
       ? '<img src="https://www.google.com/s2/favicons?domain=' + b.d + '&sz=128" alt="" loading="eager" decoding="async" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://icons.duckduckgo.com/ip3/' + b.d + '.ico\'}else{this.remove()}"/>'
       : '';
-    return '<div class="fin-bank' + (i === 0 ? ' sel' : '') + '" data-n="' + b.n + '"><div class="fin-bank-ic" style="color:' + b.c + '"><span>' + ini + '</span>' + logo + '</div><div class="fin-bank-n">' + b.n + '</div></div>';
+    return '<div class="fin-bank' + (i === 0 ? ' sel' : '') + '" data-n="' + b.n + '"><div class="fin-bank-ic" style="color:' + b.c + '"><span>' + rxEsc(ini) + '</span>' + logo + '</div><div class="fin-bank-n">' + b.n + '</div></div>';
   }).join('');
   FIN.selAccount = BANKS[0].n;
   box.querySelectorAll('.fin-bank').forEach((el) => el.addEventListener('click', () => {
@@ -1575,9 +1581,19 @@ function finRenderBanks() {
 }
 
 // Красивое форматирование суммы при вводе: 1000000 -> 1 000 000
+function finParseNum(v) {
+  const n = Number(String(v == null ? '' : v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
+  return isFinite(n) ? n : 0;
+}
+function finRound2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
 function finFormatAmountInput(el) {
-  const d = (el.value || '').replace(/\D/g, '');
-  el.value = d ? d.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : '';
+  let v = String(el.value || '').replace(/[^\d.,]/g, '').replace(/,/g, '.');
+  const i = v.indexOf('.');
+  let int = i < 0 ? v : v.slice(0, i);
+  let frac = i < 0 ? null : v.slice(i + 1).replace(/\./g, '').slice(0, 2);
+  int = int.replace(/^0+(?=\d)/, '');
+  const g = int ? int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : '';
+  el.value = frac === null ? g : (g || '0') + '.' + frac;
 }
 ['finAmount', 'finDTotal', 'finDMonthly', 'finABuy', 'finACur'].forEach((id) => {
   const el = document.getElementById(id);
@@ -1758,7 +1774,7 @@ function renderInvest(kind) {
     const sub = a.qty + ' ' + (a.unit === 'gram' ? 'г' : def.unit) + ' · ' + finFmt(cur) + live;
     return '<div class="fin-item">' +
       '<div class="ic-c" style="background:' + def.c + '22;color:' + def.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + def.i + '"></use></svg></div>' +
-      '<div class="mid"><div class="nm">' + a.name + '</div><div class="sb">' + sub + '</div></div>' +
+      '<div class="mid"><div class="nm">' + rxEsc(a.name) + '</div><div class="sb">' + sub + '</div></div>' +
       '<div class="rt"><div class="am">' + finFmt(av) + '</div><div class="dt" style="color:' + col + '">' + s + Math.abs(ppct).toFixed(1) + '%</div></div>' +
       '<button class="del" data-del="' + a.id + '" aria-label="Жою"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>';
   }).join('');
@@ -1794,8 +1810,8 @@ document.getElementById('finASave')?.addEventListener('click', async () => {
   const kind = document.getElementById('finAssetModal').dataset.kind || 'qujat';
   const hint = document.getElementById('finAHint');
   const name = document.getElementById('finAName').value.trim();
-  const qty = Number((document.getElementById('finAQty').value || '').replace(',', '.')) || 0;
-  const buyPrice = Math.round(Number((document.getElementById('finABuy').value || '').replace(/\s/g, '')) || 0);
+  const qty = finParseNum(document.getElementById('finAQty').value);
+  const buyPrice = finRound2(finParseNum(document.getElementById('finABuy').value));
   if (!name) { hint.textContent = 'Атауын жаз'; return; }
   if (qty <= 0) { hint.textContent = 'Санын енгіз'; return; }
   if (buyPrice <= 0) { hint.textContent = 'Сатып алу бағасын енгіз'; return; }
@@ -1808,7 +1824,7 @@ document.getElementById('finASave')?.addEventListener('click', async () => {
     const mt = FIN_METALS[+document.getElementById('finAType').value] || FIN_METALS[3];
     if (mt.s) { market = 'metal'; symbol = mt.s; unit = 'gram'; } else { market = 'manual'; unit = 'piece'; }
   }
-  const curManual = Math.max(0, Math.round(Number((document.getElementById('finACur').value || '').replace(/\s/g, '')) || 0));
+  const curManual = Math.max(0, finRound2(finParseNum(document.getElementById('finACur').value)));
   hint.textContent = 'Сақталуда…';
   try {
     const r = await api('/api/fin/asset/add', { kind, name, market, symbol, qty, buyPrice, curManual, unit });
@@ -1858,7 +1874,7 @@ function renderDebt(kind) {
       : '<button class="fin-pay" data-id="' + d.id + '">' + payLbl + '</button>';
     return '<div class="fin-item fin-debt">' +
       '<div class="ic-c" style="background:' + def.c + '22;color:' + def.c + '"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#' + def.i + '"></use></svg></div>' +
-      '<div class="mid"><div class="nm">' + d.title + badge + '</div><div class="sb">' + sub + '</div>' +
+      '<div class="mid"><div class="nm">' + rxEsc(d.title) + badge + '</div><div class="sb">' + sub + '</div>' +
       '<div class="fin-bar" style="margin-top:6px"><span style="width:' + pct + '%;background:' + def.c + '"></span></div></div>' +
       '<div class="rt">' + action + '</div>' +
       '<button class="del" data-del="' + d.id + '" aria-label="Жою"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>';
@@ -1994,14 +2010,14 @@ function renderFriends(r) {
   const inc = document.getElementById('frIncoming');
   inc.innerHTML = (r.incoming || []).length
     ? '<div class="qd-note">Сұраныстар:</div>' + r.incoming.map((f) =>
-      '<div class="fr-item"><div class="fr-av">' + frIni(f.name) + '</div><div class="fr-nm">' + f.name + '</div>' +
+      '<div class="fr-item"><div class="fr-av">' + frIni(f.name) + '</div><div class="fr-nm">' + rxEsc(f.name) + '</div>' +
       '<button class="fr-ok" data-acc="' + f.id + '">Растау</button>' +
       '<button class="fr-x" data-rem="' + f.id + '" aria-label="Бас тарту"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-x"></use></svg></button></div>').join('')
     : '';
   const list = document.getElementById('frList');
   list.innerHTML = (r.friends || []).length
     ? '<div class="qd-note">Достарым (' + r.friends.length + '):</div>' + r.friends.map((f) =>
-      '<div class="fr-item"><div class="fr-av">' + frIni(f.name) + '</div><div class="fr-nm">' + f.name + '</div>' +
+      '<div class="fr-item"><div class="fr-av">' + frIni(f.name) + '</div><div class="fr-nm">' + rxEsc(f.name) + '</div>' +
       '<button class="fr-x" data-rem="' + f.id + '" aria-label="Өшіру"><svg class="ic-svg" viewBox="0 0 24 24"><use href="#i-trash"></use></svg></button></div>').join('')
     : '<div class="qd-empty">Әзірше досың жоқ. Кодыңды досыңа беріп, оны қос.</div>';
   document.querySelectorAll('#frIncoming [data-acc]').forEach((el) => el.addEventListener('click', async () => {
@@ -3682,6 +3698,109 @@ function pnMount(){
     window.finOpenAssetModal = function () {
       var r = origOpen.apply(this, arguments);
       setTimeout(function () { sumEnsure(); sumCalc(); }, 0);
+      return r;
+    };
+  }
+})();
+
+
+/* ===== RX_QUALITY_V1 : желі, валидация, қауіпсіз HTML ===== */
+(function () {
+
+  /* ---------- 1. Қауіпсіз мәтін ---------- */
+  window.rxEsc = function (t) {
+    return String(t == null ? "" : t)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  };
+
+  /* ---------- 2. Желі: таймаут + түсінікті хабар ---------- */
+  var NET = { toastAt: 0 };
+
+  function rxToast(msg) {
+    if (Date.now() - NET.toastAt < 3000) return;
+    NET.toastAt = Date.now();
+    var el = document.getElementById("rxToast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "rxToast";
+      el.style.cssText = "position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));"
+        + "transform:translateX(-50%) translateY(12px);z-index:9999;max-width:86vw;"
+        + "padding:11px 16px;border-radius:14px;background:rgba(28,28,30,.94);color:#fff;"
+        + "font-size:14px;line-height:1.35;text-align:center;opacity:0;pointer-events:none;"
+        + "box-shadow:0 10px 30px rgba(0,0,0,.25);backdrop-filter:blur(12px);"
+        + "transition:opacity .22s ease, transform .22s cubic-bezier(.2,.9,.3,1.2)";
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    requestAnimationFrame(function () {
+      el.style.opacity = "1";
+      el.style.transform = "translateX(-50%) translateY(0)";
+    });
+    clearTimeout(el._t);
+    el._t = setTimeout(function () {
+      el.style.opacity = "0";
+      el.style.transform = "translateX(-50%) translateY(12px)";
+    }, 2600);
+  }
+  window.rxToast = rxToast;
+
+  var origApi = window.api;
+  if (typeof origApi === "function") {
+    window.api = function (path, body) {
+      var p;
+      try { p = origApi.apply(this, arguments); }
+      catch (e) { rxToast("Байланыс жоқ"); return Promise.reject(e); }
+      var timer;
+      var guard = new Promise(function (_, rej) {
+        timer = setTimeout(function () { rej(new Error("timeout")); }, 25000);
+      });
+      return Promise.race([Promise.resolve(p), guard]).then(function (r) {
+        clearTimeout(timer);
+        return r;
+      }, function (err) {
+        clearTimeout(timer);
+        var m = String((err && err.message) || "");
+        if (m === "timeout") rxToast("Сервер жауап бермей тұр. Қайта көріңіз");
+        else if (!navigator.onLine) rxToast("Интернет жоқ");
+        else rxToast("Байланыс үзілді. Қайта көріңіз");
+        throw err;
+      });
+    };
+  }
+
+  window.addEventListener("offline", function () { rxToast("Интернет жоқ"); });
+  window.addEventListener("unhandledrejection", function (e) {
+    try { e.preventDefault(); } catch (er) {}
+  });
+
+  /* ---------- 3. Форма: тірі валидация ---------- */
+  function vHint(msg) {
+    var h = document.getElementById("finAHint");
+    if (h) h.textContent = msg || "";
+  }
+
+  function vCheck() {
+    var qEl = document.getElementById("finAQty");
+    var bEl = document.getElementById("finABuy");
+    if (!qEl || !bEl) return;
+    var qRaw = String(qEl.value || "").trim();
+    var q = (typeof finParseNum === "function") ? finParseNum(qRaw) : Number(qRaw);
+    if (qRaw && q < 0) { vHint("Саны теріс бола алмайды"); return; }
+    if (qRaw && q === 0) { vHint("Саны нөлден үлкен болсын"); return; }
+    vHint("");
+  }
+
+  var origOpen = window.finOpenAssetModal;
+  if (typeof origOpen === "function") {
+    window.finOpenAssetModal = function () {
+      var r = origOpen.apply(this, arguments);
+      setTimeout(function () {
+        ["finAQty", "finABuy"].forEach(function (id) {
+          var f = document.getElementById(id);
+          if (f && !f._vBound) { f._vBound = 1; f.addEventListener("input", vCheck); }
+        });
+      }, 0);
       return r;
     };
   }
