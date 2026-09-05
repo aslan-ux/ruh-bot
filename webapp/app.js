@@ -3805,3 +3805,308 @@ function pnMount(){
     };
   }
 })();
+
+
+/* ===== RX_SETTINGS_V1 : Баптаулар парағы + растау терезесі ===== */
+(function () {
+  var TG = (window.Telegram && window.Telegram.WebApp) || null;
+
+  /* ---------- Растау (жою алдында) ---------- */
+  window.rxConfirm = function (opts) {
+    var o = opts || {};
+    var title = o.title || "Сенімдісіз бе?";
+    var text = o.text || "";
+    var okText = o.ok || "Жою";
+    return new Promise(function (resolve) {
+      var wrap = document.createElement("div");
+      wrap.className = "rx-conf";
+      wrap.style.cssText = "position:fixed;inset:0;z-index:9998;display:flex;align-items:flex-end;"
+        + "justify-content:center;background:rgba(0,0,0,.35);opacity:0;transition:opacity .2s ease;"
+        + "backdrop-filter:blur(2px);padding:0 10px calc(10px + env(safe-area-inset-bottom,0px))";
+      var card = document.createElement("div");
+      card.style.cssText = "width:100%;max-width:420px;transform:translateY(18px);"
+        + "transition:transform .28s cubic-bezier(.2,.9,.3,1.1)";
+      card.innerHTML =
+        '<div style="background:var(--card,#fff);border-radius:16px;overflow:hidden;text-align:center">'
+        + '<div style="padding:16px 18px 8px"><div style="font-size:15px;font-weight:600">'
+        + rxEsc(title) + "</div>"
+        + (text ? '<div style="font-size:13px;opacity:.6;margin-top:5px;line-height:1.35">' + rxEsc(text) + "</div>" : "")
+        + "</div>"
+        + '<button type="button" data-a="ok" style="width:100%;border:0;border-top:1px solid rgba(127,127,127,.2);'
+        + 'background:none;color:#dc2626;font-size:17px;padding:14px;font-weight:500">' + rxEsc(okText) + "</button>"
+        + "</div>"
+        + '<button type="button" data-a="no" style="width:100%;margin-top:8px;border:0;border-radius:16px;'
+        + 'background:var(--card,#fff);font-size:17px;padding:14px;font-weight:600">Болдырмау</button>';
+      wrap.appendChild(card);
+      document.body.appendChild(wrap);
+      requestAnimationFrame(function () {
+        wrap.style.opacity = "1";
+        card.style.transform = "translateY(0)";
+      });
+      function close(v) {
+        wrap.style.opacity = "0";
+        card.style.transform = "translateY(18px)";
+        setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 220);
+        resolve(v);
+      }
+      wrap.addEventListener("click", function (e) {
+        var a = e.target && e.target.getAttribute && e.target.getAttribute("data-a");
+        if (a === "ok") { try { TG.HapticFeedback.notificationOccurred("warning"); } catch (er) {} close(true); }
+        else if (a === "no" || e.target === wrap) close(false);
+      });
+    });
+  };
+
+  /* ---------- Баптаулар ---------- */
+  function row(icon, label, right, id) {
+    return '<button type="button" class="rx-srow" ' + (id ? 'id="' + id + '"' : "")
+      + ' style="width:100%;display:flex;align-items:center;gap:12px;padding:13px 16px;border:0;'
+      + 'background:none;text-align:left;font-size:16px;min-height:48px">'
+      + '<span style="width:22px;text-align:center;opacity:.5">' + icon + "</span>"
+      + '<span style="flex:1">' + rxEsc(label) + "</span>"
+      + '<span style="opacity:.45;font-size:14px">' + (right || "") + "</span>"
+      + "</button>";
+  }
+
+  function group(title, inner) {
+    return (title ? '<div style="font-size:12px;text-transform:uppercase;letter-spacing:.4px;'
+      + 'opacity:.45;padding:18px 18px 7px">' + rxEsc(title) + "</div>" : "")
+      + '<div style="background:var(--card,#fff);border-radius:14px;overflow:hidden;margin:0 10px">'
+      + inner + "</div>";
+  }
+
+  function openSettings() {
+    var old = document.getElementById("rxSet");
+    if (old) old.remove();
+    var sheet = document.createElement("div");
+    sheet.id = "rxSet";
+    sheet.style.cssText = "position:fixed;inset:0;z-index:9990;background:var(--bg,#f2f2f7);"
+      + "overflow:auto;-webkit-overflow-scrolling:touch;transform:translateX(100%);"
+      + "transition:transform .32s cubic-bezier(.2,.9,.3,1)";
+
+    var me = (typeof ME !== "undefined" && ME) ? ME : {};
+    var uname = [me.lastName, me.firstName].filter(Boolean).join(" ") || (me.name || "—");
+    var uid = me.telegramId || (TG && TG.initDataUnsafe && TG.initDataUnsafe.user && TG.initDataUnsafe.user.id) || "—";
+
+    sheet.innerHTML =
+      '<div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;'
+      + 'padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:var(--bg,#f2f2f7)">'
+      + '<button type="button" id="rxSetBack" aria-label="Артқа" style="border:0;background:none;'
+      + 'font-size:17px;padding:6px 10px;min-height:44px;color:var(--accent,#5E5CE6)">‹ Артқа</button>'
+      + '<div style="flex:1;text-align:center;font-weight:600;font-size:17px;margin-right:66px">Баптаулар</div></div>'
+      + group("Көрініс", '<div id="rxThemeSlot"></div>')
+      + group("Оқу", row("Aa", "Қаріп пен анимация", "Кітапта", "rxSetReader"))
+      + group("Аккаунт",
+          row("👤", "Аты-жөні", rxEsc(uname), "rxSetName")
+          + row("#", "Telegram ID", rxEsc(String(uid))))
+      + group("Деректер",
+          row("⤓", "Деректерімді жүктеу", "", "rxSetExport")
+          + '<button type="button" id="rxSetWipe" style="width:100%;display:flex;align-items:center;'
+          + 'gap:12px;padding:13px 16px;border:0;background:none;text-align:left;font-size:16px;'
+          + 'min-height:48px;color:#dc2626"><span style="width:22px;text-align:center">🗑</span>'
+          + "<span>Деректерімді жою</span></button>")
+      + '<div style="padding:16px 18px 40px;font-size:12px;opacity:.4;text-align:center">Ruh · '
+      + rxEsc(String((window.APP_VER || "1.0"))) + "</div>";
+
+    document.body.appendChild(sheet);
+    requestAnimationFrame(function () { sheet.style.transform = "translateX(0)"; });
+
+    var seg = document.getElementById("themeSeg");
+    var slot = sheet.querySelector("#rxThemeSlot");
+    if (seg && slot) { sheet.dataset.segHome = "1"; slot.appendChild(seg); }
+
+    function back() {
+      if (sheet.dataset.segHome === "1") {
+        var home = document.getElementById("pfSegSlot");
+        var sg = sheet.querySelector("#themeSeg");
+        if (home && sg) home.appendChild(sg);
+      }
+      sheet.style.transform = "translateX(100%)";
+      setTimeout(function () { if (sheet.parentNode) sheet.remove(); }, 320);
+    }
+    sheet.querySelector("#rxSetBack").addEventListener("click", back);
+
+    var nm = sheet.querySelector("#rxSetName");
+    if (nm) nm.addEventListener("click", function () { back(); setTimeout(function () { try { pnOpen(); } catch (e) {} }, 340); });
+
+    var rd = sheet.querySelector("#rxSetReader");
+    if (rd) rd.addEventListener("click", function () { rxToast("Кітапты ашып, Aa түймесін басыңыз"); });
+
+    var ex = sheet.querySelector("#rxSetExport");
+    if (ex) ex.addEventListener("click", function () {
+      try {
+        var data = { me: (typeof ME !== "undefined" ? ME : null), fin: (typeof FIN !== "undefined" ? FIN : null) };
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a2 = document.createElement("a");
+        a2.href = url; a2.download = "ruh-derekter.json";
+        document.body.appendChild(a2); a2.click(); a2.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        rxToast("Файл жүктелді");
+      } catch (e) { rxToast("Жүктеу мүмкін болмады"); }
+    });
+
+    var wp = sheet.querySelector("#rxSetWipe");
+    if (wp) wp.addEventListener("click", function () {
+      rxConfirm({
+        title: "Барлық деректеріңіз жойылады",
+        text: "Оқу тарихы, қаржы жазбалары, достар — бәрі өшеді. Қайтару мүмкін емес.",
+        ok: "Жою"
+      }).then(function (yes) {
+        if (!yes) return;
+        api("/api/me/delete", {}).then(function (r) {
+          if (r && r.ok) { rxToast("Деректер жойылды"); setTimeout(function () { location.reload(); }, 900); }
+          else rxToast("Жою мүмкін болмады");
+        }).catch(function () {});
+      });
+    });
+  }
+  window.rxOpenSettings = openSettings;
+
+  /* ---------- Профильдегі тісті доңғалақ ---------- */
+  function gear() {
+    var hero = document.getElementById("pfHero");
+    if (!hero || document.getElementById("rxGear")) return;
+    hero.style.position = hero.style.position || "relative";
+    var b = document.createElement("button");
+    b.id = "rxGear";
+    b.type = "button";
+    b.setAttribute("aria-label", "Баптаулар");
+    b.style.cssText = "position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;font-size:20px;opacity:.55;cursor:pointer";
+    b.textContent = "⚙";
+    b.addEventListener("click", function () {
+      try { TG.HapticFeedback.impactOccurred("light"); } catch (e) {}
+      openSettings();
+    });
+    hero.appendChild(b);
+  }
+  gear();
+  document.addEventListener("DOMContentLoaded", gear);
+  setTimeout(gear, 800);
+  setTimeout(gear, 2500);
+})();
+
+
+/* ===== RX_POLISH_V1 : iOS сезімі — серіппе, Dynamic Type, шеттен свайп, бос экрандар ===== */
+(function () {
+  var TG = (window.Telegram && window.Telegram.WebApp) || null;
+
+  /* ---------- 1. Стильдер ---------- */
+  var css = document.createElement("style");
+  css.id = "rxPolish";
+  css.textContent = [
+    ":root{--rx-spring:cubic-bezier(.22,1.2,.36,1);--rx-ease:cubic-bezier(.2,.9,.3,1);--rx-scale:1}",
+    ".modal,.fin-modal,.fin-sheet,.rd-panel,.qd-seg button,.fin-tb,.pf-addbtn{transition-timing-function:var(--rx-spring)!important}",
+    ".fin-item .nm,.fin-item-name,.mk-row>div,.rp-nm,.qd-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    "button,[role=button]{min-height:44px}",
+    ".rx-skel{position:relative;overflow:hidden;background:rgba(127,127,127,.13);border-radius:10px}",
+    ".rx-skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);",
+    "background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:rxSh 1.25s infinite}",
+    "@keyframes rxSh{100%{transform:translateX(100%)}}",
+    ".rx-empty{text-align:center;padding:34px 24px}",
+    ".rx-empty .ic{font-size:34px;opacity:.35;margin-bottom:10px}",
+    ".rx-empty .t{font-size:16px;font-weight:600;margin-bottom:5px}",
+    ".rx-empty .s{font-size:13px;opacity:.55;line-height:1.4}",
+    "@media (prefers-reduced-motion: reduce){*,*::before,*::after{",
+    "animation-duration:.001ms!important;animation-iteration-count:1!important;",
+    "transition-duration:.001ms!important;scroll-behavior:auto!important}}"
+  ].join("");
+  document.head.appendChild(css);
+
+  /* ---------- 2. Dynamic Type: жүйелік қаріп өлшемін ұстау ---------- */
+  function dynType() {
+    try {
+      var probe = document.createElement("div");
+      probe.style.cssText = "position:absolute;visibility:hidden;font:-apple-system-body";
+      document.body.appendChild(probe);
+      var px = parseFloat(getComputedStyle(probe).fontSize) || 17;
+      probe.remove();
+      var k = Math.max(0.9, Math.min(1.35, px / 17));
+      document.documentElement.style.setProperty("--rx-scale", String(k.toFixed(3)));
+      if (k > 1.02) document.documentElement.style.fontSize = (16 * k).toFixed(1) + "px";
+      return k;
+    } catch (e) { return 1; }
+  }
+  dynType();
+
+  /* ---------- 3. Шеттен свайп — артқа ---------- */
+  var SW = { x: 0, y: 0, on: false };
+  document.addEventListener("touchstart", function (e) {
+    var t = e.touches && e.touches[0];
+    if (!t) return;
+    SW.on = t.clientX <= 22;
+    SW.x = t.clientX; SW.y = t.clientY;
+  }, { passive: true });
+  document.addEventListener("touchend", function (e) {
+    if (!SW.on) return;
+    SW.on = false;
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    if (t.clientX - SW.x < 70 || Math.abs(t.clientY - SW.y) > 60) return;
+    var set = document.getElementById("rxSet");
+    if (set) { var bk = set.querySelector("#rxSetBack"); if (bk) { bk.click(); return; } }
+    var conf = document.querySelector(".rx-conf");
+    if (conf) { var no = conf.querySelector('[data-a="no"]'); if (no) { no.click(); return; } }
+    var rd = document.getElementById("reader");
+    if (rd && !rd.classList.contains("hidden")) { try { closeReader(); } catch (er) {} return; }
+    var mod = document.querySelector(".fin-modal:not(.hidden), .modal:not(.hidden)");
+    if (mod) { try { finCloseAssetModal(); } catch (er) { mod.classList.add("hidden"); } return; }
+  }, { passive: true });
+
+  /* ---------- 4. Қаңқа (skeleton) ---------- */
+  window.rxSkeleton = function (el, rows) {
+    if (!el) return;
+    var n = rows || 3, h = "";
+    for (var i = 0; i < n; i++) {
+      h += '<div style="display:flex;gap:12px;align-items:center;padding:12px 4px">'
+        + '<div class="rx-skel" style="width:38px;height:38px;border-radius:12px;flex:none"></div>'
+        + '<div style="flex:1"><div class="rx-skel" style="height:12px;width:' + (52 + i * 9) + '%"></div>'
+        + '<div class="rx-skel" style="height:10px;width:34%;margin-top:7px"></div></div>'
+        + '<div class="rx-skel" style="width:56px;height:14px"></div></div>';
+    }
+    el.innerHTML = h;
+  };
+
+  /* ---------- 5. Мағыналы бос экрандар ---------- */
+  var EMPTY = {
+    finList: { ic: "\uD83D\uDCC8", t: "Әзірге актив жоқ", s: "«+» түймесі арқылы бірінші активіңізді қосыңыз — бағасы биржадан өзі жаңарып тұрады." },
+    frList: { ic: "\uD83D\uDC65", t: "Достар жоқ", s: "Атын іздеп, қауымдастықтан дос қосыңыз — оқу деңгейлеріңізді салыстырасыздар." }
+  };
+
+  function upgradeEmpty() {
+    Object.keys(EMPTY).forEach(function (id) {
+      var box = document.getElementById(id);
+      if (!box) return;
+      var e = box.querySelector(".fin-empty, .qd-empty, .rd-empty");
+      if (!e || e.dataset.rx === "1") return;
+      var d = EMPTY[id];
+      e.dataset.rx = "1";
+      e.className = "rx-empty";
+      e.innerHTML = '<div class="ic">' + d.ic + '</div><div class="t">' + rxEsc(d.t)
+        + '</div><div class="s">' + rxEsc(d.s) + "</div>";
+    });
+  }
+  var mo = new MutationObserver(function () { upgradeEmpty(); });
+  try { mo.observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  upgradeEmpty();
+
+  /* ---------- 6. Қолжетімділік: белгісіз түймелерге атау ---------- */
+  function labels() {
+    var map = { rdClose: "Жабу", rdTocBtn: "Мазмұны", rdMarkBtn: "Бетбелгі", rdAaBtn: "Қаріп",
+      rdNext: "Келесі бет", rdPrev: "Алдыңғы бет", finAssetClose: "Жабу", rxGear: "Баптаулар" };
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && !el.getAttribute("aria-label")) el.setAttribute("aria-label", map[id]);
+    });
+    var all = document.querySelectorAll("button");
+    for (var i = 0; i < all.length; i++) {
+      var b = all[i];
+      if (!(b.innerText || "").trim() && !b.getAttribute("aria-label") && !b.title) {
+        b.setAttribute("aria-label", "Түйме");
+      }
+    }
+  }
+  labels();
+  setTimeout(labels, 1200);
+  setTimeout(labels, 3000);
+})();
